@@ -1,0 +1,9 @@
+# name|dimension|x1 y1 z1|x2 y2 z2   (from the live config spawn.cityRegions)
+1|minecraft:overworld|-383 34 -132|-254 163 -3
+city1|minecraft:overworld|24 59 104|103 98 183
+city2|minecraft:overworld|184 59 104|263 98 183
+city3|minecraft:overworld|344 59 104|423 98 183
+city4|minecraft:overworld|504 59 104|583 98 183
+city5|minecraft:overworld|24 85 304|103 124 383
+city6|minecraft:overworld|184 59 304|263 98 383
+city7|minecraft:overworld|368 61 320|447 100 399

@@ -1,0 +1,56 @@
+{
+  "_comment": [
+    "city_b - 64 x 34 x 40: ONE LONG SIX-STOREY OFFICE SLAB over an open plaza, with a small annex and a",
+    "low two-storey block on the other side. The footprint is wide and shallow (64 x 40) instead of square,",
+    "so it is never a rotation of another variant."
+  ],
+  "name": "city_b",
+  "palette": "modern_scav",
+  "size": [64, 34, 40],
+  "platform": { "margin": 8, "clear_to": 150, "stone_below": 8 },
+  "plot_block": "walk",
+  "interior_variation": 1,
+  "extra_openings_per_wall": 2,
+  "floor_holes_per_floor": 2,
+  "spawners_per_building": 2,
+  "chests_per_building": 3,
+  "buildings": [
+    {
+      "name": "slab_office", "x": 2, "z": 2, "w": 40, "d": 16,
+      "floors": 6, "floor_height": 4,
+      "wall": "wall_brick", "accent": "accent", "floor_block": "floor", "roof_block": "roof",
+      "window_block": "window_band", "door_side": "south", "roof_access": true, "ruined": false,
+      "rooms_x": 4, "rooms_z": 2, "min_cover_per_floor": 8, "min_furniture_per_floor": 12,
+      "min_doors": 2, "seed": 5555
+    },
+    {
+      "name": "annex_east", "x": 46, "z": 2, "w": 16, "d": 14,
+      "floors": 3, "floor_height": 4,
+      "wall": "wall_smooth", "accent": "frame", "floor_block": "floor", "roof_block": "roof",
+      "window_block": "window", "door_side": "west", "roof_access": true, "ruined": false,
+      "rooms_x": 2, "rooms_z": 1, "min_cover_per_floor": 5, "min_furniture_per_floor": 6,
+      "min_doors": 1, "seed": 6666
+    },
+    {
+      "name": "low_block", "x": 2, "z": 24, "w": 20, "d": 12,
+      "floors": 2, "floor_height": 5,
+      "wall": "wall_concrete", "accent": "accent", "floor_block": "floor_inner",
+      "roof_block": "roof", "window_block": "window", "door_side": "north", "roof_access": true,
+      "ruined": true,
+      "rooms_x": 2, "rooms_z": 1, "min_cover_per_floor": 6, "min_furniture_per_floor": 6,
+      "min_doors": 2, "seed": 7777
+    }
+  ],
+  "cover": [
+    { "type": "sandbag", "x": 26, "z": 22, "length": 6, "axis": "x" },
+    { "type": "low_wall", "x": 36, "z": 22, "length": 6, "axis": "z" },
+    { "type": "barrier", "x": 28, "z": 30, "length": 6, "axis": "x" },
+    { "type": "car", "x": 27, "z": 26 },
+    { "type": "car", "x": 38, "z": 34 },
+    { "type": "rubble", "x": 33, "z": 28, "radius": 4 },
+    { "type": "crate", "x": 25, "z": 35 },
+    { "type": "crate", "x": 40, "z": 20 },
+    { "type": "sandbag", "x": 44, "z": 30, "length": 5, "axis": "z" },
+    { "type": "rubble", "x": 52, "z": 34, "radius": 2 }
+  ]
+}

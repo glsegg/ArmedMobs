@@ -1,0 +1,83 @@
+{
+  "_comment": [
+    "city_c - 40 x 22 x 64: A NARROW STREET CANYON. Two rows of three small buildings facing each other",
+    "across a 12-block alley that runs the whole length of the plot; the long axis is Z, so this variant is",
+    "neither a rotation nor a resize of any other. Heaviest street cover of the four."
+  ],
+  "name": "city_c",
+  "palette": "modern_scav",
+  "size": [40, 22, 64],
+  "platform": { "margin": 8, "clear_to": 150, "stone_below": 8 },
+  "plot_block": "walk",
+  "interior_variation": 1,
+  "extra_openings_per_wall": 2,
+  "floor_holes_per_floor": 2,
+  "spawners_per_building": 2,
+  "chests_per_building": 3,
+  "buildings": [
+    {
+      "name": "west_1", "x": 1, "z": 1, "w": 12, "d": 14,
+      "floors": 3, "floor_height": 4,
+      "wall": "wall_brick", "accent": "accent", "floor_block": "floor", "roof_block": "roof",
+      "window_block": "window", "door_side": "east", "roof_access": true, "ruined": false,
+      "rooms_x": 2, "rooms_z": 2, "min_cover_per_floor": 4, "min_furniture_per_floor": 6,
+      "min_doors": 1, "seed": 9001
+    },
+    {
+      "name": "west_2", "x": 1, "z": 22, "w": 12, "d": 14,
+      "floors": 2, "floor_height": 5,
+      "wall": "wall_concrete", "accent": "frame", "floor_block": "floor_inner",
+      "roof_block": "roof", "window_block": "window", "door_side": "east", "roof_access": true,
+      "ruined": true,
+      "rooms_x": 1, "rooms_z": 2, "min_cover_per_floor": 5, "min_furniture_per_floor": 6,
+      "min_doors": 1, "seed": 9002
+    },
+    {
+      "name": "west_3", "x": 1, "z": 43, "w": 12, "d": 14,
+      "floors": 4, "floor_height": 4,
+      "wall": "wall_slate", "accent": "accent", "floor_block": "floor", "roof_block": "roof",
+      "window_block": "window_band", "door_side": "east", "roof_access": true, "ruined": false,
+      "rooms_x": 2, "rooms_z": 2, "min_cover_per_floor": 4, "min_furniture_per_floor": 6,
+      "min_doors": 1, "seed": 9003
+    },
+    {
+      "name": "east_1", "x": 27, "z": 1, "w": 12, "d": 14,
+      "floors": 4, "floor_height": 4,
+      "wall": "wall_smooth", "accent": "accent", "floor_block": "floor", "roof_block": "roof",
+      "window_block": "window", "door_side": "west", "roof_access": true, "ruined": false,
+      "rooms_x": 2, "rooms_z": 2, "min_cover_per_floor": 4, "min_furniture_per_floor": 6,
+      "min_doors": 1, "seed": 9004
+    },
+    {
+      "name": "east_2", "x": 27, "z": 22, "w": 12, "d": 14,
+      "floors": 3, "floor_height": 4,
+      "wall": "wall_brick", "accent": "frame", "floor_block": "floor", "roof_block": "roof",
+      "window_block": "window_band", "door_side": "west", "roof_access": true, "ruined": false,
+      "rooms_x": 2, "rooms_z": 2, "min_cover_per_floor": 4, "min_furniture_per_floor": 6,
+      "min_doors": 1, "seed": 9005
+    },
+    {
+      "name": "east_3", "x": 27, "z": 43, "w": 12, "d": 14,
+      "floors": 2, "floor_height": 5,
+      "wall": "wall_concrete", "accent": "accent", "floor_block": "floor_inner",
+      "roof_block": "roof", "window_block": "window", "door_side": "west", "roof_access": false,
+      "ruined": true,
+      "rooms_x": 1, "rooms_z": 2, "min_cover_per_floor": 4, "min_furniture_per_floor": 6,
+      "min_doors": 1, "seed": 9006
+    }
+  ],
+  "cover": [
+    { "type": "sandbag", "x": 15, "z": 6, "length": 5, "axis": "z" },
+    { "type": "barrier", "x": 23, "z": 14, "length": 5, "axis": "z" },
+    { "type": "car", "x": 16, "z": 16 },
+    { "type": "car", "x": 22, "z": 28 },
+    { "type": "low_wall", "x": 16, "z": 22, "length": 4, "axis": "x" },
+    { "type": "sandbag", "x": 16, "z": 34, "length": 6, "axis": "z" },
+    { "type": "rubble", "x": 20, "z": 40, "radius": 3 },
+    { "type": "crate", "x": 15, "z": 45 },
+    { "type": "crate", "x": 24, "z": 50 },
+    { "type": "barrier", "x": 17, "z": 54, "length": 4, "axis": "z" },
+    { "type": "rubble", "x": 22, "z": 60, "radius": 2 },
+    { "type": "sandbag", "x": 16, "z": 12, "length": 3, "axis": "x" }
+  ]
+}

@@ -1,0 +1,11 @@
+# Phase 1 - reconnaissance: what did worldgen actually produce near spawn?
+locate structure tarkovscav:city_small
+tarkovscav city test
+execute in minecraft:overworld run locate biome minecraft:plains
+execute in minecraft:overworld run locate biome minecraft:desert
+execute in minecraft:overworld run locate biome minecraft:taiga
+gamerule doDaylightCycle
+gamerule doMobSpawning
+gamerule keepInventory
+difficulty
+time query daytime

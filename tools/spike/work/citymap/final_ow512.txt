@@ -1,0 +1,7 @@
+minecraft:mineshaft @ chunk -10,-8
+minecraft:mineshaft @ chunk -10,8
+minecraft:mineshaft @ chunk -9,10
+minecraft:mineshaft @ chunk 9,-10
+minecraft:village_plains @ chunk -10,-9
+tarkovscav:city_a @ chunk 5,3
+tarkovscav:city_small @ chunk 1,0

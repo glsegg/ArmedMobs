@@ -1,0 +1,6 @@
+# Fresh-world arena + the mod's own fight harness, to separate "environment" from "villager".
+forceload query 1000 1000
+fill 990 99 990 1040 99 1040 minecraft:stone
+fill 990 100 990 1040 106 1040 minecraft:air
+gamerule doMobSpawning false
+tarkovscav test watch 20 16 1000 100 1000

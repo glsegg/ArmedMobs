@@ -1,0 +1,23 @@
+﻿seed
+tarkovscav city list
+execute positioned 64 70 144 run tarkovscav city test
+execute positioned 224 70 144 run tarkovscav city test
+execute positioned 384 70 144 run tarkovscav city test
+execute positioned 544 70 144 run tarkovscav city test
+execute positioned 64 96 344 run tarkovscav city test
+execute positioned 224 70 344 run tarkovscav city test
+execute positioned 400 80 360 run tarkovscav city test
+execute if block 40 63 120 minecraft:coarse_dirt run seed
+execute if block 87 63 167 minecraft:coarse_dirt run seed
+execute if block 200 63 120 minecraft:coarse_dirt run seed
+execute if block 520 63 120 minecraft:coarse_dirt run seed
+execute if block 40 89 320 minecraft:coarse_dirt run seed
+execute if block 200 63 320 minecraft:coarse_dirt run seed
+execute if block 384 65 336 minecraft:coarse_dirt run seed
+execute if block 431 65 383 minecraft:coarse_dirt run seed
+execute if block -31 62 -47 minecraft:coarse_dirt run seed
+execute positioned 0 100 0 run locate structure tarkovscav:city_small
+gamerule doMobSpawning
+gamerule keepInventory
+time query daytime
+difficulty

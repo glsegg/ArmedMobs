@@ -1,0 +1,65 @@
+{
+  "_comment": [
+    "city_a - 56 x 30 x 56: TWO OFFICE BLOCKS AND A LOW WAREHOUSE AROUND A COURTYARD. No street cross:",
+    "the whole plot is paved, and the fighting space is the courtyard ringed by the four buildings.",
+    "Different footprint, different floor counts and a different interior layout from city_small; see",
+    "tools/city-layout.json for the schema."
+  ],
+  "name": "city_a",
+  "palette": "modern_scav",
+  "size": [56, 30, 56],
+  "platform": { "margin": 8, "clear_to": 150, "stone_below": 8 },
+  "plot_block": "walk",
+  "interior_variation": 1,
+  "extra_openings_per_wall": 2,
+  "floor_holes_per_floor": 2,
+  "spawners_per_building": 2,
+  "chests_per_building": 3,
+  "buildings": [
+    {
+      "name": "office_west", "x": 2, "z": 2, "w": 20, "d": 14,
+      "floors": 5, "floor_height": 4,
+      "wall": "wall_slate", "accent": "accent", "floor_block": "floor", "roof_block": "roof",
+      "window_block": "window_band", "door_side": "south", "roof_access": true, "ruined": false,
+      "rooms_x": 3, "rooms_z": 2, "min_cover_per_floor": 7, "min_furniture_per_floor": 9,
+      "min_doors": 2, "seed": 1111
+    },
+    {
+      "name": "office_east", "x": 40, "z": 2, "w": 14, "d": 20,
+      "floors": 4, "floor_height": 4,
+      "wall": "wall_brick", "accent": "frame", "floor_block": "floor", "roof_block": "roof",
+      "window_block": "window", "door_side": "west", "roof_access": true, "ruined": false,
+      "rooms_x": 2, "rooms_z": 3, "min_cover_per_floor": 6, "min_furniture_per_floor": 8,
+      "min_doors": 2, "seed": 2222
+    },
+    {
+      "name": "warehouse", "x": 2, "z": 38, "w": 22, "d": 16,
+      "floors": 2, "floor_height": 5,
+      "wall": "wall_concrete", "accent": "accent", "floor_block": "floor_inner",
+      "roof_block": "roof", "window_block": "window_band", "door_side": "north",
+      "roof_access": true, "ruined": true,
+      "rooms_x": 2, "rooms_z": 2, "min_cover_per_floor": 8, "min_furniture_per_floor": 6,
+      "min_doors": 2, "seed": 3333
+    },
+    {
+      "name": "annex", "x": 40, "z": 38, "w": 12, "d": 12,
+      "floors": 3, "floor_height": 4,
+      "wall": "wall_smooth", "accent": "frame", "floor_block": "floor", "roof_block": "roof",
+      "window_block": "window", "door_side": "west", "roof_access": true, "ruined": false,
+      "rooms_x": 1, "rooms_z": 1, "min_cover_per_floor": 4, "min_furniture_per_floor": 6,
+      "min_doors": 1, "seed": 4444
+    }
+  ],
+  "cover": [
+    { "type": "sandbag", "x": 26, "z": 20, "length": 5, "axis": "z" },
+    { "type": "sandbag", "x": 30, "z": 32, "length": 5, "axis": "x" },
+    { "type": "low_wall", "x": 24, "z": 26, "length": 7, "axis": "x" },
+    { "type": "barrier", "x": 34, "z": 24, "length": 5, "axis": "z" },
+    { "type": "car", "x": 25, "z": 23 },
+    { "type": "car", "x": 33, "z": 34 },
+    { "type": "rubble", "x": 29, "z": 29, "radius": 4 },
+    { "type": "crate", "x": 24, "z": 35 },
+    { "type": "crate", "x": 36, "z": 21 },
+    { "type": "sandbag", "x": 20, "z": 34, "length": 4, "axis": "x" }
+  ]
+}

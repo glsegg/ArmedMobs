@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "INI",
+    "IGI",
+    " I "
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "N": { "item": "minecraft:iron_block" },
+    "G": { "item": "minecraft:glass" }
+  },
+  "result": {
+    "item": "tarkovscav:vant_shield",
+    "count": 1
+  }
+}

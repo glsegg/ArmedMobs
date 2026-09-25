@@ -1,0 +1,91 @@
+﻿structurePalette=67 block(s) from D:\deepseek\ArmedMobs\src\main\resources\data\tarkovscav\structures
+world=D:\deepseek\ArmedMobs\tools\spike\citysave\server\UrbanWasteland\dimensions\tarkovscav\urban_wasteland
+box=x[-240..271] z[-240..271] y[-64..319]  columns=262144
+
+=== 1. GENERATED STRUCTURES (from each chunk's structures.starts, by id) ===
+chunksRead=1024 chunksWithAStructureStart=46
+  tarkovscav:city_a x11
+  tarkovscav:city_b x2
+  tarkovscav:city_c x5
+  tarkovscav:city_district x2
+  tarkovscav:city_small x26
+  TOTAL structure starts in the sampled box = 46
+  wrote 46 start position(s) to D:\deepseek\ArmedMobs\tools\spike\work\citymap\runA_wasteland_starts.txt
+
+=== 2. SURFACE BLOCK HISTOGRAM (topmost non-air block per column) ===
+  minecraft:coarse_dirt        104638   39.92%
+  minecraft:deepslate_tiles     40703   15.53%
+  minecraft:gravel              33189   12.66%
+  minecraft:smooth_stone        29763   11.35%
+  minecraft:gray_concrete       18481    7.05%
+  minecraft:andesite            18363    7.00%
+  minecraft:cobblestone          8976    3.42%
+  minecraft:light_gray_concrete     1983    0.76%
+  minecraft:polished_andesite     1706    0.65%
+  minecraft:stone_brick_wall      476    0.18%
+  minecraft:black_concrete        414    0.16%
+  minecraft:cobblestone_wall      405    0.15%
+  minecraft:stone                 363    0.14%
+  minecraft:deepslate_bricks      354    0.14%
+  minecraft:tinted_glass          339    0.13%
+  minecraft:white_carpet          331    0.13%
+  minecraft:dead_bush             325    0.12%
+  minecraft:cobblestone_slab      303    0.12%
+  minecraft:iron_bars             210    0.08%
+  minecraft:stone_brick_stairs      176    0.07%
+  minecraft:ladder                150    0.06%
+  minecraft:barrel                 58    0.02%
+  minecraft:chain                  53    0.02%
+  minecraft:cracked_stone_bricks       53    0.02%
+  minecraft:end_rod                53    0.02%
+  minecraft:oak_fence              53    0.02%
+  minecraft:oak_stairs             53    0.02%
+  minecraft:polished_deepslate       53    0.02%
+  minecraft:brown_concrete         46    0.02%
+  minecraft:water                  34    0.01%
+  distinct surface blocks = 33
+
+=== 3. MAN-MADE vs WASTELAND SURFACE ===
+columns=262144 manMade(unique to a city palette)=96190 (36.69%) wastelandPalette=18410 (7.02%) both=147544 (56.28%) other=0 (0.00%)
+  (the 'both' column is the honest one: stone/andesite/gravel/coarse_dirt/cobblestone are terrain blocks AND foundation blocks, so they are not claimed as man-made)
+  man-made top: minecraft:barrel              58
+  man-made top: minecraft:black_concrete     414
+  man-made top: minecraft:brown_concrete      46
+  man-made top: minecraft:chain               53
+  man-made top: minecraft:chiseled_stone_bricks      10
+  man-made top: minecraft:cobblestone_slab     303
+  man-made top: minecraft:cobblestone_wall     405
+  man-made top: minecraft:cracked_stone_bricks      53
+  man-made top: minecraft:deepslate_bricks     354
+  man-made top: minecraft:deepslate_tiles   40703
+  man-made top: minecraft:end_rod             53
+  man-made top: minecraft:gray_concrete    18481
+  man-made top: minecraft:iron_bars          210
+  man-made top: minecraft:ladder             150
+  man-made top: minecraft:light_gray_concrete    1983
+  man-made top: minecraft:oak_stairs          53
+  man-made top: minecraft:polished_andesite    1706
+  man-made top: minecraft:polished_deepslate      53
+  man-made top: minecraft:smooth_stone     29763
+  man-made top: minecraft:stone_brick_stairs     176
+  man-made top: minecraft:stone_brick_wall     476
+  man-made top: minecraft:stripped_dark_oak_log      17
+  man-made top: minecraft:tinted_glass       339
+  man-made top: minecraft:white_carpet       331
+chunksWithStructure=46 of 1024 (4.49%)
+
+=== 4. RELIEF AND WATER (the noise-settings choices, measured) ===
+surfaceY min=18 max=147 mean=111.6 relief(max-min)=129
+waterColumns=0 (0.00%)
+surfaceY histogram (y=count, 1-block buckets, non-empty only):
+  18=2  19=1  40=1  41=1  68=7  69=7  70=5  71=8  
+  72=39  73=42  74=49  75=11  76=9  77=6  78=3  79=5  
+  80=8  81=4  82=8  83=15  84=25  85=26  86=42  87=45  
+  88=126  89=118  90=93  91=60  92=33  93=25  94=79  95=187  
+  96=285  97=678  98=847  99=1734  100=4540  101=6368  102=12205  103=12926  
+  104=11055  105=13914  106=16229  107=13982  108=23086  109=17089  110=19398  111=13159  
+  112=7962  113=8563  114=5082  115=2969  116=5000  117=6360  118=3909  119=4833  
+  120=2147  121=5824  122=4286  123=3919  124=3688  125=5368  126=2993  127=2888  
+  128=1696  129=2588  130=1902  131=1802  132=1002  133=889  134=1537  135=1594  
+  136=730  137=647  138=1008  139=457  140=62  141=684  142=586  143=128  
+  144=32  145=1  146=327  147=96  

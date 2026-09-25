@@ -1,0 +1,8 @@
+{
+  "structure": "gen_district",
+  "size": [48, 30, 32],
+  "buildings": [
+    { "id": "0:gen_a", "x": 1, "z": 1, "w": 16, "d": 16 },
+    { "id": "1:gen_b", "x": 31, "z": 1, "w": 16, "d": 16 }
+  ]
+}

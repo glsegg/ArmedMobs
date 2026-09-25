@@ -1,0 +1,142 @@
+{
+  "temperature": 0.9,
+  "downfall": 0.05,
+  "has_precipitation": false,
+  "effects": {
+    "sky_color": 10125913,
+    "fog_color": 13218958,
+    "water_color": 4877146,
+    "water_fog_color": 3029548,
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 6000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    }
+  },
+  "carvers": {
+    "air": [],
+    "liquid": []
+  },
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "tarkovscav:gravel_rubble",
+      "tarkovscav:coarse_dirt_patch",
+      "tarkovscav:debris_field",
+      "minecraft:patch_dead_bush"
+    ],
+    []
+  ],
+  "spawners": {
+    "monster": [
+      {
+        "type": "tarkovscav:scav",
+        "weight": 5,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      {
+        "type": "tarkovscav:gunner_pillager",
+        "weight": 2,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "tarkovscav:gunner_villager",
+        "weight": 2,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "tarkovscav:sniper_pillager",
+        "weight": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "tarkovscav:sniper_villager",
+        "weight": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "tarkovscav:usec_villager",
+        "weight": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "tarkovscav:bear_pillager",
+        "weight": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "tarkovscav:elite_villager",
+        "weight": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "tarkovscav:elite_pillager",
+        "weight": 1,
+        "minCount": 1,
+        "maxCount": 1
+      }
+    ],
+    "creature": [],
+    "ambient": [],
+    "axolotls": [],
+    "underground_water_creature": [],
+    "water_creature": [],
+    "water_ambient": [],
+    "misc": []
+  },
+  "spawn_costs": {
+    "tarkovscav:scav": {
+      "energy_budget": 0.12,
+      "charge": 0.7
+    },
+    "tarkovscav:gunner_pillager": {
+      "energy_budget": 0.12,
+      "charge": 0.7
+    },
+    "tarkovscav:gunner_villager": {
+      "energy_budget": 0.12,
+      "charge": 0.7
+    },
+    "tarkovscav:sniper_pillager": {
+      "energy_budget": 0.08,
+      "charge": 1.2
+    },
+    "tarkovscav:sniper_villager": {
+      "energy_budget": 0.08,
+      "charge": 1.2
+    },
+    "tarkovscav:usec_villager": {
+      "energy_budget": 0.08,
+      "charge": 1.2
+    },
+    "tarkovscav:bear_pillager": {
+      "energy_budget": 0.08,
+      "charge": 1.2
+    },
+    "tarkovscav:elite_villager": {
+      "energy_budget": 0.05,
+      "charge": 1.6
+    },
+    "tarkovscav:elite_pillager": {
+      "energy_budget": 0.05,
+      "charge": 1.6
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "_comment": "M4: the jigsaw DISTRICT's generator-side buildings. Run with: java -cp tools/spike/out CityStructureGen --pieces-only --foundation 5 tools/district-layout.json  -  it writes ONE structure NBT per building into src/main/resources/data/tarkovscav/structures/buildings/ and never touches the four shipped city templates. The look follows the M1 survey of the user's own hand-built district: light-grey / brown concrete walls, a terracotta wainscot on the ground floor, a torch, a bed, more cover per floor, a real door, and a 5-block footing.",
+  "name": "gen_district",
+  "ground_floor_look": true,
+  "palette": "modern_scav",
+  "size": [48, 30, 32],
+  "interior_variation": 1,
+  "extra_openings_per_wall": 2,
+  "floor_holes_per_floor": 2,
+  "spawners_per_building": 2,
+  "chests_per_building": 3,
+  "buildings": [
+    {
+      "name": "gen_a",
+      "x": 1, "z": 1, "w": 16, "d": 16,
+      "floors": 4, "floor_height": 4,
+      "wall": "wall_concrete_light", "accent": "frame",
+      "floor_block": "floor", "roof_block": "roof", "window_block": "window",
+      "door_side": "south", "roof_access": true, "ruined": false,
+      "rooms_x": 2, "rooms_z": 2,
+      "min_cover_per_floor": 7, "min_furniture_per_floor": 8, "min_doors": 2,
+      "seed": 9001
+    },
+    {
+      "name": "gen_b",
+      "x": 31, "z": 1, "w": 16, "d": 16,
+      "floors": 5, "floor_height": 4,
+      "wall": "wall_concrete_brown", "accent": "frame",
+      "floor_block": "floor_inner", "roof_block": "roof", "window_block": "window_band",
+      "door_side": "west", "roof_access": true, "ruined": false,
+      "rooms_x": 2, "rooms_z": 2,
+      "min_cover_per_floor": 7, "min_furniture_per_floor": 8, "min_doors": 2,
+      "seed": 9002
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+place template tarkovscav:city_small 40 63 120 bogus
+place template tarkovscav:city_small 40 63 120 none bogus
+place template tarkovscav:city_small

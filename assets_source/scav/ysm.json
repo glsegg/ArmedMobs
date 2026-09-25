@@ -1,0 +1,548 @@
+{
+  "spec": 2,
+  "metadata": {
+    "name": "Scav",
+    "tips": "在秩序混乱、无法无天，缺少重要物资和地盘的时期，所有法律条文都不过是一张废纸，第一批当上头目的都是心狠手辣的角色，道德或伦理对他们而言都是狗屁。他们三五成群，互相厮杀，按照黑吃黑的规矩生存着。昨日的平民，就是这样成为今天的 Scav。",
+    "license": {
+      "type": "All Rights Reserved",
+      "desc:": ""
+    },
+    "authors": [
+      {
+        "name": "哥斯拉",
+        "role": "模型",
+        "avatar": "avatar/gsl.png",
+        "contact": {
+          "Afdian": "https://afdian.com/a/6TGESILA",
+          "Bilibili": "https://space.bilibili.com/17798027"
+        },
+        "comment": "目前在做娘化 勿催"
+      },
+      {
+        "name": "雷切克",
+        "role": "动画/适配",
+        "avatar": "avatar/receke.png",
+        "contact": {
+          "Afdian": "https://afdian.com/a/Receke",
+          "Bilibili": "https://space.bilibili.com/33150006"
+        },
+        "comment": "动画师缚丝刘经理\n目前在做娘化 勿催"
+      }
+    ]
+  },
+  "properties": {
+    "height_scale": 0.7,
+    "width_scale": 0.7,
+    "extra_animation": {
+      "#自定义模型": "自定义模型",
+      "#舞蹈": "舞蹈",
+      "#动作": "动作",
+      "#战术动作": "战术动作",
+      "#语音": "语音",
+      "Drink": "喝水"
+    },
+    "extra_animation_classify": [
+      {
+        "id": "自定义模型",
+        "extra_animation": {
+          "#return": "§c返回按钮",
+          "1": "#变更服装",
+          "2": "#变更手持物品",
+          "#定位组配置": "§6定位组配置"
+        }
+      },
+      {
+        "id": "舞蹈",
+        "extra_animation": {
+          "#return": "返回按钮",
+          "extra6": "萝莉摇",
+          "extra18": "鹿乃子虎视眈眈",
+          "extra11": "催眠术",
+          "extra12": "星辉闪耀",
+          "extra13": "橙色正义",
+          "extra14": "互联网过度依存",
+          "extra20": "摇啊摇",
+          "extra10": "摇摇乐",
+          "extra15": "开车车",
+          "extra19": "致命公司摇",
+          "extra21": "快远离互联网",
+          "extra16": "dance",
+          "extra17": "alice didida",
+          "extra22": "谎言舞者",
+          "extra25": "速通"
+        }
+      },
+      {
+        "id": "动作",
+        "extra_animation": {
+          "#return": "返回按钮",
+          "extra1": "坐下_1",
+          "sit_2": "坐下_2",
+          "extra2": "鼓掌",
+          "extra3": "点头",
+          "extra4": "鬼脸",
+          "extra5": "胜利",
+          "extra7": "胡桃夹子站",
+          "extra9": "似了",
+          "hd_a_1": "§6敬礼",
+          "hd_a_2": "§6稍息",
+          "hd_a_3": "§6恭迎民主"
+        }
+      },
+      {
+        "id": "战术动作",
+        "extra_animation": {
+          "#return": "返回按钮",
+          "tac_a_1": "§c战术动作-§6前进",
+          "tac_a_2": "§c战术动作-§6过来",
+          "tac_a_3": "§c战术动作-§6等 停下",
+          "tac_a_4": "§c战术动作-§6找掩护",
+          "tac_a_5": "§c战术动作-§6你掩护我",
+          "tac_a_6": "§c战术动作-§6我掩护你",
+          "tac_a_7": "§c战术动作-§6我叼你妈的",
+          "tac_a_8": "§c战术动作-§6集合"
+        }
+      },
+      {
+        "id": "语音",
+        "extra_animation": {
+          "#return": "返回按钮",
+          "voice_set_1": "§6语音1",
+          "voice_set_2": "§6语音2",
+          "voice_set_3": "§6语音3",
+          "voice_set_4": "§6语音4",
+          "voice_set_5": "§6语音5",
+          "voice_set_6": "§6语音6",
+          "voice_set_7": "§6语音7",
+          "voice_set_8": "§6语音8",
+          "voice_set_9": "§6语音9",
+          "voice_set_10": "§6语音10",
+          "voice_set_11": "§6语音11",
+          "voice_set_12": "§6语音12",
+          "voice_set_13": "§6语音13"
+        }
+      },
+      {
+        "id": "定位组配置",
+        "extra_animation": {
+          "#return": "§c返回按钮",
+          "1": "#TaC主武器定位配置",
+          "2": "#TaC副武器定位配置",
+          "3": "#左手定位组配置",
+          "4": "#右手定位组配置"
+        }
+      }
+    ],
+    "extra_animation_buttons": [
+      {
+        "id": "变更服装",
+        "name": "变更服装",
+        "config_forms": [
+          {
+            "type": "range",
+            "title": "Size/大小: ",
+            "description": "改变玩家大小",
+            "value": "v.player_size",
+            "step": 0.05,
+            "min": 0.2,
+            "max": 5
+          },
+          {
+            "type": "checkbox",
+            "title": "穿戴胸挂",
+            "description": " 用来显示穿戴胸挂",
+            "value": "v.roaming.ChestRigt"
+          },
+          {
+            "type": "checkbox",
+            "title": "穿戴背包",
+            "description": " 用来显示穿戴背包",
+            "value": "v.roaming.BallisticVest"
+          },
+          {
+            "type": "checkbox",
+            "title": "烟开关",
+            "description": " 用来显示烟",
+            "value": "v.roaming.yan"
+          },
+          {
+            "type": "radio",
+            "title": "帽子",
+            "description": "切换帽子",
+            "value": "v.roaming.yanjing",
+            "labels": {
+              "无": "v.roaming.yanjing=0",
+              "防风镜": "v.roaming.yanjing=1",
+              "墨镜": "v.roaming.yanjing=2"
+            }
+          },
+          {
+            "type": "radio",
+            "title": "帽子",
+            "description": "切换帽子",
+            "value": "v.roaming.hat",
+            "labels": {
+              "无": "v.roaming.hat=0",
+              "贝雷帽": "v.roaming.hat=1",
+              "苏联毛帽": "v.roaming.hat=2",
+              "小毡帽": "v.roaming.hat=3"
+            }
+          }
+        ]
+      },
+      {
+        "id": "变更手持物品",
+        "name": "变更手持物品",
+        "config_forms": [
+          {
+            "type": "checkbox",
+            "title": "骨折板开关",
+            "description": " 用来显示骨折板",
+            "value": "v.roaming.Ban"
+          },
+          {
+            "type": "checkbox",
+            "title": "炼乳开关",
+            "description": " 用来显示炼乳",
+            "value": "v.roaming.Lianru"
+          },
+          {
+            "type": "checkbox",
+            "title": "灰熊包开关",
+            "description": " 用来显示灰熊包",
+            "value": "v.roaming.Bao"
+          },
+          {
+            "type": "checkbox",
+            "title": "桶装水开关",
+            "description": " 用来显示桶装水",
+            "value": "v.roaming.Spwt"
+          },
+          {
+            "type": "checkbox",
+            "title": "私酒开关",
+            "description": " 用来显示私酒",
+            "value": "v.roaming.jiu"
+          },
+          {
+            "type": "checkbox",
+            "title": "鹦鹉雕像开关",
+            "description": " 用来显示鹦鹉雕像",
+            "value": "v.roaming.Parrot"
+          },
+          {
+            "type": "checkbox",
+            "title": "卢布开关",
+            "description": " 用来显示卢布",
+            "value": "v.roaming.money"
+          }
+        ]
+      },
+      {
+        "id": "TaC主武器定位配置",
+        "name": "§6TaC主武器定位配置",
+        "config_forms": [
+          {
+            "type": "range",
+            "title": "§6背部枪械旋转_X",
+            "description": "用以调整背部枪械旋转",
+            "value": "v.roaming.RifleLocator_Rotation_X",
+            "step": 0.1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6背部枪械旋转_Y",
+            "description": "用以调整背部枪械旋转",
+            "value": "v.roaming.RifleLocator_Rotation_Y",
+            "step": 0.1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6背部枪械旋转_Z",
+            "description": "用以调整背部枪械旋转",
+            "value": "v.roaming.RifleLocator_Rotation_Z",
+            "step": 0.1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6背部枪械位置_X",
+            "description": "用以调整背部枪械位置",
+            "value": "v.roaming.RifleLocator_Position_X",
+            "step": 0.1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6背部枪械位置_Y",
+            "description": "用以调整背部枪械位置",
+            "value": "v.roaming.RifleLocator_Position_Y",
+            "step": 0.1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6背部枪械位置_Z",
+            "description": "用以调整背部枪械位置",
+            "value": "v.roaming.RifleLocator_Position_Z",
+            "step": 0.1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6背部枪械大小",
+            "description": "用以调整背部枪械大小",
+            "value": "v.roaming.RifleLocator_Scale",
+            "step": 0.05,
+            "min": 0,
+            "max": 5
+          }
+        ]
+      },
+      {
+        "id": "TaC副武器定位配置",
+        "name": "§6TaC副武器定位配置",
+        "config_forms": [
+          {
+            "type": "range",
+            "title": "§6腿部枪械旋转_X",
+            "description": "用以调整腿部枪械旋转",
+            "value": "v.roaming.PistolLocator_Rotation_X",
+            "step": 0.1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6腿部枪械旋转_Y",
+            "description": "用以调整腿部枪械旋转",
+            "value": "v.roaming.PistolLocator_Rotation_Y",
+            "step": 0.1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6腿部枪械旋转_Z",
+            "description": "用以调整腿部枪械旋转",
+            "value": "v.roaming.PistolLocator_Rotation_Z",
+            "step": 0.1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6腿部枪械位置_X",
+            "description": "用以调整腿部枪械位置",
+            "value": "v.roaming.PistolLocator_Position_X",
+            "step": 0.1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6腿部枪械位置_Y",
+            "description": "用以调整腿部枪械位置",
+            "value": "v.roaming.PistolLocator_Position_Y",
+            "step": 0.1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6腿部枪械位置_Z",
+            "description": "用以调整腿部枪械位置",
+            "value": "v.roaming.PistolLocator_Position_Z",
+            "step": 0.1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6腿部枪械大小",
+            "description": "用以调整腿部枪械大小",
+            "value": "v.roaming.PistolLocator_Scale",
+            "step": 0.05,
+            "min": 0,
+            "max": 5
+          }
+        ]
+      },
+      {
+        "id": "右手定位组配置",
+        "name": "§6右手定位组配置",
+        "config_forms": [
+          {
+            "type": "range",
+            "title": "§6物品旋转_X",
+            "description": "用以调整右手物品旋转",
+            "value": "v.roaming.RightHandLocator_Rotation_X",
+            "step": 1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6物品旋转_Y",
+            "description": "用以调整右手物品旋转",
+            "value": "v.roaming.RightHandLocator_Rotation_Y",
+            "step": 1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6物品旋转_Z",
+            "description": "用以调整右手物品旋转",
+            "value": "v.roaming.RightHandLocator_Rotation_Z",
+            "step": 1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6物品位置_X",
+            "description": "用以调整右手物品位置",
+            "value": "v.roaming.RightHandLocator_Position_X",
+            "step": 1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6物品位置_Y",
+            "description": "用以调整右手物品位置",
+            "value": "v.roaming.RightHandLocator_Position_Y",
+            "step": 1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6物品位置_Z",
+            "description": "用以调整右手物品位置",
+            "value": "v.roaming.RightHandLocator_Position_Z",
+            "step": 1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6物品大小",
+            "description": "用以调整左手物品大小",
+            "value": "v.roaming.RightHandLocator_Scale",
+            "step": 0.05,
+            "min": 0,
+            "max": 5
+          }
+        ]
+      },
+      {
+        "id": "左手定位组配置",
+        "name": "§6左手定位组配置",
+        "config_forms": [
+          {
+            "type": "range",
+            "title": "§6物品旋转_X",
+            "description": "用以调整左手物品旋转",
+            "value": "v.LeftHandLocator_Rotation_X",
+            "step": 1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6物品旋转_Y",
+            "description": "用以调整左手物品旋转",
+            "value": "v.LeftHandLocator_Rotation_Y",
+            "step": 1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6物品旋转_Z",
+            "description": "用以调整左手物品旋转",
+            "value": "v.LeftHandLocator_Rotation_Z",
+            "step": 1,
+            "min": 0,
+            "max": 360
+          },
+          {
+            "type": "range",
+            "title": "§6物品位置_X",
+            "description": "用以调整左手物品位置",
+            "value": "v.LeftHandLocator_Position_X",
+            "step": 0.1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6物品位置_Y",
+            "description": "用以调整左手物品位置",
+            "value": "v.LeftHandLocator_Position_Y",
+            "step": 0.1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6物品位置_Z",
+            "description": "用以调整左手物品位置",
+            "value": "v.LeftHandLocator_Position_Z",
+            "step": 0.1,
+            "min": -10,
+            "max": 10
+          },
+          {
+            "type": "range",
+            "title": "§6物品大小",
+            "description": "用以调整左手物品大小",
+            "value": "v.LeftHandLocator_Scale",
+            "step": 0.05,
+            "min": 0,
+            "max": 5
+          }
+        ]
+      }
+    ],
+    "preview_animation": "idle",
+    "default_texture": "texture",
+    "free": false,
+    "render_layers_first": false
+  },
+  "files": {
+    "player": {
+      "model": {
+        "main": "models/main.json",
+        "arm": "models/arm.json"
+      },
+      "animation": {
+        "main": "animations/main.animation.json",
+        "arm": "animations/arm.animation.json",
+        "extra": "animations/extra.animation.json",
+        "tac": "animations/tac.animation.json",
+        "carryon": "animations/carryon.animation.json",
+        "swem": "animations/swem.animation.json",
+        "parcool": "animations/parcool.animation.json"
+      },
+      "animation_controllers": [
+        "controller/controller_scav.json"
+      ],
+      "texture": [
+        {
+          "uv": "textures/texture.png"
+        }
+      ]
+    }
+  }
+}

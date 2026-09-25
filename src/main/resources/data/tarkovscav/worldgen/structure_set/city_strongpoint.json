@@ -1,0 +1,17 @@
+{
+  "structures": [
+    {
+      "structure": "tarkovscav:city_strongpoint",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "tarkovscav:wasteland_spread",
+    "spacing": 192,
+    "separation": 48,
+    "dense_spacing": 192,
+    "dense_separation": 48,
+    "frequency": 0.25,
+    "salt": 20261001
+  }
+}

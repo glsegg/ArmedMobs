@@ -1,0 +1,728 @@
+{
+  "voice.contact_1": {
+    "subtitle": "subtitles.tarkovscav.voice.contact_1",
+    "sounds": [
+      "tarkovscav:voice/contact_1"
+    ]
+  },
+  "voice.contact_2": {
+    "subtitle": "subtitles.tarkovscav.voice.contact_2",
+    "sounds": [
+      "tarkovscav:voice/contact_2"
+    ]
+  },
+  "voice.contact_3": {
+    "subtitle": "subtitles.tarkovscav.voice.contact_3",
+    "sounds": [
+      "tarkovscav:voice/contact_3"
+    ]
+  },
+  "voice.contact_4": {
+    "subtitle": "subtitles.tarkovscav.voice.contact_4",
+    "sounds": [
+      "tarkovscav:voice/contact_4"
+    ]
+  },
+  "voice.contact_5": {
+    "subtitle": "subtitles.tarkovscav.voice.contact_5",
+    "sounds": [
+      "tarkovscav:voice/contact_5"
+    ]
+  },
+  "voice.taunt_1": {
+    "subtitle": "subtitles.tarkovscav.voice.taunt_1",
+    "sounds": [
+      "tarkovscav:voice/taunt_1"
+    ]
+  },
+  "voice.taunt_2": {
+    "subtitle": "subtitles.tarkovscav.voice.taunt_2",
+    "sounds": [
+      "tarkovscav:voice/taunt_2"
+    ]
+  },
+  "voice.taunt_3": {
+    "subtitle": "subtitles.tarkovscav.voice.taunt_3",
+    "sounds": [
+      "tarkovscav:voice/taunt_3"
+    ]
+  },
+  "voice.grenade_1": {
+    "subtitle": "subtitles.tarkovscav.voice.grenade_1",
+    "sounds": [
+      "tarkovscav:voice/grenade_1"
+    ]
+  },
+  "voice.grenade_2": {
+    "subtitle": "subtitles.tarkovscav.voice.grenade_2",
+    "sounds": [
+      "tarkovscav:voice/grenade_2"
+    ]
+  },
+  "voice.grenade_3": {
+    "subtitle": "subtitles.tarkovscav.voice.grenade_3",
+    "sounds": [
+      "tarkovscav:voice/grenade_3"
+    ]
+  },
+  "voice.grenade_4": {
+    "subtitle": "subtitles.tarkovscav.voice.grenade_4",
+    "sounds": [
+      "tarkovscav:voice/grenade_4"
+    ]
+  },
+  "voice.grenade_5": {
+    "subtitle": "subtitles.tarkovscav.voice.grenade_5",
+    "sounds": [
+      "tarkovscav:voice/grenade_5"
+    ]
+  },
+  "voice.mark_1": {
+    "subtitle": "subtitles.tarkovscav.voice.mark_1",
+    "sounds": [
+      "tarkovscav:voice/mark_1"
+    ]
+  },
+  "voice.death_1": {
+    "subtitle": "subtitles.tarkovscav.voice.death_1",
+    "sounds": [
+      "tarkovscav:voice/death_1"
+    ]
+  },
+  "voice.death_2": {
+    "subtitle": "subtitles.tarkovscav.voice.death_2",
+    "sounds": [
+      "tarkovscav:voice/death_2"
+    ]
+  },
+  "voice.death_3": {
+    "subtitle": "subtitles.tarkovscav.voice.death_3",
+    "sounds": [
+      "tarkovscav:voice/death_3"
+    ]
+  },
+  "voice.death_4": {
+    "subtitle": "subtitles.tarkovscav.voice.death_4",
+    "sounds": [
+      "tarkovscav:voice/death_4"
+    ]
+  },
+  "voice.contact_6": {
+    "subtitle": "subtitles.tarkovscav.voice.contact_6",
+    "sounds": [
+      "tarkovscav:voice/contact_6"
+    ]
+  },
+  "voice.contact_7": {
+    "subtitle": "subtitles.tarkovscav.voice.contact_7",
+    "sounds": [
+      "tarkovscav:voice/contact_7"
+    ]
+  },
+  "voice.contact_8": {
+    "subtitle": "subtitles.tarkovscav.voice.contact_8",
+    "sounds": [
+      "tarkovscav:voice/contact_8"
+    ]
+  },
+  "voice.contact_9": {
+    "subtitle": "subtitles.tarkovscav.voice.contact_9",
+    "sounds": [
+      "tarkovscav:voice/contact_9"
+    ]
+  },
+  "voice.contact_10": {
+    "subtitle": "subtitles.tarkovscav.voice.contact_10",
+    "sounds": [
+      "tarkovscav:voice/contact_10"
+    ]
+  },
+  "voice.contact_11": {
+    "subtitle": "subtitles.tarkovscav.voice.contact_11",
+    "sounds": [
+      "tarkovscav:voice/contact_11"
+    ]
+  },
+  "voice.idle_1": {
+    "subtitle": "subtitles.tarkovscav.voice.idle_1",
+    "sounds": [
+      "tarkovscav:voice/idle_1"
+    ]
+  },
+  "voice.idle_2": {
+    "subtitle": "subtitles.tarkovscav.voice.idle_2",
+    "sounds": [
+      "tarkovscav:voice/idle_2"
+    ]
+  },
+  "voice.idle_3": {
+    "subtitle": "subtitles.tarkovscav.voice.idle_3",
+    "sounds": [
+      "tarkovscav:voice/idle_3"
+    ]
+  },
+  "voice.idle_4": {
+    "subtitle": "subtitles.tarkovscav.voice.idle_4",
+    "sounds": [
+      "tarkovscav:voice/idle_4"
+    ]
+  },
+  "voice.idle_5": {
+    "subtitle": "subtitles.tarkovscav.voice.idle_5",
+    "sounds": [
+      "tarkovscav:voice/idle_5"
+    ]
+  },
+  "voice.idle_6": {
+    "subtitle": "subtitles.tarkovscav.voice.idle_6",
+    "sounds": [
+      "tarkovscav:voice/idle_6"
+    ]
+  },
+  "voice.usec_contact_1": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_contact_1",
+    "sounds": [
+      "tarkovscav:voice/usec_contact_1"
+    ]
+  },
+  "voice.usec_contact_2": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_contact_2",
+    "sounds": [
+      "tarkovscav:voice/usec_contact_2"
+    ]
+  },
+  "voice.usec_contact_3": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_contact_3",
+    "sounds": [
+      "tarkovscav:voice/usec_contact_3"
+    ]
+  },
+  "voice.usec_contact_4": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_contact_4",
+    "sounds": [
+      "tarkovscav:voice/usec_contact_4"
+    ]
+  },
+  "voice.usec_contact_5": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_contact_5",
+    "sounds": [
+      "tarkovscav:voice/usec_contact_5"
+    ]
+  },
+  "voice.usec_chatter_1": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_chatter_1",
+    "sounds": [
+      "tarkovscav:voice/usec_chatter_1"
+    ]
+  },
+  "voice.usec_chatter_2": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_chatter_2",
+    "sounds": [
+      "tarkovscav:voice/usec_chatter_2"
+    ]
+  },
+  "voice.usec_chatter_3": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_chatter_3",
+    "sounds": [
+      "tarkovscav:voice/usec_chatter_3"
+    ]
+  },
+  "voice.usec_chatter_4": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_chatter_4",
+    "sounds": [
+      "tarkovscav:voice/usec_chatter_4"
+    ]
+  },
+  "voice.usec_chatter_5": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_chatter_5",
+    "sounds": [
+      "tarkovscav:voice/usec_chatter_5"
+    ]
+  },
+  "voice.usec_idle_1": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_idle_1",
+    "sounds": [
+      "tarkovscav:voice/usec_idle_1"
+    ]
+  },
+  "voice.usec_idle_2": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_idle_2",
+    "sounds": [
+      "tarkovscav:voice/usec_idle_2"
+    ]
+  },
+  "voice.usec_idle_3": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_idle_3",
+    "sounds": [
+      "tarkovscav:voice/usec_idle_3"
+    ]
+  },
+  "voice.usec_idle_4": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_idle_4",
+    "sounds": [
+      "tarkovscav:voice/usec_idle_4"
+    ]
+  },
+  "voice.usec_idle_5": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_idle_5",
+    "sounds": [
+      "tarkovscav:voice/usec_idle_5"
+    ]
+  },
+  "voice.usec_grenade_1": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_grenade_1",
+    "sounds": [
+      "tarkovscav:voice/usec_grenade_1"
+    ]
+  },
+  "voice.usec_grenade_2": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_grenade_2",
+    "sounds": [
+      "tarkovscav:voice/usec_grenade_2"
+    ]
+  },
+  "voice.usec_grenade_3": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_grenade_3",
+    "sounds": [
+      "tarkovscav:voice/usec_grenade_3"
+    ]
+  },
+  "voice.usec_grenade_4": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_grenade_4",
+    "sounds": [
+      "tarkovscav:voice/usec_grenade_4"
+    ]
+  },
+  "voice.usec_grenade_5": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_grenade_5",
+    "sounds": [
+      "tarkovscav:voice/usec_grenade_5"
+    ]
+  },
+  "voice.usec_mark_1": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_mark_1",
+    "sounds": [
+      "tarkovscav:voice/usec_mark_1"
+    ]
+  },
+  "voice.usec_mark_2": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_mark_2",
+    "sounds": [
+      "tarkovscav:voice/usec_mark_2"
+    ]
+  },
+  "voice.usec_mark_3": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_mark_3",
+    "sounds": [
+      "tarkovscav:voice/usec_mark_3"
+    ]
+  },
+  "voice.usec_mark_4": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_mark_4",
+    "sounds": [
+      "tarkovscav:voice/usec_mark_4"
+    ]
+  },
+  "voice.usec_mark_5": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_mark_5",
+    "sounds": [
+      "tarkovscav:voice/usec_mark_5"
+    ]
+  },
+  "voice.usec_death_1": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_death_1",
+    "sounds": [
+      "tarkovscav:voice/usec_death_1"
+    ]
+  },
+  "voice.usec_death_2": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_death_2",
+    "sounds": [
+      "tarkovscav:voice/usec_death_2"
+    ]
+  },
+  "voice.usec_death_3": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_death_3",
+    "sounds": [
+      "tarkovscav:voice/usec_death_3"
+    ]
+  },
+  "voice.usec_death_4": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_death_4",
+    "sounds": [
+      "tarkovscav:voice/usec_death_4"
+    ]
+  },
+  "voice.usec_death_5": {
+    "subtitle": "subtitles.tarkovscav.voice.usec_death_5",
+    "sounds": [
+      "tarkovscav:voice/usec_death_5"
+    ]
+  },
+  "voice.bear_contact_1": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_contact_1",
+    "sounds": [
+      "tarkovscav:voice/bear_contact_1"
+    ]
+  },
+  "voice.bear_contact_2": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_contact_2",
+    "sounds": [
+      "tarkovscav:voice/bear_contact_2"
+    ]
+  },
+  "voice.bear_contact_3": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_contact_3",
+    "sounds": [
+      "tarkovscav:voice/bear_contact_3"
+    ]
+  },
+  "voice.bear_contact_4": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_contact_4",
+    "sounds": [
+      "tarkovscav:voice/bear_contact_4"
+    ]
+  },
+  "voice.bear_contact_5": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_contact_5",
+    "sounds": [
+      "tarkovscav:voice/bear_contact_5"
+    ]
+  },
+  "voice.bear_chatter_1": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_chatter_1",
+    "sounds": [
+      "tarkovscav:voice/bear_chatter_1"
+    ]
+  },
+  "voice.bear_chatter_2": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_chatter_2",
+    "sounds": [
+      "tarkovscav:voice/bear_chatter_2"
+    ]
+  },
+  "voice.bear_chatter_3": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_chatter_3",
+    "sounds": [
+      "tarkovscav:voice/bear_chatter_3"
+    ]
+  },
+  "voice.bear_chatter_4": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_chatter_4",
+    "sounds": [
+      "tarkovscav:voice/bear_chatter_4"
+    ]
+  },
+  "voice.bear_chatter_5": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_chatter_5",
+    "sounds": [
+      "tarkovscav:voice/bear_chatter_5"
+    ]
+  },
+  "voice.bear_idle_1": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_idle_1",
+    "sounds": [
+      "tarkovscav:voice/bear_idle_1"
+    ]
+  },
+  "voice.bear_idle_2": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_idle_2",
+    "sounds": [
+      "tarkovscav:voice/bear_idle_2"
+    ]
+  },
+  "voice.bear_idle_3": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_idle_3",
+    "sounds": [
+      "tarkovscav:voice/bear_idle_3"
+    ]
+  },
+  "voice.bear_idle_4": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_idle_4",
+    "sounds": [
+      "tarkovscav:voice/bear_idle_4"
+    ]
+  },
+  "voice.bear_idle_5": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_idle_5",
+    "sounds": [
+      "tarkovscav:voice/bear_idle_5"
+    ]
+  },
+  "voice.bear_grenade_1": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_grenade_1",
+    "sounds": [
+      "tarkovscav:voice/bear_grenade_1"
+    ]
+  },
+  "voice.bear_grenade_2": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_grenade_2",
+    "sounds": [
+      "tarkovscav:voice/bear_grenade_2"
+    ]
+  },
+  "voice.bear_grenade_3": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_grenade_3",
+    "sounds": [
+      "tarkovscav:voice/bear_grenade_3"
+    ]
+  },
+  "voice.bear_grenade_4": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_grenade_4",
+    "sounds": [
+      "tarkovscav:voice/bear_grenade_4"
+    ]
+  },
+  "voice.bear_grenade_5": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_grenade_5",
+    "sounds": [
+      "tarkovscav:voice/bear_grenade_5"
+    ]
+  },
+  "voice.bear_mark_1": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_mark_1",
+    "sounds": [
+      "tarkovscav:voice/bear_mark_1"
+    ]
+  },
+  "voice.bear_mark_2": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_mark_2",
+    "sounds": [
+      "tarkovscav:voice/bear_mark_2"
+    ]
+  },
+  "voice.bear_mark_3": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_mark_3",
+    "sounds": [
+      "tarkovscav:voice/bear_mark_3"
+    ]
+  },
+  "voice.bear_mark_4": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_mark_4",
+    "sounds": [
+      "tarkovscav:voice/bear_mark_4"
+    ]
+  },
+  "voice.bear_mark_5": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_mark_5",
+    "sounds": [
+      "tarkovscav:voice/bear_mark_5"
+    ]
+  },
+  "voice.bear_death_1": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_death_1",
+    "sounds": [
+      "tarkovscav:voice/bear_death_1"
+    ]
+  },
+  "voice.bear_death_2": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_death_2",
+    "sounds": [
+      "tarkovscav:voice/bear_death_2"
+    ]
+  },
+  "voice.bear_death_3": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_death_3",
+    "sounds": [
+      "tarkovscav:voice/bear_death_3"
+    ]
+  },
+  "voice.bear_death_4": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_death_4",
+    "sounds": [
+      "tarkovscav:voice/bear_death_4"
+    ]
+  },
+  "voice.bear_death_5": {
+    "subtitle": "subtitles.tarkovscav.voice.bear_death_5",
+    "sounds": [
+      "tarkovscav:voice/bear_death_5"
+    ]
+  },
+  "voice.elite_contact_1": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_contact_1",
+    "sounds": [
+      "tarkovscav:voice/elite_contact_1"
+    ]
+  },
+  "voice.elite_contact_2": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_contact_2",
+    "sounds": [
+      "tarkovscav:voice/elite_contact_2"
+    ]
+  },
+  "voice.elite_contact_3": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_contact_3",
+    "sounds": [
+      "tarkovscav:voice/elite_contact_3"
+    ]
+  },
+  "voice.elite_contact_4": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_contact_4",
+    "sounds": [
+      "tarkovscav:voice/elite_contact_4"
+    ]
+  },
+  "voice.elite_contact_5": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_contact_5",
+    "sounds": [
+      "tarkovscav:voice/elite_contact_5"
+    ]
+  },
+  "voice.elite_chatter_1": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_chatter_1",
+    "sounds": [
+      "tarkovscav:voice/elite_chatter_1"
+    ]
+  },
+  "voice.elite_chatter_2": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_chatter_2",
+    "sounds": [
+      "tarkovscav:voice/elite_chatter_2"
+    ]
+  },
+  "voice.elite_chatter_3": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_chatter_3",
+    "sounds": [
+      "tarkovscav:voice/elite_chatter_3"
+    ]
+  },
+  "voice.elite_chatter_4": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_chatter_4",
+    "sounds": [
+      "tarkovscav:voice/elite_chatter_4"
+    ]
+  },
+  "voice.elite_chatter_5": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_chatter_5",
+    "sounds": [
+      "tarkovscav:voice/elite_chatter_5"
+    ]
+  },
+  "voice.elite_idle_1": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_idle_1",
+    "sounds": [
+      "tarkovscav:voice/elite_idle_1"
+    ]
+  },
+  "voice.elite_idle_2": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_idle_2",
+    "sounds": [
+      "tarkovscav:voice/elite_idle_2"
+    ]
+  },
+  "voice.elite_idle_3": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_idle_3",
+    "sounds": [
+      "tarkovscav:voice/elite_idle_3"
+    ]
+  },
+  "voice.elite_idle_4": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_idle_4",
+    "sounds": [
+      "tarkovscav:voice/elite_idle_4"
+    ]
+  },
+  "voice.elite_idle_5": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_idle_5",
+    "sounds": [
+      "tarkovscav:voice/elite_idle_5"
+    ]
+  },
+  "voice.elite_grenade_1": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_grenade_1",
+    "sounds": [
+      "tarkovscav:voice/elite_grenade_1"
+    ]
+  },
+  "voice.elite_grenade_2": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_grenade_2",
+    "sounds": [
+      "tarkovscav:voice/elite_grenade_2"
+    ]
+  },
+  "voice.elite_grenade_3": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_grenade_3",
+    "sounds": [
+      "tarkovscav:voice/elite_grenade_3"
+    ]
+  },
+  "voice.elite_grenade_4": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_grenade_4",
+    "sounds": [
+      "tarkovscav:voice/elite_grenade_4"
+    ]
+  },
+  "voice.elite_grenade_5": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_grenade_5",
+    "sounds": [
+      "tarkovscav:voice/elite_grenade_5"
+    ]
+  },
+  "voice.elite_mark_1": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_mark_1",
+    "sounds": [
+      "tarkovscav:voice/elite_mark_1"
+    ]
+  },
+  "voice.elite_mark_2": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_mark_2",
+    "sounds": [
+      "tarkovscav:voice/elite_mark_2"
+    ]
+  },
+  "voice.elite_mark_3": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_mark_3",
+    "sounds": [
+      "tarkovscav:voice/elite_mark_3"
+    ]
+  },
+  "voice.elite_mark_4": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_mark_4",
+    "sounds": [
+      "tarkovscav:voice/elite_mark_4"
+    ]
+  },
+  "voice.elite_mark_5": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_mark_5",
+    "sounds": [
+      "tarkovscav:voice/elite_mark_5"
+    ]
+  },
+  "voice.elite_death_1": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_death_1",
+    "sounds": [
+      "tarkovscav:voice/elite_death_1"
+    ]
+  },
+  "voice.elite_death_2": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_death_2",
+    "sounds": [
+      "tarkovscav:voice/elite_death_2"
+    ]
+  },
+  "voice.elite_death_3": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_death_3",
+    "sounds": [
+      "tarkovscav:voice/elite_death_3"
+    ]
+  },
+  "voice.elite_death_4": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_death_4",
+    "sounds": [
+      "tarkovscav:voice/elite_death_4"
+    ]
+  },
+  "voice.elite_death_5": {
+    "subtitle": "subtitles.tarkovscav.voice.elite_death_5",
+    "sounds": [
+      "tarkovscav:voice/elite_death_5"
+    ]
+  },
+  "grenade_land": {
+    "subtitle": "subtitles.tarkovscav.grenade_land",
+    "sounds": [
+      "tarkovscav:effect/grenade_land"
+    ]
+  }
+}

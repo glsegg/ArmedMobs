@@ -1,0 +1,9 @@
+{
+  "structure": "city_b",
+  "size": [64, 34, 40],
+  "buildings": [
+    { "id": "0:slab_office", "x": 2, "z": 2, "w": 40, "d": 16 },
+    { "id": "1:annex_east", "x": 46, "z": 2, "w": 16, "d": 14 },
+    { "id": "2:low_block", "x": 2, "z": 24, "w": 20, "d": 12 }
+  ]
+}

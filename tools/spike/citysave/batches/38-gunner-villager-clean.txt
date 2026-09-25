@@ -1,0 +1,11 @@
+# Gunner villager, clean scenario: no iron golem in the arena (it hunts Enemy/Monster mobs and was
+# killing the pillager before the villager could), and the plain villager put behind the gunner one.
+kill @e[type=tarkovscav:gunner_villager]
+kill @e[type=tarkovscav:scav]
+kill @e[type=minecraft:zombie]
+kill @e[type=minecraft:pillager]
+kill @e[type=minecraft:villager]
+kill @e[type=minecraft:iron_golem]
+summon tarkovscav:gunner_villager 1000 100 1000
+summon minecraft:pillager 1000 100 1012
+summon minecraft:villager 1000 100 992

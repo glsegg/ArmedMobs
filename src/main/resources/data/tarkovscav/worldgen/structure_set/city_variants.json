@@ -1,0 +1,25 @@
+{
+  "structures": [
+    {
+      "structure": "tarkovscav:city_a",
+      "weight": 1
+    },
+    {
+      "structure": "tarkovscav:city_b",
+      "weight": 1
+    },
+    {
+      "structure": "tarkovscav:city_c",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "tarkovscav:wasteland_spread",
+    "spacing": 32,
+    "separation": 12,
+    "dense_spacing": 5,
+    "dense_separation": 2,
+    "frequency": 0.25,
+    "salt": 987654321
+  }
+}

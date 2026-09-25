@@ -1,0 +1,13 @@
+﻿# sanity: does `execute if block` see this area at all?
+execute if block 0 -60 0 minecraft:bedrock run say SANITY-bedrock
+execute if block 16 77 0 minecraft:coarse_dirt run say SANITY-accidental-lot-coarse-dirt
+execute if block 16 76 0 minecraft:coarse_dirt run say SANITY-accidental-lot-minus1
+execute if block 16 78 0 minecraft:air run say SANITY-accidental-above-is-air
+execute if block 64 77 47 minecraft:coarse_dirt run say SANITY-accidental-farcorner
+execute if block -43 50 -59 minecraft:air run say NAT-boxmin-is-air
+execute if block -20 84 -35 minecraft:grass_block run say NAT-surface-grass
+execute if block -20 62 -35 minecraft:stone run say NAT-y62-stone
+execute if block -20 62 -35 minecraft:deepslate run say NAT-y62-deepslate
+execute if block -20 62 -35 minecraft:water run say NAT-y62-water
+execute if block -20 40 -35 minecraft:stone run say NAT-y40-stone
+tarkovscav city test

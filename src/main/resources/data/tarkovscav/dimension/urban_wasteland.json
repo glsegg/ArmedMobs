@@ -1,0 +1,11 @@
+{
+  "type": "tarkovscav:urban_wasteland",
+  "generator": {
+    "type": "minecraft:noise",
+    "biome_source": {
+      "type": "minecraft:fixed",
+      "biome": "tarkovscav:urban_wasteland"
+    },
+    "settings": "tarkovscav:urban_wasteland"
+  }
+}

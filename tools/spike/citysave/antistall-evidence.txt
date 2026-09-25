@@ -1,0 +1,94 @@
+# 需求 A（掠夺者卡住）+ B（掩体速度 1.5 倍）验收证据
+
+## 1. 交付物
+
+| 文件 | sha256 | size | entries |
+| --- | --- | --- | --- |
+| `build/libs/tarkovscav-0.1.0-all.jar`（= 已安装 = `mods/` 副本） | `b39a87512f2b13cc18b8755404ba53d5e4a9677fc69a01cb4d40f0be5bf3f7d6` | 1255894 | 77 |
+| 旧版（用户此前安装，round 4） | `986ec76f93723bca14071eec937c38805ea7fe2684b17724bd3191a2750a0510` | 1246265 | 74 |
+
+## 2. 卡死成因（旧版字节码：`javap -c` 旧 jar 的 `GunBrain.class`）
+
+旧版 `tickFire` 的 `transition` 调用点 = **2**：
+
+* 丢失视线 → `decide()`
+* 一个弹匣打完（`shotsInBurst >= burstTarget`，只有 `SUCCESS` 才会累加）→ `REPOSITION`
+
+TaCZ 若对每一发都返回 `NETWORK_FAIL` / `UNKNOWN_FAIL` / `FORGE_EVENT_CANCEL`，`FIRE` **没有任何出口**：
+`watchdogTicks` 在 `handleShootResult` 的 `default` 分支被写入 20、在 `tick()` 里自减，但旧版全项目
+没有任何一处读取它来决定状态转移。同一个 tick 内 `tickFire` 反复执行
+`getNavigation().stop()` + `setSprinting(false)`（旧版 `GunBrain.java:521`/`523`），于是掠夺者
+完全静止、持续瞄准、零输出 —— 即用户报告的「卡在原地不动，等着挨打」。
+
+`FIRE` 之外还有第二处同类缺陷：旧版 `tickReload` 把 `watchdogTicks = 200` 写在
+`if (reloading) { ... return; }` 的提前返回之前，而唯一的超时判定 `if (this.stateTicks > 200)`
+位于该返回**之后**，因此只要 TaCZ 一直报告「正在换弹」就永远不可达（旧版 616 / 652 行）。
+
+## 3. 修复后字节码（新版 `javap -c`）
+
+新版 `tickFire` 的 `transition` 调用点 = **4**，并新增：
+
+```
+String "[gunai] {} FIRE produced no accepted shot for {} ticks (last TaCZ result {}, {} stall(s)) - giving up on this position"
+org/slf4j/Logger.warn:(Ljava/lang/String;[Ljava/lang/Object;)V
+Field com/tacz/guns/api/entity/ShootResult.FORGE_EVENT_CANCEL   (注入分支，仅 /tarkovscav test stall 使用)
+```
+
+* `watchdogTicks` 只在 `stateTicks == 1`（一个点射的第一 tick）装备一次，每次 `SUCCESS` 续期；
+  `default` 分支**故意不续期**（续期正是旧版让它变成无效计数的原因，也会掩盖到期）。
+* 到期后 `WARN` + `REPOSITION`；连续三次或 `giveUpTicks / 2` 之后 `RETREAT`（该状态必发 `moveTo`）。
+* `tickReload` 的 `reloadWaitTicks > Config.RELOAD_STALL_TICKS` 位于 `if (reloading)` 分支**内部**。
+
+## 4. 运行时数值
+
+独立 Forge 1.20.1-47.4.3 专用服务器（TaCZ 1.1.7 + GeckoLib 4.8.2，51x51 石台 arena，`logGunAi = true`），
+全部经 RCON 下发：
+
+| 命令 | 结果 | 数值 |
+| --- | --- | --- |
+| 最终交付 jar `b39a8751`：`/tarkovscav test watch 20 16` | **PASS** | `moved=1.65 shots=18 dummyDamage=106.09 stalls=0` |
+| 最终交付 jar `b39a8751`：`/tarkovscav test stall 20 16` | **PASS** | `escapes=2 moved=2.09`，WARN 间隔 100 tick，第 3 次在 +1s |
+| `/tarkovscav test watch 20 16` | **PASS** | `moved=6.09 shots=37 dummyDamage=261.38 stalls=0` |
+| `/tarkovscav test watch 20 16` | **PASS** | `moved=1.32 shots=41 dummyDamage=361.08 stalls=0` |
+| `/tarkovscav test stall 20 16` | **PASS** | `escapes=2 moved=2.30`，两条 WARN 间隔恰好 100 tick |
+| `/tarkovscav test watch 30 16` @ `coverSeekSpeedModifier=1.0` | **PASS** | `moved=3.11 shots=19` |
+| `/tarkovscav test watch 30 16` @ `coverSeekSpeedModifier=1.5` | **PASS** | `moved=5.54 shots=4`（同场景同窗口 **1.78 倍**） |
+
+## 5. 未回归：同一次健康对局（40 秒窗口）的状态机统计
+
+```
+AIM -> FIRE x63 ; FIRE -> REPOSITION x60 ; REPOSITION -> AIM x59
+FIRE -> RELOAD x3 ; RELOAD -> AIM x3 ; ALERT -> AIM x1
+shoot -> SUCCESS x180 ; shoot -> COOL_DOWN x119
+```
+
+该会话唯一的 WARN 是 GeckoLib 版本提示；`escapes=0`，说明看门狗在正常战斗中从不触发。
+（平坦 arena 上目标始终可见，因此本局没有触发 SUPPRESS；压制逻辑本次未改动，其上限仍是 `suppressTicks`。）
+
+## 6. 源码不变式 gate
+
+`node tools/selftest_antistall.js` → exit 0，包含：
+
+* `tickFire` 内 `watchdogTicks` **只被赋值一次**（`stateTicks == 1`），到期读取后必 `transition`；
+* 换弹上限位于提前返回**之前**；
+* `moveTo` 速度表：`1.15D` x2（ADVANCE）、`coverSeekSpeed()` x3（三处掩体动作）、`1.25D` x1（无掩体时逃逸），
+  出现表外速度即失败；
+* `setSprinting` 标志不变（true x1 / false x4）；
+* 三个新配置键的默认值 + README 文档；
+* 类文件级校验：vanilla `Pillager` / `AbstractIllager` / `Raider` 均**不引用** `MeleeAttackGoal`
+  （`Pillager`/`Raider` 同时引用 `HoldGroundAttackGoal`/`RangedCrossbowAttackGoal` 以证明读的是正确的类）。
+
+## 7. 复现方式
+
+```powershell
+# 装 jar -> 起服 -> 圈一块净空 + 强制加载 -> 跑 gate（tools/spike/antistall.ps1 是同样的流程）
+powershell -File tools/spike/citysave/start-server.ps1
+powershell -File tools/spike/citysave/rc.ps1 "forceload add 990 990 1040 1040"
+powershell -File tools/spike/citysave/rc.ps1 "fill 990 199 990 1040 199 1040 minecraft:stone"
+powershell -File tools/spike/citysave/rc.ps1 "tarkovscav test watch 20 16 1000 200 1000"
+powershell -File tools/spike/citysave/rc.ps1 "tarkovscav test stall 20 16 1000 200 1000"
+# 掩体速度：改 config/tarkovscav-common.toml 的 tactics.coverSeekSpeedModifier 后重启服务器，重复 watch
+node tools/spike/speed_from_log.js <导出的 [gunai] 遥测行>
+```
+
+原始日志：`tools/spike/citysave/antistall-run.log`；遥测样本：`speed-1.0.txt` / `speed-1.5.txt`。

@@ -1,0 +1,63 @@
+# ---- forceload everything the fix touches (vanilla caps one /forceload at 256 chunks, and a
+#      55x23-chunk area is 805, so it has to be split or the whole command is rejected) ----
+forceload add 32 64 159 431
+forceload add 160 64 287 431
+forceload add 288 64 415 431
+forceload add 416 64 543 431
+forceload add 544 64 591 431
+# ---- erase misplaced copy city2 cw90 at (153,63,120) ----
+fill 153 55 120 200 62 167 minecraft:stone
+fill 153 63 120 200 63 167 minecraft:smooth_stone
+fill 153 64 120 200 77 167 minecraft:air
+fill 153 78 120 200 91 167 minecraft:air
+fill 153 92 120 200 105 167 minecraft:air
+fill 153 106 120 200 119 167 minecraft:air
+fill 153 120 120 200 133 167 minecraft:air
+fill 153 134 120 200 147 167 minecraft:air
+fill 153 148 120 200 150 167 minecraft:air
+# ---- erase misplaced copy city3 180 at (313,63,73) ----
+fill 313 55 73 360 62 120 minecraft:stone
+fill 313 63 73 360 63 120 minecraft:smooth_stone
+fill 313 64 73 360 77 120 minecraft:air
+fill 313 78 73 360 91 120 minecraft:air
+fill 313 92 73 360 105 120 minecraft:air
+fill 313 106 73 360 119 120 minecraft:air
+fill 313 120 73 360 133 120 minecraft:air
+fill 313 134 73 360 147 120 minecraft:air
+fill 313 148 73 360 150 120 minecraft:air
+# ---- erase misplaced copy city4 ccw90 at (520,63,73) ----
+fill 520 55 73 567 62 120 minecraft:stone
+fill 520 63 73 567 63 120 minecraft:smooth_stone
+fill 520 64 73 567 77 120 minecraft:air
+fill 520 78 73 567 91 120 minecraft:air
+fill 520 92 73 567 105 120 minecraft:air
+fill 520 106 73 567 119 120 minecraft:air
+fill 520 120 73 567 133 120 minecraft:air
+fill 520 134 73 567 147 120 minecraft:air
+fill 520 148 73 567 150 120 minecraft:air
+# ---- erase misplaced copy city5 mirror_lr at (40,89,273) ----
+fill 40 81 273 87 88 320 minecraft:stone
+fill 40 89 273 87 89 320 minecraft:smooth_stone
+fill 40 90 273 87 103 320 minecraft:air
+fill 40 104 273 87 117 320 minecraft:air
+fill 40 118 273 87 131 320 minecraft:air
+fill 40 132 273 87 145 320 minecraft:air
+fill 40 146 273 87 150 320 minecraft:air
+# ---- erase misplaced copy city6 mirror_fb_cw90 at (153,63,273) ----
+fill 153 55 273 200 62 320 minecraft:stone
+fill 153 63 273 200 63 320 minecraft:smooth_stone
+fill 153 64 273 200 77 320 minecraft:air
+fill 153 78 273 200 91 320 minecraft:air
+fill 153 92 273 200 105 320 minecraft:air
+fill 153 106 273 200 119 320 minecraft:air
+fill 153 120 273 200 133 320 minecraft:air
+fill 153 134 273 200 147 320 minecraft:air
+fill 153 148 273 200 150 320 minecraft:air
+# ---- re-place with the anchor corrected so each lot lands on its pad ----
+place template tarkovscav:city_small 247 63 120 clockwise_90
+place template tarkovscav:city_small 407 63 167 180
+place template tarkovscav:city_small 520 63 167 counterclockwise_90
+place template tarkovscav:city_small 40 89 367 none left_right
+place template tarkovscav:city_small 247 63 367 clockwise_90 front_back
+# ---- leave no forced chunks behind in the delivered save ----
+forceload remove all

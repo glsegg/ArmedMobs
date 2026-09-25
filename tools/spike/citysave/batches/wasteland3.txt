@@ -1,0 +1,7 @@
+# Urban-wasteland RCON proof, batch 3: the forceload boxes are in place and the area is writable.
+execute in tarkovscav:urban_wasteland run forceload query
+execute in tarkovscav:urban_wasteland run setblock 0 300 0 minecraft:stone_bricks
+execute in tarkovscav:urban_wasteland run setblock 0 300 0 minecraft:air
+execute in tarkovscav:urban_wasteland run fill 4 302 4 8 302 8 minecraft:stone_bricks
+execute in tarkovscav:urban_wasteland run fill 4 302 4 8 302 8 minecraft:air
+execute in tarkovscav:urban_wasteland run time query daytime

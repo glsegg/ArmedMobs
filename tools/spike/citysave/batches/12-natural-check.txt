@@ -1,0 +1,12 @@
+﻿# is there ANOTHER natural city_small near the city7 pad? (coarse_dirt patch at y=62, x401..448, z400..410)
+execute positioned 420 70 405 run tarkovscav city test
+execute positioned 415 70 380 run tarkovscav city test
+execute positioned 430 70 410 run tarkovscav city test
+# sanity: the /place template copies have no worldgen StructureStart, so these must say NOT inside
+execute positioned 64 90 144 run tarkovscav city test
+execute positioned 384 90 344 run tarkovscav city test
+# the natural instance at spawn
+execute positioned -7 70 -23 run tarkovscav city test
+# locate from a controlled position
+execute positioned 0 100 0 run locate structure tarkovscav:city_small
+execute positioned 420 100 405 run locate structure tarkovscav:city_small

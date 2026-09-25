@@ -1,0 +1,3 @@
+execute if entity @e[type=tarkovscav:scav]
+data get entity @e[type=tarkovscav:scav,limit=1] Pos
+data get entity @e[type=tarkovscav:scav,limit=1] PersistenceRequired

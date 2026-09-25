@@ -1,0 +1,10 @@
+{
+  "structure": "city_small",
+  "size": [48, 26, 48],
+  "buildings": [
+    { "id": "0:north_west", "x": 1, "z": 1, "w": 16, "d": 16 },
+    { "id": "1:north_east", "x": 31, "z": 1, "w": 16, "d": 16 },
+    { "id": "2:south_west", "x": 1, "z": 31, "w": 16, "d": 16 },
+    { "id": "3:south_east", "x": 31, "z": 31, "w": 16, "d": 16 }
+  ]
+}

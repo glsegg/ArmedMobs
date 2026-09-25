@@ -1,0 +1,6 @@
+# Run B (control): the four city structure sets are plain minecraft:random_spread again, so this measures
+# the overworld's own placement with NO custom placement involved.
+execute in minecraft:overworld run forceload add -240 -240 15 15
+execute in minecraft:overworld run forceload add 16 -240 271 15
+execute in minecraft:overworld run forceload add -240 16 15 271
+execute in minecraft:overworld run forceload add 16 16 271 271

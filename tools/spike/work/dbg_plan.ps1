@@ -1,0 +1,12 @@
+$ErrorActionPreference = 'Stop'
+$planPath = 'D:\deepseek\ArmedMobs\tools\spike\work\voice_plan.json'
+Write-Host ("exists=" + (Test-Path $planPath))
+$raw = Get-Content $planPath -Raw
+Write-Host ("rawLength=" + $raw.Length)
+$plan = $raw | ConvertFrom-Json
+Write-Host ("planType=" + $plan.GetType().FullName)
+Write-Host ("poolCount=" + $plan.pools.Count)
+Write-Host ("firstPool=" + $plan.pools[0].pool)
+Write-Host ("candidates=" + $plan.pools[0].candidates.Count)
+Write-Host ("minSeconds=" + $plan.minSeconds)
+Write-Host ("keys=" + (($plan | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name) -join ','))

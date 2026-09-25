@@ -1,0 +1,8 @@
+# State of the gunner villager scenario.
+data get entity @e[type=tarkovscav:gunner_villager,limit=1] Pos
+data get entity @e[type=tarkovscav:gunner_villager,limit=1] Health
+data get entity @e[type=tarkovscav:gunner_villager,limit=1] VillagerData
+data get entity @e[type=minecraft:pillager,limit=1] Health
+data get entity @e[type=minecraft:villager,limit=1] Health
+data get entity @e[type=minecraft:iron_golem,limit=1] Health
+execute positioned 1000 100 1000 run tarkovscav debug

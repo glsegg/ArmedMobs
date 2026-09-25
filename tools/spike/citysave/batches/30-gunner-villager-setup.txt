@@ -1,0 +1,10 @@
+# Gunner villager runtime scenario: one friendly gun unit, a pillager to fight, a plain villager and
+# an iron golem to prove who is NOT a target.
+kill @e[type=tarkovscav:gunner_villager]
+kill @e[type=minecraft:villager]
+kill @e[type=minecraft:iron_golem]
+kill @e[type=minecraft:pillager]
+summon tarkovscav:gunner_villager 1000 100 1000
+summon minecraft:pillager 1000 100 1012
+summon minecraft:villager 1002 100 1006
+summon minecraft:iron_golem 1006 100 1000

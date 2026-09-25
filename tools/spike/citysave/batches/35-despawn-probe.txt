@@ -1,0 +1,5 @@
+# Is the despawn the vanilla far-away despawn (i.e. is a player connected)?
+list
+kill @e[type=tarkovscav:scav]
+summon tarkovscav:scav 1000 100 1000
+summon tarkovscav:scav 1006 100 1000 {PersistenceRequired:1b}

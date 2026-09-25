@@ -1,0 +1,13 @@
+# Tight probe: how many seconds does a persisted scav survive in this world?
+kill @e[type=tarkovscav:scav]
+summon tarkovscav:scav 1000 100 1000 {PersistenceRequired:1b}
+execute if entity @e[type=tarkovscav:scav]
+execute if entity @e[type=tarkovscav:scav]
+execute if entity @e[type=tarkovscav:scav]
+execute if entity @e[type=tarkovscav:scav]
+execute if entity @e[type=tarkovscav:scav]
+execute if entity @e[type=tarkovscav:scav]
+execute if entity @e[type=tarkovscav:scav]
+execute if entity @e[type=tarkovscav:scav]
+data get entity @e[type=tarkovscav:scav,limit=1] PersistenceRequired
+tarkovscav debug

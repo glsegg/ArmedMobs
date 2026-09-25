@@ -1,0 +1,207 @@
+Armed Mobs（武装暴徒）0.1.0  —— 测试版安装说明
+================================================
+
+【文件】
+  armedmobs-0.1.0-all.jar
+  sha256 = 95c33d9b153f753882b77e0ea29f71e7344c7ab0cbd2999196d19749f3f3e13b
+  大小   = 4,105,343 字节
+  （显示名是 Armed Mobs，但内部 mod id 仍是 tarkovscav —— 老存档/结构/配置照常可用；
+    /armedmobs 与 /tarkovscav 是同一个指令树的两个名字。）
+
+【运行环境（缺一不可）】
+  1) Minecraft 1.20.1 + Forge 47.x（47.3.0 以上即可）
+  2) TaCZ（Timeless and Classics Zero）>= 1.1.7
+     *** 本模组不打包 TaCZ ***，请自行安装，并至少装一个 TaCZ 枪包；
+         没有 TaCZ 时游戏会在启动阶段直接报"缺少依赖"，这是有意的。
+  3) GeckoLib：已内嵌 4.8.4，无需另装；若你已经装了 4.8.2 以上也能正常共存。
+
+【安装】
+  把 jar 放进 mods/ 目录（客户端与服务端都要放）。
+  服务器：TaCZ 也需要在服务端安装；首次进世界后建议执行
+      /armedmobs city add 城市名 200
+  来圈出"城市区域"——本模组的武装单位只会在这个区域里生成。
+
+【本次更新（累计）】
+  -11) **18 栋楼的大型据点 + 掩体成线 + 城区刷率下调**（2026-10-01）：
+      * 新增结构 `tarkovscav:city_strongpoint`：**18 栋楼（6×3 网格，138×34×66）**，当成一个大据点。
+        生成器现在会保证**每层楼与屋顶都有 ≥3 条"可用低掩体线"**（≥3 格连续、上方通透、旁边能站人），
+        街道上另有 87 处掩体（含 10 个路口的沙袋+矮墙）。四个出厂预设 `city_small/a/b/c` 的 NBT
+        **逐字节未变**（门禁钉住 sha256），所以你世界里已经放好的城区一个方块都没动。
+      * 世界生成：`structure_set/city_strongpoint.json` 用 `spacing 192 / separation 48`（据点 138 宽，
+        spacing 必须 ≥ 138，否则两个据点会叠）。新生成的区块里会出现；也可以手动
+        `/place structure tarkovscav:city_strongpoint`，或用 `/locate structure tarkovscav:city_strongpoint` 找。
+      * **降刷率**：自然生成权重 `12,6,4,3,2,2,2,1,1`（33）→ `5,2,2,1,1,1,1,1,1`（15）；
+        `spawn.cityRegionPadding` 默认值 `24` → `4`（每个城区可判定面积 −52.7%）。
+        说清楚口径：MC 的刷怪权重是**同类别内的相对份额**，等比调小只降低"本模组 vs 原版怪"的占比；
+        **真正线性的是 `cityRegionPadding`**。
+        ⚠️ **Forge 不会覆盖已存在的配置**：你实例里那份 `config/tarkovscav-common.toml` 仍是旧值，
+        要生效请自己把它改成 `cityRegionPadding = 4`（改完 `/armedmobs client reload`，部分需重启）。
+      * 顺带：`tools/selftest_strongpoint.js` 是新的门禁（直接用 NBT 解析器算掩体线/门/梯子/室内物件，
+        并钉住四个预设的 sha256）；调查与地图见 `docs/城市战城区调研.md` 与 `docs/maps/`。
+  -10) **改名 Armed Mobs + 一份可直接贴 wiki 的指令/配置表**（2026-09-25）：
+      * 显示名改为 Armed Mobs（中文仍是"武装暴徒"），产物改名 `armedmobs-0.1.0-all.jar`；
+        **内部 mod id 仍然是 `tarkovscav`** —— 存档、结构、tag、`config/tarkovscav-common.toml` 全都不变，
+        老存档直接能用。装新版时请**删掉旧的 `tarkovscav-0.1.0-all.jar`**（同一个 modId 不能有两份 live jar，
+        否则 Forge 会拒绝启动）。
+      * 新增指令根 `/armedmobs`，与 `/tarkovscav` 是**同一棵树的两个名字**（两处注册的是同一份 tree，
+        不是复制品），提示文案也改成 `/armedmobs`；两种写法完全等价，旧习惯不用改。
+      * 包内新增 `指令与配置参考.md` 与排版好的 **`指令与配置参考.docx`**（Word：封面 + 自动目录 +
+        页码 + 三线表式表格）：每条指令（参数、范围、示例）、每个配置键（出厂默认值 + 推荐范围）、
+        四档 AI 的行为数值表，以及第三方内容接口（实体 tag、自定义 `tarkovscav/city/*.nbt` 城区、
+        语音包 `<family>_<category>`、枪池与 TaCZ 配件）。两份同源，由 `tools/selftest_wiki_doc.js`
+        与 `tools/selftest_docx.js` 对着源码核对（少一条指令或一个配置键即报红）；
+        改了 md 之后跑 `node tools/make_reference_docx.js` 即可重新生成 Word 版。
+      * 顺带修正一批**纯文字**的文档漂移（不改任何行为）：`cityStructureIds` / `pistolClipTypes` 的默认值、
+        `foundationDepth` 其实在 `[spawn]` 段（不是 `[city]`）、`modelLayering` 的默认值、
+        `gunnerVillagerGunRotation` 注释里遗留的历史值、`spawn` 报错提示里漏掉的 `sniper_pillager`。
+  -9) **火力纪律 + 受伤反应**（2026-09-25，`README §5ab`）：解决"面对出了掩体的敌人只会点射、打不死，
+     挨打也不躲"。
+     * **暴露判定**：眼睛和脚都有视线、且距离在交战范围内才算"暴露"（低墙/栅栏/单格台阶挡住其中一项就不算）。
+     * **部队 / 优质**：目标暴露时 `exposedBurstShots = -1`（**打空弹匣或打死为止**）、
+       `exposedBurstCooldownTicks = 0`（**梭间零停顿、不再换位**）、`warmupShotsWhenExposed = 0`（**取消首发散布**）。
+     * **暴徒 / 狙击手保持不变**（六个键全是"哨兵"= 走原值；狙击手仍是单发守点）。
+     * **受伤反应**：部队/优质撤退阈值提到 0.5/0.55 血、中弹触发概率 0.8/0.85，并新增
+       `retreatHoldTicks`（60~80 = 躲进掩体后至少待 3~4 秒）；**撤退途中再中枪不会把它勾回空地**，
+       重新开火是从掩体**探头**（REPOSITION→peekSpot）而不是走回空地。
+     * 排查提示：`/armedmobs debug` 现在会打印 `exposed=` 与 `retreatHold=`。
+     * 顺带修正：`[tiers.<枪种>] burstShots = -1` 现在真的解码成"当前弹匣发数"（旧代码硬写 30），
+       空弹匣也直接进换弹而不是先停顿+换位。
+  -8) **AI 智力分档 + 小队协同**（2026-09-25，新 `[ai]` 段）：
+     * **暴徒档**（武装暴徒 / 武装暴徒·掠夺者 / 武装村民）：发现你之后**愣 0.6~1.2 秒**才开枪、精度 ×0.8、
+       **很少主动找掩体**、基本直线走来、不会压制。
+     * **狙击手档**（狙击手掠夺者 / 狙击手村民）：**站桩守点不推进**、只挑**有遮挡/略高**的射击位、
+       命中把握不够就**不开枪**（门槛 0.5，约 48 格外才拒射；最迟 3 个窗口必开一枪防自锁）、被接近或挨打会换点。
+     * **部队档**（USEC村民 / BEAR掠夺者）：反应快、**中距离掩体推进**（小步、少暴露）、**压制更久更密**、参与协同。
+     * **优质档**（优质村民 / 优质掠夺者）：反应最快、**贴到约 60% 射程**才开火、长步/短冲刺推进、参与协同。
+     * **协同四件**（部队 + 优质）：集火同一目标 / 交替掩护推进（角色轮换）/ 两侧包抄 / 掩体不重叠（占位有主、到期释放）。
+     * 配置：`[ai] enabled`（总开关，false = 回到只有全局 `[tactics]` 的旧行为）、`[ai.scav|sniper|troop|elite]`
+       四档各自的旋钮（都是**乘在**原全局键上的系数，你调过的 `[tactics]` 数值仍然有效）、`[ai.coordination]` 十二个键。
+       README §5aa 里有**"把四档都调回暴徒水平"**的配方（想安静点就照它填）。改完 `/armedmobs client reload` 即生效。
+       （新键会由 Forge 自动补进你现有的 toml，不需要删配置。）
+  -7) 所有武装单位**会开门、也会关门**（2026-09-25）：新增 `gun/DoorBehavior`，九个单位（暴徒/掠夺者/村民/
+     狙击手/部队/优质）在交战状态下都会推开木门通过，并在通过后**把门关上**（播放原版关门声）。
+     安全规则：门洞里站着任何活体（包括它自己）就绝不关；铁门/金门这类打不开的门一律不碰；
+     单位还顶着门时只重置计时器，从构造上杜绝"开关开关"循环。
+     新 `[ai]` 段三个键：`closeDoorsBehind`(true) / `doorCloseDelayTicks`(40) / `doorCloseAllyRadius`(2.0)。
+     （顺带修正一个此前的误解：`GunUser#allowDoors()` 只是**放宽寻路器**，原版里真正推门的是 Goal，
+     而只有 Vindicator 注册了它 —— 所以在这次改动之前，九个单位**交战中都开不了门**，不只是不会关。）
+  -6) 手雷不再被掩体吃掉（2026-09-25）：以前是**直线投掷**（`direction = 目标 - 自己`，没有仰角），
+     15~20 格外中间一堵矮墙/围栏就把它截住。现在按 vanilla 的真实物理（重力 0.03/tick、阻力 0.99）
+     逐步模拟弹道，扫若干仰角取"落点最接近目标**且途中不撞方块**"的那条弧；并且
+     **"预测落点"与"实际投掷"共用同一个求解器**（原先是两份各算各的）。
+     对着满高墙**不扔、不消耗手雷**（日志：`held the throw: arc blocked by cover at (x,y,z)`），
+     对着矮墙会吊射过去（1 格墙实测余量 0.17 格；2~3 格墙判为不可扔）。
+     新增 4 个键：`mobGrenadeArcSamples`(13) / `mobGrenadeRequireClearArc`(true) /
+     `mobGrenadeMaxLaunchPitchDegrees`(45) / `mobGrenadeRetryCooldownTicks`(40)。
+     注意：投掷散布改成 0（否则"预测的弧"和"实际扔的弧"又会分叉），近距离（6~9 格）默认不再扔雷。
+  -5) **发布基线 = 用户 2026-09-25 认可的外观**（出厂默认改了五个值，新玩家开全新配置看到的就是这一版）：
+     * `client.renderScale` 0.7 → **0.77**
+     * `gunnerVillagerAimArmPitch` 0 → **-57**（= 绝对 -100°，他确认的瞄准臂姿）
+     * `gunnerVillagerGunRotation` [-40,0,0] → **[5,0,0]**
+     * `gunnerVillagerGunOffset` [0,0.06,0] → **[0,0.06,-0.09]**
+     * `gunnerVillagerIdleGunRotation` [-47,0,0] → **[-2,0,0]**
+     对应倾角：瞄准 **-185** / 闲置 **-130** / 换弹与撤退 **-128**。`client villagerpose reset` 的
+     回退字面量、README 的姿势表与闸门数字已同步（老值不会再被"reset"带回来）。
+  -4) 手雷喊话补充 + 冷却拆分（2026-09-25）：
+     * 共享手雷语音池 2 条 → **5 条**（新增 grenade_3/4/5）。这三条来自你给的 B 站视频
+       《【俄中英三语字幕】逃离塔科夫SCAV语音翻译》BV1eyZeBYEnn 的 4:36–4:43 / 8:20–8:24 / 8:28.5–8:30.5，
+       已按现有两条的实测响度对齐（-17.1/-17.1/-17.6 dB，峰值不削波）。**仅供本地私用。**
+       该池正是 武装暴徒 / 武装村民 / 武装暴徒掠夺者 三者共用。
+     * 手雷冷却拆成两个：voice.grenadeCooldownTicks（反应，200）与新键
+       voice.grenadeShoutCooldownTicks（扔雷者自己的喊话，40）。原来共用一个计时器，
+       混战里"有雷落在我旁边"会把"我扔的这颗"的喊话吃掉 —— 拆开后连续扔雷每次都会喊。
+  -3) 武装暴徒"重合面"修复（20 → 0）：头和背包、右小臂那几个位置在某些角度会变成别的材质/发黑，
+     根因是**两个不同骨骼的面几乎在同一个平面**（深度缓冲只能按像素和角度挑赢家）。修法是
+     **把小方块沿轴挪 0.03 单位**（= 0.0019 格，肉眼不可见；只改 origin，不动尺寸/UV），
+     从此不再有两个面抢同一个深度。复扫：共面对 20 → **0**，看穿面四姿势仍全 0。
+     注意：**不要**用 client.modelRenderType = "zOffset" 治这个——它是斜率相关的深度偏移，
+     会让层间深度在某些角度整体翻转，整只暴徒会变成一堆乱块（实测踩过，已记进 README 坑列表）。
+  -2) 武装暴徒的 10 个"看穿面"修复：这个 rig 用"UV 指到贴图 alpha=0"来隐藏多余面，
+     落在外壳上的就变成看穿面（头和背包那 10 个面）。已把它们重指到不透明的相邻面，
+     复扫 rest/hold/aim/walk 四个姿势 holes=0。另：某些角度"显示别的材质/发黑"是
+     面重合导致的 z-fighting（不是 UV 问题），用 client.modelRenderType = "zOffset"
+     加深度偏移压掉，已写进实例配置。
+     四档手臂角（瞄准/闲置/换弹/撤退）统一成"相对原版抱臂的偏移量"：0 = 原版村民的位置，
+     负 = 在原版基础上往上抬；枪的位置也按档分了 delta（命令里的 idleX/idleY/idleZ 等）。
+  -1) 村民闲置手臂 = 原版村民位置：原版网格把"抱臂"烤在 xRot = -0.75 rad（约 -43°），
+     而模型以前往这个部件写的是**绝对角度**，所以 0 会把手臂压平进身体（"闲置时手平放在身侧、和身体穿模"）。
+     现在模型在构造时把烘焙值抓下来，闲置档写的是"烘焙值 + gunnerVillagerHoldArmPitch"，
+     空手村民也恢复成烘焙值。**hold = 0 就是完完全全的原版村民手臂**，负值才是在原版基础上往上抬。
+     因为枪锚在手臂上：闲置枪角随之从 -90 改为 -47（正好抵消手臂恢复的那 43°），枪口朝向不变。
+  0) 城区世界生成（新）：把存档 city1 的 4 栋楼逐栋提取成独立结构件，再拼成一片"城区"。
+     自然生成：新结构 tarkovscav:city_district（不替换地形 terrain_adaptation=none，
+     每栋楼自带 5 格向下延伸地基），只出现在还没生成的区块里，用
+     /locate structure tarkovscav:city_district 找。
+     现场验货：/armedmobs city district [seed] [grid] —— 用同一批结构件在你脚下摆一片城区
+     （默认 3×3 街面 48×48），种子会打印、可复现。提取的件里刷怪笼/箱子/军械台/火已剥掉，
+     保留床/门/梯/火把/terracotta 墙裙等内装。
+     生成器产的新楼（浅灰/棕混凝土外墙、terracotta 墙裙、火把、床、每层掩体更多）也已进
+     同一个城区池子混搭；提取件的地基是烘死的 5 格，生成器那批由 [spawn] foundationDepth 决定。
+  1) 姿势调参：/armedmobs client villagerpose 现在四档手臂角都能在线调
+     —— 闲置 hold= / 瞄准 aim= / 换弹 reload= / 撤退 hunker=，
+     枪的角度另有 base(pitch/yaw/roll) + 每档 delta(idlepitch/reloadPitch/hunkerPitch 等)，
+     位置用 forward/back/left/right/up/down 或 x/y/z；全部即时生效并写回 toml；
+     reset 恢复出厂。另修掉"台子上放手雷时刷的那句自相矛盾的 [rack] unsupported item"日志。
+  1) 铁傀儡：减免 80% 枪械伤害，并且有 30% 概率"跳弹"
+     - 跳弹成立时那一发伤害归零，弹丸被弹开，带金属声和火花；
+     - 只对 TaCZ 的子弹伤害生效（用 TaCZ 自己的伤害类型标签 #tacz:bullets 判定），
+       近战/爆炸/摔落/火焰/手雷完全不受影响；箭矢默认不参与；
+     - 配置 [ricochet] 段：enabled / gunDamageMultiplier(0.2) / chance(0.3) /
+       maxBouncesPerBullet(1) / includeArrows(false) / sparks / soundVolume / log；
+     - 适用对象是一个实体类型标签 tarkovscav:hard_target（默认只有 minecraft:iron_golem），
+       数据包可以往里加别的"硬目标"。
+     - 诚实说明：弹丸被弹开之后"还会不会打到别人"取决于 TaCZ 自己的命中处理
+       （穿甲弹会继续飞，普通弹多数当帧就消失）；伤害归零、声音、火花一定发生。
+  2) 脚本枪防护（防崩服）：声明了 Lua 脚本、且脚本命名空间不受信任的枪
+     ***不会*** 发给怪物 —— 第三方枪包的脚本出错会从 TaCZ 自己的 tick 里抛异常，
+     那是我们接不住的崩服。默认信任 tacz 自己的脚本命名空间。
+     - 配置：guns.excludeScriptedGuns(true) / guns.trustedScriptNamespaces(["tacz"]) /
+       guns.scriptedGunRescanTicks(40)；
+     - 想看挡了哪些枪：/armedmobs test mods 与 /armedmobs gunpool；
+     - 想全放开（风险自负）：excludeScriptedGuns=false。
+  3) 新增可选开关 guns.respectDeclaredFireModes（默认 false）
+     - 现在怪物手里的枪一律被设成全自动；打开这个开关后，改成"按枪自己声明的开火模式"
+       （声明里没有 AUTO 就用第一个模式，例如栓动/半自动枪变单发点射）。
+     - 打开它可以从源头掐掉一类"脚本按全自动分支读参数"的崩溃，但会明显改变手感，
+       所以默认关闭、需要你自己试。
+  4) 武器放置台现在有朝向：和箱子一样，你面朝哪它就朝哪，可以 rotate/结构镜像跟着转；
+     旧存档里已经放好的台子保持原样（默认朝北），台子上的枪不会丢。
+  5) 持枪村民闲置姿势（2026-09-25 最终版）：闲置档 = 原版抱臂（手臂偏移 0），枪基准 5、闲置附加 -2，
+     四档结果 = 瞄准 -185 / 闲置 -130 / 换弹 -128 / 撤退 -128。**旧配置文件不会自动更新**，
+       /armedmobs client villagerpose reset
+     来把这一组键恢复成出厂基线（Forge 只补缺失的键、不覆盖已存在的值）。
+
+【内容一览】
+  * 9 种武装单位：武装暴徒（Scav）、武装暴徒·掠夺者、武装村民、狙击手掠夺者、狙击手村民、
+    部队村民(USEC)、部队掠夺者(BEAR)、优质村民、优质掠夺者
+  * 5 种投掷物：破片手雷 / 高爆手雷 / 烟雾手雷 / 闪光弹 / 短引信闪光弹（默认不破坏地形，有破片）
+  * 武器放置台：一格一把枪 = 转化一个空手的原版村民/掠夺者，用的是台子上那把枪；
+    创造模式另有"创造武器放置台"（创造物品栏，无配方），枪是模板、永不消耗，
+    可以无限把村民/掠夺者变成持枪单位。
+  * 系统：阵营/叛变（误伤同族会变"叛徒"）、警戒情报共享、随机配件池、
+    精度档位（普通怪前 8 发明显打偏、稳态上限 75%）、击杀播报（屏幕正上方）、
+    玩家歪头（长按 Q/E）、27+ 条语音
+
+【指令速查】(都在 /armedmobs 下；/tarkovscav 是等价别名)
+  city add <名称> <半径> | city place <变体> | city structures
+  spawn scav | gunner_pillager | gunner_villager | sniper_pillager | sniper | sniper_villager |
+        usec_villager | bear_pillager | elite_villager | elite_pillager
+  test mods | test sniper | test grenade <类型> | test killfeed | test sound <池|单条> |
+        test rack | test watch | test stall
+  debug
+  client state | client reload | client scale <值> | client gunpose ... |
+        client villagerpose ... | client pose ...
+  调参：config/tarkovscav-common.toml（每个键都有注释），
+        改完在游戏里敲 /armedmobs client reload 即可生效（部分需重启）。
+
+【已知问题 / 注意】
+  * 城市里的怪目前基本靠刷怪笼/生成器：本模组确实注册了自然刷怪（9 种单位、只允许在城市
+    区域内），但城市地面多为建筑与照明，原版刷怪位置判定很难通过，实测日志里自然生成
+    0 次成功、刷怪笼刷出的全部通过。需要人口时用刷怪笼或 /armedmobs spawn。
+  * 在专用服务器上，击杀播报里的实体名会显示成可读的英文类型名（服务器没有语言文件），
+    单人游戏里显示正常的中文名。
+  * [client] 段里的渲染/手感配置是每台机器各自的，不随存档走。
+  * 部队/优质四种单位已各说各的语音（USEC / BEAR / 优质系列，池隔离）。
+  * 语音素材来自第三方（塔科夫音效 / 优质PMC / B 站视频片段）：
+    *** 仅限本地与私用测试，请不要公开分发或塞进公开整合包。***
+  * 遇到崩溃/异常：把 logs/latest.log 或 crash-reports 里的新文件发给作者。

@@ -1,0 +1,45 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="Armed Mobs"
+authors="${mod_authors}"
+description='''${mod_description}'''
+
+[[dependencies.${mod_id}]]
+    modId="forge"
+    mandatory=true
+    versionRange="${forge_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+# GeckoLib is embedded into this jar, so this dependency is satisfied out of the box.
+# The range is intentionally wide (the sources are verified to compile against 4.7 - 4.8.4):
+# a modpack that ships a slightly older GeckoLib should NOT hard-crash the game at startup.
+# If the player's copy is older than the bundled one, Forge's jarJar uses the bundled copy.
+[[dependencies.${mod_id}]]
+    modId="geckolib"
+    mandatory=true
+    versionRange="${geckolib_version_range}"
+    ordering="AFTER"
+    side="BOTH"
+
+# TaCZ is a HARD runtime dependency and is deliberately NOT bundled: it is a 57 MB third-party
+# mod that the player installs themselves. Every gun, magazine and bullet this mod fires comes
+# from TaCZ, so without it nothing here can work - fail loudly at load instead of at first shot.
+[[dependencies.${mod_id}]]
+    modId="tacz"
+    mandatory=true
+    versionRange="${tacz_version_range}"
+    ordering="AFTER"
+    side="BOTH"

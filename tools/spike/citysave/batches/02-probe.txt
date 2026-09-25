@@ -1,0 +1,125 @@
+forceload add 24 104 104 184
+execute positioned 64 320 144 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S1"]}
+data get entity @e[tag=probe_S1,limit=1] Pos
+kill @e[tag=probe_S1]
+execute positioned 34 320 114 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S1"]}
+data get entity @e[tag=probe_S1,limit=1] Pos
+kill @e[tag=probe_S1]
+execute positioned 94 320 114 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S1"]}
+data get entity @e[tag=probe_S1,limit=1] Pos
+kill @e[tag=probe_S1]
+execute positioned 34 320 174 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S1"]}
+data get entity @e[tag=probe_S1,limit=1] Pos
+kill @e[tag=probe_S1]
+execute positioned 94 320 174 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S1"]}
+data get entity @e[tag=probe_S1,limit=1] Pos
+kill @e[tag=probe_S1]
+forceload add 184 104 264 184
+execute positioned 224 320 144 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S2"]}
+data get entity @e[tag=probe_S2,limit=1] Pos
+kill @e[tag=probe_S2]
+execute positioned 194 320 114 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S2"]}
+data get entity @e[tag=probe_S2,limit=1] Pos
+kill @e[tag=probe_S2]
+execute positioned 254 320 114 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S2"]}
+data get entity @e[tag=probe_S2,limit=1] Pos
+kill @e[tag=probe_S2]
+execute positioned 194 320 174 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S2"]}
+data get entity @e[tag=probe_S2,limit=1] Pos
+kill @e[tag=probe_S2]
+execute positioned 254 320 174 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S2"]}
+data get entity @e[tag=probe_S2,limit=1] Pos
+kill @e[tag=probe_S2]
+forceload add 344 104 424 184
+execute positioned 384 320 144 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S3"]}
+data get entity @e[tag=probe_S3,limit=1] Pos
+kill @e[tag=probe_S3]
+execute positioned 354 320 114 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S3"]}
+data get entity @e[tag=probe_S3,limit=1] Pos
+kill @e[tag=probe_S3]
+execute positioned 414 320 114 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S3"]}
+data get entity @e[tag=probe_S3,limit=1] Pos
+kill @e[tag=probe_S3]
+execute positioned 354 320 174 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S3"]}
+data get entity @e[tag=probe_S3,limit=1] Pos
+kill @e[tag=probe_S3]
+execute positioned 414 320 174 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S3"]}
+data get entity @e[tag=probe_S3,limit=1] Pos
+kill @e[tag=probe_S3]
+forceload add 504 104 584 184
+execute positioned 544 320 144 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S4"]}
+data get entity @e[tag=probe_S4,limit=1] Pos
+kill @e[tag=probe_S4]
+execute positioned 514 320 114 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S4"]}
+data get entity @e[tag=probe_S4,limit=1] Pos
+kill @e[tag=probe_S4]
+execute positioned 574 320 114 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S4"]}
+data get entity @e[tag=probe_S4,limit=1] Pos
+kill @e[tag=probe_S4]
+execute positioned 514 320 174 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S4"]}
+data get entity @e[tag=probe_S4,limit=1] Pos
+kill @e[tag=probe_S4]
+execute positioned 574 320 174 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S4"]}
+data get entity @e[tag=probe_S4,limit=1] Pos
+kill @e[tag=probe_S4]
+forceload add 24 304 104 384
+execute positioned 64 320 344 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S5"]}
+data get entity @e[tag=probe_S5,limit=1] Pos
+kill @e[tag=probe_S5]
+execute positioned 34 320 314 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S5"]}
+data get entity @e[tag=probe_S5,limit=1] Pos
+kill @e[tag=probe_S5]
+execute positioned 94 320 314 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S5"]}
+data get entity @e[tag=probe_S5,limit=1] Pos
+kill @e[tag=probe_S5]
+execute positioned 34 320 374 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S5"]}
+data get entity @e[tag=probe_S5,limit=1] Pos
+kill @e[tag=probe_S5]
+execute positioned 94 320 374 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S5"]}
+data get entity @e[tag=probe_S5,limit=1] Pos
+kill @e[tag=probe_S5]
+forceload add 184 304 264 384
+execute positioned 224 320 344 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S6"]}
+data get entity @e[tag=probe_S6,limit=1] Pos
+kill @e[tag=probe_S6]
+execute positioned 194 320 314 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S6"]}
+data get entity @e[tag=probe_S6,limit=1] Pos
+kill @e[tag=probe_S6]
+execute positioned 254 320 314 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S6"]}
+data get entity @e[tag=probe_S6,limit=1] Pos
+kill @e[tag=probe_S6]
+execute positioned 194 320 374 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S6"]}
+data get entity @e[tag=probe_S6,limit=1] Pos
+kill @e[tag=probe_S6]
+execute positioned 254 320 374 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S6"]}
+data get entity @e[tag=probe_S6,limit=1] Pos
+kill @e[tag=probe_S6]
+forceload add 344 304 424 384
+execute positioned 384 320 344 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S7"]}
+data get entity @e[tag=probe_S7,limit=1] Pos
+kill @e[tag=probe_S7]
+execute positioned 354 320 314 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S7"]}
+data get entity @e[tag=probe_S7,limit=1] Pos
+kill @e[tag=probe_S7]
+execute positioned 414 320 314 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S7"]}
+data get entity @e[tag=probe_S7,limit=1] Pos
+kill @e[tag=probe_S7]
+execute positioned 354 320 374 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S7"]}
+data get entity @e[tag=probe_S7,limit=1] Pos
+kill @e[tag=probe_S7]
+execute positioned 414 320 374 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_S7"]}
+data get entity @e[tag=probe_S7,limit=1] Pos
+kill @e[tag=probe_S7]
+forceload add -64 -80 48 32
+execute positioned -20 320 -35 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_nat"]}
+data get entity @e[tag=probe_nat,limit=1] Pos
+kill @e[tag=probe_nat]
+execute positioned 16 320 0 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_nat"]}
+data get entity @e[tag=probe_nat,limit=1] Pos
+kill @e[tag=probe_nat]
+execute positioned -43 320 -59 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_nat"]}
+data get entity @e[tag=probe_nat,limit=1] Pos
+kill @e[tag=probe_nat]
+execute positioned 28 320 12 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["probe_nat"]}
+data get entity @e[tag=probe_nat,limit=1] Pos
+kill @e[tag=probe_nat]

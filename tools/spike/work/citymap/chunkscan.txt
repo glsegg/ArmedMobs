@@ -1,0 +1,277 @@
+﻿generatorVocabularySize=63 from D:\deepseek\ArmedMobs\src\main\resources\data\tarkovscav\structures
+world=D:\deepseek\ArmedMobs\tools\spike\work\citymap\region_snapshot
+regionFiles=11 yRange=-64..319
+
+=== SCAN SUMMARY ===
+chunksRead=6450 chunksUnreadable=0 elapsedSeconds=4
+blocksCountedInYRange=634060800
+
+=== TOP 40 CHUNKS BY HAND-PLACED (artifact) COUNT ===
+chunk(cx,cz)           worldX0    worldZ0    artifact  natStruct otherAll  gen       obstacle 
+(34,21)                544        336        494       8         6014      206       4822     
+(36,16)                576        256        430       8         457       389       472      
+(35,16)                560        256        389       5         1054      436       646      
+(-12,29)               -192       464        384       15        4257      614       4013     
+(34,17)                544        272        319       6         3268      418       2275     
+(13,37)                208        592        248       1         3712      820       3320     
+(-11,-9)               -176       -144       242       242       246       410       304      
+(36,17)                576        272        231       4         836       377       816      
+(-8,11)                -128       176        203       239       421       580       505      
+(25,1)                 400        16         180       16        238       820       238      
+(-12,-9)               -192       -144       175       171       428       520       547      
+(34,18)                544        288        171       6         2917      185       1647     
+(-10,12)               -160       192        164       179       469       647       537      
+(-8,7)                 -128       112        163       189       202       565       237      
+(-9,-9)                -144       -144       161       174       242       391       347      
+(-8,8)                 -128       128        160       178       281       528       289      
+(-26,1)                -416       16         158       168       2958      380       3317     
+(-8,10)                -128       160        157       163       353       705       397      
+(-9,8)                 -144       128        154       168       168       388       171      
+(34,19)                544        304        152       5         4075      340       2682     
+(18,20)                288        320        151       151       5546      555       5553     
+(-11,-10)              -176       -160       149       173       203       465       345      
+(16,22)                256        352        148       38        278       480       277      
+(34,22)                544        352        146       2         6331      207       5598     
+(-9,7)                 -144       112        146       150       327       274       394      
+(-10,-9)               -160       -144       143       163       284       582       394      
+(-9,10)                -144       160        141       154       300       711       368      
+(-26,2)                -416       32         140       152       3088      273       3237     
+(-11,12)               -176       192        139       153       530       469       602      
+(16,23)                256        368        138       57        859       505       428      
+(-9,11)                -144       176        137       174       302       740       393      
+(36,38)                576        608        136       166       7202      520       6964     
+(-11,-11)              -176       -176       134       150       165       424       214      
+(-12,9)                -192       144        133       145       835       279       858      
+(37,38)                592        608        132       143       7654      348       7503     
+(0,18)                 0          288        131       46        149       400       148      
+(34,20)                544        320        129       0         4231      776       2823     
+(-12,-11)              -192       -176       127       135       349       598       369      
+(15,24)                240        384        125       63        256       406       283      
+(33,21)                528        336        121       3         7955      187       6700     
+
+=== CLUSTERS OF HAND-PLACED (artifact) BLOCKS (chunk adjacency, Chebyshev <= 3) ===
+cluster#0 chunks=128 chunkBox=(10,8)..(36,40) worldBox=x[160..591] z[128..655]
+    artifactBlocks=7044 naturalStructureBlocks=3639 genBlocks=68458 allObstacleBlocks=360794 nonGeneratorBlocks=380847 nonGeneratorObstacleBlocks=350374
+    topNonGeneratorBlocks: water x337838; sand x30422; lava x4254; smooth_sandstone x1744; oak_planks x1697; dark_oak_planks x873; mossy_cobblestone x751; dark_oak_fence x610; cobweb x530; cut_sandstone x525; rail x516; smooth_sandstone_slab x304; dark_oak_stairs x104; smooth_sandstone_stairs x82; 
+cluster#1 chunks=140 chunkBox=(-29,-2)..(-5,15) worldBox=x[-464..-65] z[-32..255]
+    artifactBlocks=6153 naturalStructureBlocks=7520 genBlocks=62236 allObstacleBlocks=141122 nonGeneratorBlocks=143626 nonGeneratorObstacleBlocks=137167
+    topNonGeneratorBlocks: water x105329; lava x24391; sand x6207; oak_planks x5255; rail x1159; cobweb x843; clay x179; mossy_cobblestone x135; raw_copper_block x73; wall_torch x37; spawner x13; chest x5; 
+cluster#2 chunks=112 chunkBox=(4,-16)..(27,7) worldBox=x[64..447] z[-256..127]
+    artifactBlocks=2926 naturalStructureBlocks=3207 genBlocks=48228 allObstacleBlocks=138789 nonGeneratorBlocks=201485 nonGeneratorObstacleBlocks=135434
+    topNonGeneratorBlocks: water x127419; sand x39308; clay x26681; lava x4083; oak_planks x1431; cobweb x641; rail x561; dark_oak_planks x475; mossy_cobblestone x445; dark_oak_fence x312; bone_block x42; wall_torch x30; spawner x19; chest x18; 
+cluster#3 chunks=45 chunkBox=(-16,-13)..(-2,-6) worldBox=x[-256..-17] z[-208..-81]
+    artifactBlocks=2463 naturalStructureBlocks=3006 genBlocks=24456 allObstacleBlocks=11907 nonGeneratorBlocks=10671 nonGeneratorObstacleBlocks=9900
+    topNonGeneratorBlocks: water x4620; lava x2225; oak_planks x1219; dirt_path x1033; clay x615; mossy_cobblestone x386; rail x206; sand x145; cobweb x76; wall_torch x44; oak_door x20; cobblestone_stairs x18; chest x12; farmland x12; 
+cluster#4 chunks=71 chunkBox=(-13,14)..(4,30) worldBox=x[-208..79] z[224..495]
+    artifactBlocks=2424 naturalStructureBlocks=2129 genBlocks=44403 allObstacleBlocks=125651 nonGeneratorBlocks=129274 nonGeneratorObstacleBlocks=122465
+    topNonGeneratorBlocks: water x114976; sand x6269; lava x4124; oak_planks x779; mossy_cobblestone x629; dark_oak_planks x522; clay x484; dark_oak_fence x386; rail x310; cobweb x292; spruce_planks x176; spruce_stairs x107; jungle_planks x60; sculk_sensor x36; 
+cluster#5 chunks=32 chunkBox=(27,35)..(39,40) worldBox=x[432..639] z[560..655]
+    artifactBlocks=1209 naturalStructureBlocks=1453 genBlocks=12716 allObstacleBlocks=225736 nonGeneratorBlocks=232962 nonGeneratorObstacleBlocks=224949
+    topNonGeneratorBlocks: water x221053; sand x8007; lava x2420; oak_planks x917; cobweb x245; rail x188; mossy_cobblestone x79; cut_sandstone x29; wall_torch x10; raw_copper_block x6; spawner x5; chest x3; 
+cluster#6 chunks=12 chunkBox=(-21,18)..(-16,20) worldBox=x[-336..-241] z[288..335]
+    artifactBlocks=356 naturalStructureBlocks=457 genBlocks=4655 allObstacleBlocks=9394 nonGeneratorBlocks=9306 nonGeneratorObstacleBlocks=9186
+    topNonGeneratorBlocks: water x8515; oak_planks x332; lava x217; sand x116; rail x58; mossy_cobblestone x40; cobweb x18; crying_obsidian x4; chest x3; mossy_stone_bricks x1; spawner x1; wall_torch x1; 
+cluster#7 chunks=4 chunkBox=(-31,-9)..(-30,-7) worldBox=x[-496..-465] z[-144..-97]
+    artifactBlocks=152 naturalStructureBlocks=165 genBlocks=1305 allObstacleBlocks=1434 nonGeneratorBlocks=1233 nonGeneratorObstacleBlocks=1158
+    topNonGeneratorBlocks: water x869; oak_planks x151; lava x124; sand x75; rail x13; cobweb x1; 
+cluster#8 chunks=2 chunkBox=(-17,-18)..(-16,-18) worldBox=x[-272..-241] z[-288..-273]
+    artifactBlocks=37 naturalStructureBlocks=81 genBlocks=974 allObstacleBlocks=1751 nonGeneratorBlocks=3202 nonGeneratorObstacleBlocks=1624
+    topNonGeneratorBlocks: water x1543; clay x1071; sand x507; mossy_cobblestone x44; cobweb x28; oak_planks x5; chest x2; spawner x2; 
+cluster#9 chunks=11 chunkBox=(2,5)..(5,10) worldBox=x[32..95] z[80..175]
+    artifactBlocks=18 naturalStructureBlocks=104 genBlocks=11486 allObstacleBlocks=16961 nonGeneratorBlocks=11655 nonGeneratorObstacleBlocks=11105
+    topNonGeneratorBlocks: water x10569; clay x495; lava x439; mossy_cobblestone x81; sand x41; raw_copper_block x10; spawner x6; chest x5; tarkovscav:creative_weapon_rack x5; fire x2; white_wall_banner x2; 
+cluster#10 chunks=3 chunkBox=(8,20)..(10,21) worldBox=x[128..175] z[320..351]
+    artifactBlocks=8 naturalStructureBlocks=155 genBlocks=1703 allObstacleBlocks=975 nonGeneratorBlocks=635 nonGeneratorObstacleBlocks=632
+    topNonGeneratorBlocks: water x480; mossy_cobblestone x144; chest x5; sculk_sensor x3; spawner x3; 
+cluster#11 chunks=1 chunkBox=(20,30)..(20,30) worldBox=x[320..335] z[480..495]
+    artifactBlocks=7 naturalStructureBlocks=1 genBlocks=551 allObstacleBlocks=3167 nonGeneratorBlocks=3923 nonGeneratorObstacleBlocks=3167
+    topNonGeneratorBlocks: water x3152; sand x756; lava x7; cut_sandstone x6; chest x1; polished_granite x1; 
+cluster#12 chunks=2 chunkBox=(26,31)..(28,32) worldBox=x[416..463] z[496..527]
+    artifactBlocks=6 naturalStructureBlocks=92 genBlocks=1142 allObstacleBlocks=7716 nonGeneratorBlocks=8474 nonGeneratorObstacleBlocks=7535
+    topNonGeneratorBlocks: water x7403; sand x939; mossy_cobblestone x86; lava x40; chest x4; spawner x2; 
+cluster#13 chunks=2 chunkBox=(33,29)..(34,30) worldBox=x[528..559] z[464..495]
+    artifactBlocks=5 naturalStructureBlocks=126 genBlocks=1248 allObstacleBlocks=8358 nonGeneratorBlocks=8590 nonGeneratorObstacleBlocks=8078
+    topNonGeneratorBlocks: water x7948; sand x512; mossy_cobblestone x121; lava x4; chest x3; spawner x2; 
+cluster#14 chunks=3 chunkBox=(8,14)..(8,16) worldBox=x[128..143] z[224..271]
+    artifactBlocks=5 naturalStructureBlocks=78 genBlocks=1527 allObstacleBlocks=8176 nonGeneratorBlocks=8084 nonGeneratorObstacleBlocks=8002
+    topNonGeneratorBlocks: water x7867; sand x79; mossy_cobblestone x73; lava x57; chest x3; clay x3; spawner x2; 
+cluster#15 chunks=1 chunkBox=(-12,38)..(-12,38) worldBox=x[-192..-177] z[608..623]
+    artifactBlocks=4 naturalStructureBlocks=9 genBlocks=728 allObstacleBlocks=742 nonGeneratorBlocks=799 nonGeneratorObstacleBlocks=738
+    topNonGeneratorBlocks: water x729; sand x61; rail x5; oak_planks x3; cobweb x1; 
+cluster#16 chunks=1 chunkBox=(32,2)..(32,2) worldBox=x[512..527] z[32..47]
+    artifactBlocks=3 naturalStructureBlocks=47 genBlocks=718 allObstacleBlocks=3804 nonGeneratorBlocks=3854 nonGeneratorObstacleBlocks=3694
+    topNonGeneratorBlocks: water x3647; sand x160; mossy_cobblestone x44; chest x2; spawner x1; 
+cluster#17 chunks=1 chunkBox=(-1,3)..(-1,3) worldBox=x[-16..-1] z[48..63]
+    artifactBlocks=3 naturalStructureBlocks=29 genBlocks=654 allObstacleBlocks=1340 nonGeneratorBlocks=1543 nonGeneratorObstacleBlocks=1271
+    topNonGeneratorBlocks: water x1242; sand x259; mossy_cobblestone x26; clay x13; chest x2; spawner x1; 
+cluster#18 chunks=1 chunkBox=(-25,14)..(-25,14) worldBox=x[-400..-385] z[224..239]
+    artifactBlocks=3 naturalStructureBlocks=34 genBlocks=694 allObstacleBlocks=846 nonGeneratorBlocks=969 nonGeneratorObstacleBlocks=735
+    topNonGeneratorBlocks: water x518; sand x234; lava x183; mossy_cobblestone x31; chest x2; spawner x1; 
+cluster#19 chunks=1 chunkBox=(1,33)..(1,33) worldBox=x[16..31] z[528..543]
+    artifactBlocks=3 naturalStructureBlocks=53 genBlocks=673 allObstacleBlocks=472 nonGeneratorBlocks=549 nonGeneratorObstacleBlocks=373
+    topNonGeneratorBlocks: water x322; sand x174; mossy_cobblestone x48; chest x2; raw_copper_block x2; spawner x1; 
+cluster#20 chunks=1 chunkBox=(-4,38)..(-4,38) worldBox=x[-64..-49] z[608..623]
+    artifactBlocks=3 naturalStructureBlocks=31 genBlocks=295 allObstacleBlocks=449 nonGeneratorBlocks=394 nonGeneratorObstacleBlocks=394
+    topNonGeneratorBlocks: water x362; mossy_cobblestone x28; chest x2; lava x1; spawner x1; 
+cluster#21 chunks=2 chunkBox=(13,10)..(14,10) worldBox=x[208..239] z[160..175]
+    artifactBlocks=3 naturalStructureBlocks=54 genBlocks=2142 allObstacleBlocks=1752 nonGeneratorBlocks=360 nonGeneratorObstacleBlocks=346
+    topNonGeneratorBlocks: water x292; mossy_cobblestone x51; clay x8; sand x6; chest x2; spawner x1; 
+cluster#22 chunks=2 chunkBox=(9,4)..(9,5) worldBox=x[144..159] z[64..95]
+    artifactBlocks=3 naturalStructureBlocks=54 genBlocks=1139 allObstacleBlocks=2338 nonGeneratorBlocks=2225 nonGeneratorObstacleBlocks=2220
+    topNonGeneratorBlocks: water x2167; mossy_cobblestone x46; raw_iron_block x5; lava x4; chest x2; spawner x1; 
+cluster#23 chunks=1 chunkBox=(-29,14)..(-29,14) worldBox=x[-464..-449] z[224..239]
+    artifactBlocks=2 naturalStructureBlocks=18 genBlocks=798 allObstacleBlocks=430 nonGeneratorBlocks=534 nonGeneratorObstacleBlocks=394
+    topNonGeneratorBlocks: water x298; sand x139; lava x78; mossy_cobblestone x16; chest x1; clay x1; spawner x1; 
+cluster#24 chunks=1 chunkBox=(-1,-13)..(-1,-13) worldBox=x[-16..-1] z[-208..-193]
+    artifactBlocks=2 naturalStructureBlocks=36 genBlocks=481 allObstacleBlocks=342 nonGeneratorBlocks=509 nonGeneratorObstacleBlocks=199
+    topNonGeneratorBlocks: sand x213; clay x97; lava x69; bamboo x61; mossy_cobblestone x34; water x33; chest x1; spawner x1; 
+cluster#25 chunks=1 chunkBox=(36,6)..(36,6) worldBox=x[576..591] z[96..111]
+    artifactBlocks=1 naturalStructureBlocks=33 genBlocks=352 allObstacleBlocks=1541 nonGeneratorBlocks=1481 nonGeneratorObstacleBlocks=1463
+    topNonGeneratorBlocks: water x1430; mossy_cobblestone x32; sand x18; spawner x1; 
+
+=== PER-CONFIGURED-CITY-BOX TOTALS ===
+box 1 x[-383..-254] y[34..163] z[-132..-3] interestingChunks=81
+    ARTIFACT=24 natStructure=45 scannerSeesGenBlocks=31698 naturalBlocks=2362852 nonGeneratorBlocks=105115 obstacleBlocks=99916 nonGeneratorObstacle=99916
+    ARTIFACT_LIST: oak_planks x24; 
+    nonGenerator: water x97877; sand x4868; lava x2005; clay x320; oak_planks x24; rail x10; raw_copper_block x9; guaniao:crow_nest x2; 
+    generatorPaletteBlocks: gravel x31698; 
+box city1 x[24..103] y[59..98] z[104..183] interestingChunks=36
+    ARTIFACT=14 natStructure=61 scannerSeesGenBlocks=27895 naturalBlocks=1178055 nonGeneratorBlocks=44760 obstacleBlocks=53488 nonGeneratorObstacle=42265
+    ARTIFACT_LIST: spawner x5; tarkovscav:creative_weapon_rack x5; chest x2; white_wall_banner x2; 
+    nonGenerator: water x40797; clay x1993; lava x1431; sand x471; mossy_cobblestone x25; fire x16; raw_copper_block x13; spawner x5; tarkovscav:creative_weapon_rack x5; chest x2; white_wall_banner x2; 
+    generatorPaletteBlocks: gravel x16669; polished_andesite x4119; smooth_stone x2406; light_gray_concrete x1299; deepslate_tiles x1103; gray_concrete x754; brown_concrete x571; cobblestone x508; glass_pane x315; ladder x49; black_concrete x26; cobblestone_wall x19; white_bed x14; spruce_door x10; iron_bars x8; dark_oak_door x6; stone_brick_stairs x6; stone_brick_wall x6; oak_sign x3; barrel x2; bell x1; torch x1; 
+box city2 x[184..263] y[59..98] z[104..183] interestingChunks=36
+    ARTIFACT=3 natStructure=57 scannerSeesGenBlocks=28609 naturalBlocks=1135009 nonGeneratorBlocks=46498 obstacleBlocks=56638 nonGeneratorObstacle=45086
+    ARTIFACT_LIST: chest x2; spawner x1; 
+    nonGenerator: water x44031; sand x1364; lava x998; mossy_cobblestone x51; clay x45; pointed_dripstone x3; raw_iron_block x3; chest x2; spawner x1; 
+    generatorPaletteBlocks: gravel x17057; polished_andesite x4053; smooth_stone x2980; light_gray_concrete x1262; deepslate_tiles x1103; gray_concrete x784; brown_concrete x627; glass_pane x452; cobblestone x187; ladder x49; black_concrete x24; cobblestone_wall x13; iron_bars x8; tinted_glass x8; barrel x2; 
+box city3 x[344..423] y[59..98] z[104..183] interestingChunks=36
+    ARTIFACT=3 natStructure=33 scannerSeesGenBlocks=29361 naturalBlocks=1093433 nonGeneratorBlocks=86133 obstacleBlocks=96261 nonGeneratorObstacle=84930
+    ARTIFACT_LIST: chest x2; spawner x1; 
+    nonGenerator: water x84574; sand x1149; lava x323; clay x54; mossy_cobblestone x30; chest x2; spawner x1; 
+    generatorPaletteBlocks: gravel x18030; polished_andesite x4053; smooth_stone x2756; light_gray_concrete x1262; deepslate_tiles x1103; gray_concrete x784; brown_concrete x627; glass_pane x452; cobblestone x190; ladder x49; black_concrete x24; cobblestone_wall x13; iron_bars x8; tinted_glass x8; barrel x2; 
+box city4 x[504..583] y[59..98] z[104..183] interestingChunks=36
+    ARTIFACT=6 natStructure=209 scannerSeesGenBlocks=30800 naturalBlocks=1084801 nonGeneratorBlocks=80309 obstacleBlocks=87319 nonGeneratorObstacle=74140
+    ARTIFACT_LIST: chest x3; spawner x3; 
+    nonGenerator: water x72920; sand x6088; lava x1083; mossy_cobblestone x131; bone_block x71; clay x9; chest x3; spawner x3; raw_iron_block x1; 
+    generatorPaletteBlocks: gravel x17621; polished_andesite x4265; smooth_stone x3186; light_gray_concrete x1480; gray_concrete x1271; deepslate_tiles x1213; brown_concrete x627; glass_pane x529; cobblestone x440; ladder x58; black_concrete x48; cobblestone_wall x26; iron_bars x16; tinted_glass x16; barrel x4; 
+box city5 x[24..103] y[85..124] z[304..383] interestingChunks=30
+    ARTIFACT=39 natStructure=224 scannerSeesGenBlocks=27390 naturalBlocks=1159905 nonGeneratorBlocks=1422 obstacleBlocks=12810 nonGeneratorObstacle=1391
+    ARTIFACT_LIST: dark_oak_fence x16; dark_oak_planks x10; chest x5; cobweb x4; spawner x3; wall_torch x1; 
+    nonGenerator: lava x718; water x454; mossy_cobblestone x178; sculk_sensor x25; dark_oak_fence x16; dark_oak_planks x10; sculk_catalyst x6; chest x5; cobweb x4; spawner x3; rail x2; wall_torch x1; 
+    generatorPaletteBlocks: gravel x15971; polished_andesite x4053; smooth_stone x2596; light_gray_concrete x1262; deepslate_tiles x1103; gray_concrete x784; brown_concrete x627; cobblestone x450; glass_pane x443; ladder x49; black_concrete x24; cobblestone_wall x13; iron_bars x8; tinted_glass x5; barrel x2; 
+box city6 x[184..263] y[59..98] z[304..383] interestingChunks=30
+    ARTIFACT=349 natStructure=137 scannerSeesGenBlocks=25569 naturalBlocks=980060 nonGeneratorBlocks=20027 obstacleBlocks=30652 nonGeneratorObstacle=19565
+    ARTIFACT_LIST: dark_oak_planks x191; dark_oak_fence x118; cobweb x35; wall_torch x3; chest x1; spawner x1; 
+    nonGenerator: water x18391; lava x729; sand x461; dark_oak_planks x191; dark_oak_fence x118; rail x56; mossy_cobblestone x40; cobweb x35; wall_torch x3; chest x1; sculk_sensor x1; spawner x1; 
+    generatorPaletteBlocks: gravel x14482; polished_andesite x4053; smooth_stone x2556; light_gray_concrete x1262; deepslate_tiles x1103; gray_concrete x784; brown_concrete x627; glass_pane x452; cobblestone x146; ladder x49; black_concrete x24; cobblestone_wall x13; iron_bars x8; tinted_glass x8; barrel x2; 
+box city7 x[368..447] y[61..100] z[320..399] interestingChunks=25
+    ARTIFACT=454 natStructure=503 scannerSeesGenBlocks=27807 naturalBlocks=772543 nonGeneratorBlocks=42554 obstacleBlocks=56394 nonGeneratorObstacle=41111
+    ARTIFACT_LIST: oak_planks x343; cobweb x108; spawner x2; wall_torch x1; 
+    nonGenerator: water x39444; sand x1443; lava x1164; oak_planks x343; cobweb x108; rail x49; spawner x2; wall_torch x1; 
+    generatorPaletteBlocks: gravel x12524; smooth_stone x6661; polished_andesite x4053; light_gray_concrete x1262; deepslate_tiles x1103; gray_concrete x784; brown_concrete x627; glass_pane x452; oak_fence x147; cobblestone x83; ladder x49; black_concrete x24; cobblestone_wall x13; iron_bars x8; tinted_glass x8; chain x7; barrel x2; 
+
+=== GLOBAL non-generator block totals (all scanned chunks) ===
+  water x6301476
+  sand x644039
+  lava x166423
+  clay x155705
+  bamboo x18131
+  oak_planks x11789   [ARTIFACT]
+  mossy_cobblestone x3657   [worldgen structure]
+  rail x3061   [worldgen structure]
+  cobweb x2675   [ARTIFACT]
+  dark_oak_planks x1870   [ARTIFACT]
+  smooth_sandstone x1744   [ARTIFACT]
+  dark_oak_fence x1308   [ARTIFACT]
+  dirt_path x1033   [ARTIFACT]
+  bone_block x564   [worldgen structure]
+  cut_sandstone x563   [ARTIFACT]
+  raw_copper_block x539   [worldgen structure]
+  smooth_sandstone_slab x304   [ARTIFACT]
+  spruce_planks x236   [ARTIFACT]
+  wall_torch x206   [ARTIFACT]
+  chest x140   [ARTIFACT]
+  raw_iron_block x123   [worldgen structure]
+  spruce_stairs x120   [ARTIFACT]
+  spawner x112   [ARTIFACT]
+  dark_oak_stairs x104   [ARTIFACT]
+  sculk_sensor x102   [worldgen structure]
+  smooth_sandstone_stairs x82   [ARTIFACT]
+  sandstone_slab x70   [ARTIFACT]
+  birch_planks x60   [ARTIFACT]
+  jungle_planks x60   [ARTIFACT]
+  hay_block x51   [ARTIFACT]
+  sandstone_wall x36   [ARTIFACT]
+  sculk_catalyst x36   [worldgen structure]
+  jungle_door x34   [ARTIFACT]
+  pointed_dripstone x31
+  fire x23   [worldgen structure]
+  farmland x20   [ARTIFACT]
+  oak_door x20   [ARTIFACT]
+  cobblestone_stairs x18   [ARTIFACT]
+  mossy_stone_brick_slab x18   [ARTIFACT]
+  birch_stairs x13   [ARTIFACT]
+  spruce_fence x13   [ARTIFACT]
+  green_bed x12   [ARTIFACT]
+  jungle_button x12   [ARTIFACT]
+  birch_fence x11   [ARTIFACT]
+  guaniao:crow_nest x11   [worldgen structure]
+  jungle_fence x10   [ARTIFACT]
+  jungle_stairs x10   [ARTIFACT]
+  yellow_bed x10   [ARTIFACT]
+  sculk_shrieker x9   [worldgen structure]
+  crying_obsidian x8   [worldgen structure]
+  jungle_slab x7   [ARTIFACT]
+  potted_cactus x7   [ARTIFACT]
+  potted_dead_bush x7   [ARTIFACT]
+  lime_bed x6   [ARTIFACT]
+  mossy_stone_brick_stairs x6   [ARTIFACT]
+  polished_granite x5
+  tarkovscav:creative_weapon_rack x5   [ARTIFACT]
+  cyan_bed x4   [ARTIFACT]
+  gold_block x4   [ARTIFACT]
+  mossy_stone_bricks x4   [ARTIFACT]
+  spruce_trapdoor x4   [ARTIFACT]
+  stone_brick_slab x4   [ARTIFACT]
+  smooth_stone_slab x3   [ARTIFACT]
+  spruce_slab x3   [ARTIFACT]
+  stone_slab x3
+  furnace x2   [ARTIFACT]
+  green_carpet x2   [ARTIFACT]
+  sandstone_stairs x2   [ARTIFACT]
+  stonecutter x2   [ARTIFACT]
+  white_glazed_terracotta x2   [ARTIFACT]
+  white_wall_banner x2   [ARTIFACT]
+  chiseled_sandstone x1   [ARTIFACT]
+  composter x1   [worldgen structure]
+  grindstone x1   [ARTIFACT]
+  oak_fence_gate x1   [ARTIFACT]
+
+=== OBSTACLE-CLASS TOTALS PER CLUSTER (all obstacle blocks) ===
+cluster#0 {barrel_chest=117, bed=22, concrete=1213, door=48, fence=1599, floor_wood=2690, light=83, low_wall=42, plant_soft=587, rail=516, slab=407, stairs=331, transparent=235, wall_stone=10812, water=342092}
+cluster#1 {barrel_chest=18, fence=2399, floor_wood=5255, light=37, plant_soft=2119, rail=1159, wall_stone=415, water=129720}
+cluster#2 {barrel_chest=37, concrete=90, fence=1180, floor_wood=1906, light=30, plant_soft=668, rail=561, transparent=18, wall_stone=2797, water=131502}
+cluster#3 {barrel_chest=32, bed=20, door=32, fence=581, fence_gate=1, floor_wood=1219, light=47, plant_soft=1121, rail=206, slab=2, stairs=362, transparent=32, wall_stone=1407, water=6845}
+cluster#4 {barrel_chest=40, door=4, fence=1023, floor_wood=1537, light=23, plant_soft=319, rail=310, slab=10, stairs=117, transparent=30, wall_stone=3138, water=119100}
+cluster#5 {barrel_chest=8, fence=602, floor_wood=917, light=10, plant_soft=251, rail=188, wall_stone=287, water=223473}
+cluster#6 {barrel_chest=4, fence=94, floor_wood=332, light=1, low_wall=3, plant_soft=24, rail=58, stairs=2, wall_stone=144, water=8732}
+cluster#7 {fence=16, floor_wood=151, plant_soft=261, rail=13, water=993}
+cluster#8 {barrel_chest=4, fence=8, floor_wood=5, plant_soft=28, wall_stone=163, water=1543}
+cluster#9 {barrel_chest=14, bed=14, concrete=1437, door=6, fence=8, light=1, low_wall=25, mod_block=5, plant_soft=21, stairs=6, transparent=131, wall_stone=4285, water=11008}
+cluster#10 {barrel_chest=8, wall_stone=487, water=480}
+cluster#11 {barrel_chest=1, wall_stone=7, water=3159}
+cluster#12 {barrel_chest=6, wall_stone=267, water=7443}
+cluster#13 {barrel_chest=5, wall_stone=401, water=7952}
+cluster#14 {barrel_chest=5, wall_stone=247, water=7924}
+cluster#15 {fence=4, floor_wood=3, plant_soft=1, rail=5, water=729}
+cluster#16 {barrel_chest=3, wall_stone=154, water=3647}
+cluster#17 {barrel_chest=3, wall_stone=95, water=1242}
+cluster#18 {barrel_chest=3, wall_stone=142, water=701}
+cluster#19 {barrel_chest=3, wall_stone=147, water=322}
+cluster#20 {barrel_chest=3, wall_stone=83, water=363}
+cluster#21 {barrel_chest=3, concrete=358, transparent=58, wall_stone=1041, water=292}
+cluster#22 {barrel_chest=3, wall_stone=164, water=2171}
+cluster#23 {barrel_chest=2, wall_stone=52, water=376}
+cluster#24 {barrel_chest=2, plant_soft=61, wall_stone=177, water=102}
+cluster#25 {barrel_chest=1, wall_stone=110, water=1430}

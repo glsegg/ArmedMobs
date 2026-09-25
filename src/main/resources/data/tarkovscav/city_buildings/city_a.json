@@ -1,0 +1,10 @@
+{
+  "structure": "city_a",
+  "size": [56, 30, 56],
+  "buildings": [
+    { "id": "0:office_west", "x": 2, "z": 2, "w": 20, "d": 14 },
+    { "id": "1:office_east", "x": 40, "z": 2, "w": 14, "d": 20 },
+    { "id": "2:warehouse", "x": 2, "z": 38, "w": 22, "d": 16 },
+    { "id": "3:annex", "x": 40, "z": 38, "w": 12, "d": 12 }
+  ]
+}

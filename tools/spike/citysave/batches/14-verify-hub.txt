@@ -1,0 +1,13 @@
+﻿gamerule doMobSpawning
+gamerule doDaylightCycle
+gamerule keepInventory
+gamerule doWeatherCycle
+gamerule mobGriefing
+gamerule randomTickSpeed
+time query daytime
+difficulty
+data get block 34 64 141 Items[0].tag.title
+data get block 34 64 141 Items[0].tag.pages
+data get block 34 64 141 Items[1].id
+data get block 36 64 139 front_text.messages[0]
+data get block 34 64 139 front_text.messages[3]

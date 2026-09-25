@@ -1,0 +1,27 @@
+# Final verification run: the shipped jar, a fresh world, the wasteland sample, the overworld sample, and
+# the two things only a live server can prove (the registry loads, the dimension exists).
+execute in tarkovscav:urban_wasteland run forceload add -240 -240 15 15
+execute in tarkovscav:urban_wasteland run forceload add 16 -240 271 15
+execute in tarkovscav:urban_wasteland run forceload add -240 16 15 271
+execute in tarkovscav:urban_wasteland run forceload add 16 16 271 271
+execute in tarkovscav:urban_wasteland run forceload add 2176 1616 2367 1807
+execute in minecraft:overworld run forceload add -240 -240 15 15
+execute in minecraft:overworld run forceload add 16 -240 271 15
+execute in minecraft:overworld run forceload add -240 16 15 271
+execute in minecraft:overworld run forceload add 16 16 271 271
+execute in minecraft:overworld run forceload add 1024 1024 1279 1279
+execute in minecraft:overworld run forceload add 1280 1024 1535 1279
+execute in minecraft:overworld run forceload add 1536 1024 1791 1279
+execute in minecraft:overworld run forceload add 1792 1024 2047 1279
+execute in minecraft:overworld run forceload add 1024 1280 1279 1535
+execute in minecraft:overworld run forceload add 1280 1280 1535 1535
+execute in minecraft:overworld run forceload add 1536 1280 1791 1535
+execute in minecraft:overworld run forceload add 1792 1280 2047 1535
+execute in minecraft:overworld run forceload add 1024 1536 1279 1791
+execute in minecraft:overworld run forceload add 1280 1536 1535 1791
+execute in minecraft:overworld run forceload add 1536 1536 1791 1791
+execute in minecraft:overworld run forceload add 1792 1536 2047 1791
+execute in minecraft:overworld run forceload add 1024 1792 1279 2047
+execute in minecraft:overworld run forceload add 1280 1792 1535 2047
+execute in minecraft:overworld run forceload add 1536 1792 1791 2047
+execute in minecraft:overworld run forceload add 1792 1792 2047 2047

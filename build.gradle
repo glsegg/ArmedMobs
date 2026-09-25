@@ -1,0 +1,185 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    // Display-only rebrand: the artifact is armedmobs-<version>, while mod_id (and therefore the
+    // resource namespace, the save data and the config file name) stays tarkovscav. See gradle.properties.
+    archivesName = mod_jar_name
+}
+
+// Mojang ships Java 17 to end users in 1.18+, so the mod targets Java 17.
+// NOTE: no java toolchain block on purpose - this project compiles with whatever
+// JDK 17+ runs Gradle, and only emits Java 17 bytecode.
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release.set(17)
+}
+
+minecraft {
+    mappings channel: mapping_channel, version: mapping_version
+
+    // The player lean moves the camera sideways (README 5t), which needs Camera#setPosition(Vec3) to be public.
+    // An access transformer is the supported way to do that, and declaring it here means ForgeGradle applies it
+    // to the dev classes (so the code compiles as a direct call) and ships it to the game in SRG form. The gate
+    // tools/selftest_lean.js asserts the shipped bytecode contains that direct call and no reflection.
+    //
+    // The line inside the .cfg is:  public net.minecraft.client.Camera m_90581_(Lnet/minecraft/world/phys/Vec3;)V
+    //   * SRG member name, because that is what the runtime uses (checked against srg_to_official_1.20.1.tsrg,
+    //     which maps m_90581_ -> setPosition for Camera);
+    //   * and the .cfg must contain NOTHING but AT lines - Forge's parser rejects "#" comments outright
+    //     ("Invalid access transformer line"), which the build surfaces immediately, so no comment is kept
+    //     there on purpose. This comment block is where the explanation lives instead.
+    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+
+    // This property allows configuring Gradle's ProcessResources task(s) to run on IDE output locations before launching the game.
+    copyIdeResources = true
+
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+
+            // ---------------------------------------------------------------------------------
+            // Mixin refmap remapping - REQUIRED to run TaCZ in this dev workspace.
+            //
+            // TaCZ (like every released mod) ships a mixin refmap full of SRG names, e.g.
+            //   @Inject(... method = "tick")  ->  refmap: m_8119_()V
+            // but the ForgeGradle dev workspace uses the *official* (Mojang) names, so Mixin looks
+            // for m_8119_ in LivingEntity, finds nothing and dies with
+            //   "Critical injection failure: @Inject annotation on onTickServerSide could not find
+            //    any targets matching 'Lnet/minecraft/world/entity/LivingEntity;m_8119_()V'"
+            // which takes the whole game down at startup.
+            //
+            // These two properties make Mixin translate the refmap from SRG to the dev names using
+            // the mapping file ForgeGradle already generates. Without them, TaCZ simply cannot be
+            // tested in dev - see README section "Running TaCZ in the dev workspace".
+            // ---------------------------------------------------------------------------------
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+
+            mods {
+                "${mod_id}" {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        client {
+            property 'forge.enabledGameTestNamespaces', mod_id
+        }
+
+        server {
+            property 'forge.enabledGameTestNamespaces', mod_id
+            args '--nogui'
+        }
+
+        data {
+            workingDirectory project.file('run-data')
+            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+        }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+repositories {
+    // GeckoLib's official maven (used both for compilation and for the bundled jar).
+    maven {
+        name = 'GeckoLib'
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+    }
+    // Where the user's own TaCZ jar lives. A flatDir repo (not `files(...)`) is required: ForgeGradle
+    // can only deobfuscate a resolvable module dependency, and it says so out loud when handed a
+    // FileCollection ("files(...) dependencies are not deobfuscated ... using obfuscated version!").
+    flatDir {
+        name = 'TarkovScavLibs'
+        dirs 'libs'
+    }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    // GeckoLib is compiled against AND embedded into the shipped jar (see jarJar below),
+    // so players do not have to install it separately.
+    implementation fg.deobf("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_bundled_version}")
+
+    jarJar(group: 'software.bernie.geckolib', name: "geckolib-forge-${minecraft_version}", version: "${geckolib_bundled_range}") {
+        jarJar.pin(it, "${geckolib_bundled_version}")
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // TaCZ ("Timeless and Classics Zero") - a HARD dependency that is deliberately NOT bundled.
+    //
+    // The jar is the user's own download and lives in libs/ (which is .gitignore'd: it is a
+    // 57 MB third-party mod, not our content). It is only needed to compile against the API
+    // and to run the dev server, so it goes in as compileOnly + runtimeOnly and never reaches
+    // `jarJar`, never reaches the shipped jar, and is never redistributed.
+    //
+    // fg.deobf matters: a production mod jar carries SRG member names (m_41720_ ...) while the
+    // ForgeGradle dev workspace uses official names, so the raw jar compiles fine but explodes
+    // with NoSuchMethodError at dev runtime. The deobfuscated copy is what both the compiler
+    // and `runServer` see. Module notation (group is ignored by flatDir) because fg.deobf cannot
+    // deobfuscate a raw FileCollection.
+    compileOnly fg.deobf("tarkovscav.libs:${tacz_module}:${tacz_version}")
+    runtimeOnly fg.deobf("tarkovscav.libs:${tacz_module}:${tacz_version}")
+}
+
+// Embed the declared jarJar dependencies (GeckoLib) into the built jar. TaCZ is NOT a jarJar
+// dependency, so it is not embedded - by design.
+jarJar.enable()
+
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version, minecraft_version_range: minecraft_version_range,
+            forge_version          : forge_version, forge_version_range: forge_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
+            mod_authors            : mod_authors, mod_description: mod_description,
+            geckolib_version_range : geckolib_version_range,
+            tacz_version_range     : tacz_version_range,
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [project: project]
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+                'Specification-Title'     : mod_id,
+                'Specification-Vendor'    : mod_authors,
+                'Specification-Version'   : '1',
+                'Implementation-Title'    : project.name,
+                'Implementation-Version'  : project.jar.archiveVersion,
+                'Implementation-Vendor'   : mod_authors,
+                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+
+    finalizedBy 'reobfJar'
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifact jar
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/mcmodsrepo"
+        }
+    }
+}

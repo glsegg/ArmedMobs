@@ -1,0 +1,1242 @@
+{
+  "_comment": [
+    "The 18-building STRONGPOINT (one big city strongpoint: 6 columns x 3 rows of 16x16 buildings on an",
+    "8-wide street grid, footprint 138 x 34 x 66 = 9,108 cells). Same schema as tools/district-layout.json.",
+    "",
+    "Generate the structure NBT with (from the repository root):",
+    "  java -cp tools/spike/out CityStructureGen tools/strongpoint-layout.json",
+    "which writes src/main/resources/data/tarkovscav/structures/city_strongpoint.nbt plus the RCON",
+    "command lists under tools/spike/work/. Render the picture with:",
+    "  java -cp tools/spike/work/citymap/out CityMap structure --nbt src/main/resources/data/tarkovscav/structures/city_strongpoint.nbt --gen src/main/resources/data/tarkovscav/structures --out docs/maps/strongpoint.png",
+    "and prove the acceptance metrics with:  node tools/selftest_strongpoint.js",
+    "",
+    "The keys this layout adds to the schema are:",
+    "  min_cover_lines_per_floor  how many USABLE (V4) low-cover lines each floor and the roof must have;",
+    "                             0 when absent, so a layout that does not name it is unchanged;",
+    "  cover_line_min_length / cover_line_max_length  the length band of one placed line (default 3 / 6);",
+    "  cover_line_blocks          the palette keys the line builder may use. The first is the intended",
+    "                             sandbag line (white_concrete base + white_carpet top), the rest are the",
+    "                             wall / slab / barrel families;",
+    "  cover[].level              opt-in Y for a street piece: \"ground\" (default), \"roof\", or a floor index;",
+    "  street.bands_x / bands_z   opt-in street GRID: a list of [from, to] bands per axis. Without them the",
+    "                             single band_from..band_to street is built exactly as before.",
+    "  ruin_light_cleanup         opt-in (default false): after a ruin collapse, take down the chain /",
+    "                             lantern / end rod the collapse orphaned, because the game would drop",
+    "                             them on the next neighbour update anyway.",
+    "",
+    "Every building keeps >= 3 usable cover lines per floor AND on the roof, and the street list below has",
+    "87 entries - sandbag / low_wall / barrier / crate / car / rubble lines and clusters, including a",
+    "sandbag-plus-low-wall pair at each of the ten street junctions."
+  ],
+  "name": "city_strongpoint",
+  "palette": "modern_scav",
+  "size": [
+    138,
+    34,
+    66
+  ],
+  "floor_height": 4,
+  "ruin_light_cleanup": true,
+  "interior_variation": 1,
+  "extra_openings_per_wall": 2,
+  "floor_holes_per_floor": 2,
+  "spawners_per_building": 1,
+  "spawner_budget": 4,
+  "chests_per_building": 2,
+  "platform": {
+    "margin": 8,
+    "clear_to": 150,
+    "stone_below": 8
+  },
+  "street": {
+    "band_from": 17,
+    "band_to": 24,
+    "bands_x": [
+      [
+        17,
+        24
+      ],
+      [
+        41,
+        48
+      ],
+      [
+        65,
+        72
+      ],
+      [
+        89,
+        96
+      ],
+      [
+        113,
+        120
+      ]
+    ],
+    "bands_z": [
+      [
+        17,
+        24
+      ],
+      [
+        41,
+        48
+      ]
+    ],
+    "sidewalk": 3,
+    "road_block": "road",
+    "line_block": "line",
+    "sidewalk_block": "walk",
+    "ground_block": "ground"
+  },
+  "buildings": [
+    {
+      "name": "bp_00_nw",
+      "x": 1,
+      "z": 1,
+      "w": 16,
+      "d": 16,
+      "floors": 4,
+      "floor_height": 4,
+      "wall": "wall_concrete_light",
+      "accent": "accent",
+      "floor_block": "floor",
+      "roof_block": "roof",
+      "window_block": "window",
+      "door_side": "south",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7000
+    },
+    {
+      "name": "bp_01_n",
+      "x": 25,
+      "z": 1,
+      "w": 16,
+      "d": 16,
+      "floors": 5,
+      "floor_height": 4,
+      "wall": "wall_concrete_brown",
+      "accent": "accent",
+      "floor_block": "floor_inner",
+      "roof_block": "roof_brick",
+      "window_block": "window_band",
+      "door_side": "north",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7007
+    },
+    {
+      "name": "bp_02_ne",
+      "x": 49,
+      "z": 1,
+      "w": 16,
+      "d": 16,
+      "floors": 3,
+      "floor_height": 4,
+      "wall": "wall_brick",
+      "accent": "accent",
+      "floor_block": "floor",
+      "roof_block": "roof_warm",
+      "window_block": "window",
+      "door_side": "east",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7014
+    },
+    {
+      "name": "bp_03_w",
+      "x": 73,
+      "z": 1,
+      "w": 16,
+      "d": 16,
+      "floors": 4,
+      "floor_height": 4,
+      "wall": "wall_slate",
+      "accent": "accent",
+      "floor_block": "floor_inner",
+      "roof_block": "roof",
+      "window_block": "window_band",
+      "door_side": "west",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7021
+    },
+    {
+      "name": "bp_04_c",
+      "x": 97,
+      "z": 1,
+      "w": 16,
+      "d": 16,
+      "floors": 5,
+      "floor_height": 4,
+      "wall": "wall_mossy",
+      "accent": "accent",
+      "floor_block": "floor_tile",
+      "roof_block": "roof_brick",
+      "window_block": "window_gray",
+      "door_side": "south",
+      "roof_access": true,
+      "ruined": true,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7028
+    },
+    {
+      "name": "bp_05_e",
+      "x": 121,
+      "z": 1,
+      "w": 16,
+      "d": 16,
+      "floors": 3,
+      "floor_height": 4,
+      "wall": "wall_smooth",
+      "accent": "accent",
+      "floor_block": "floor",
+      "roof_block": "roof_warm",
+      "window_block": "window",
+      "door_side": "north",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7035
+    },
+    {
+      "name": "bp_10_sw",
+      "x": 1,
+      "z": 25,
+      "w": 16,
+      "d": 16,
+      "floors": 5,
+      "floor_height": 4,
+      "wall": "wall_brick",
+      "accent": "accent",
+      "floor_block": "floor",
+      "roof_block": "roof_warm",
+      "window_block": "window",
+      "door_side": "north",
+      "roof_access": true,
+      "ruined": true,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7100
+    },
+    {
+      "name": "bp_11_s",
+      "x": 25,
+      "z": 25,
+      "w": 16,
+      "d": 16,
+      "floors": 3,
+      "floor_height": 4,
+      "wall": "wall_slate",
+      "accent": "accent",
+      "floor_block": "floor_inner",
+      "roof_block": "roof",
+      "window_block": "window_band",
+      "door_side": "east",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7107
+    },
+    {
+      "name": "bp_12_se",
+      "x": 49,
+      "z": 25,
+      "w": 16,
+      "d": 16,
+      "floors": 4,
+      "floor_height": 4,
+      "wall": "wall_mossy",
+      "accent": "accent",
+      "floor_block": "floor_tile",
+      "roof_block": "roof_brick",
+      "window_block": "window_gray",
+      "door_side": "west",
+      "roof_access": true,
+      "ruined": true,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7114
+    },
+    {
+      "name": "bp_13_a",
+      "x": 73,
+      "z": 25,
+      "w": 16,
+      "d": 16,
+      "floors": 5,
+      "floor_height": 4,
+      "wall": "wall_smooth",
+      "accent": "accent",
+      "floor_block": "floor",
+      "roof_block": "roof_warm",
+      "window_block": "window",
+      "door_side": "south",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7121
+    },
+    {
+      "name": "bp_14_b",
+      "x": 97,
+      "z": 25,
+      "w": 16,
+      "d": 16,
+      "floors": 4,
+      "floor_height": 4,
+      "wall": "wall_concrete_light",
+      "accent": "accent",
+      "floor_block": "floor",
+      "roof_block": "roof",
+      "window_block": "window",
+      "door_side": "north",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7128
+    },
+    {
+      "name": "bp_15_c2",
+      "x": 121,
+      "z": 25,
+      "w": 16,
+      "d": 16,
+      "floors": 4,
+      "floor_height": 4,
+      "wall": "wall_concrete_brown",
+      "accent": "accent",
+      "floor_block": "floor_inner",
+      "roof_block": "roof_brick",
+      "window_block": "window_band",
+      "door_side": "east",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7135
+    },
+    {
+      "name": "bp_20_d",
+      "x": 1,
+      "z": 49,
+      "w": 16,
+      "d": 16,
+      "floors": 3,
+      "floor_height": 4,
+      "wall": "wall_mossy",
+      "accent": "accent",
+      "floor_block": "floor_tile",
+      "roof_block": "roof_brick",
+      "window_block": "window_gray",
+      "door_side": "east",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7200
+    },
+    {
+      "name": "bp_21_e2",
+      "x": 25,
+      "z": 49,
+      "w": 16,
+      "d": 16,
+      "floors": 4,
+      "floor_height": 4,
+      "wall": "wall_smooth",
+      "accent": "accent",
+      "floor_block": "floor",
+      "roof_block": "roof_warm",
+      "window_block": "window",
+      "door_side": "west",
+      "roof_access": true,
+      "ruined": true,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7207
+    },
+    {
+      "name": "bp_22_f",
+      "x": 49,
+      "z": 49,
+      "w": 16,
+      "d": 16,
+      "floors": 5,
+      "floor_height": 4,
+      "wall": "wall_concrete_light",
+      "accent": "accent",
+      "floor_block": "floor",
+      "roof_block": "roof",
+      "window_block": "window",
+      "door_side": "south",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7214
+    },
+    {
+      "name": "bp_23_g",
+      "x": 73,
+      "z": 49,
+      "w": 16,
+      "d": 16,
+      "floors": 3,
+      "floor_height": 4,
+      "wall": "wall_concrete_brown",
+      "accent": "accent",
+      "floor_block": "floor_inner",
+      "roof_block": "roof_brick",
+      "window_block": "window_band",
+      "door_side": "north",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7221
+    },
+    {
+      "name": "bp_24_h",
+      "x": 97,
+      "z": 49,
+      "w": 16,
+      "d": 16,
+      "floors": 5,
+      "floor_height": 4,
+      "wall": "wall_brick",
+      "accent": "accent",
+      "floor_block": "floor",
+      "roof_block": "roof_warm",
+      "window_block": "window",
+      "door_side": "east",
+      "roof_access": true,
+      "ruined": true,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7228
+    },
+    {
+      "name": "bp_25_i",
+      "x": 121,
+      "z": 49,
+      "w": 16,
+      "d": 16,
+      "floors": 4,
+      "floor_height": 4,
+      "wall": "wall_slate",
+      "accent": "accent",
+      "floor_block": "floor_inner",
+      "roof_block": "roof",
+      "window_block": "window_band",
+      "door_side": "west",
+      "roof_access": true,
+      "ruined": false,
+      "rooms_x": 2,
+      "rooms_z": 2,
+      "min_cover_per_floor": 14,
+      "min_furniture_per_floor": 9,
+      "min_doors": 2,
+      "min_cover_lines_per_floor": 3,
+      "cover_line_min_length": 3,
+      "cover_line_max_length": 6,
+      "cover_line_blocks": [
+        "cover_sandbag",
+        "cover_wall",
+        "cover_plank",
+        "cover_crate"
+      ],
+      "seed": 7235
+    }
+  ],
+  "cover": [
+    {
+      "type": "low_wall",
+      "x": 3,
+      "z": 20,
+      "length": 6,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 11,
+      "z": 22,
+      "length": 4,
+      "axis": "x"
+    },
+    {
+      "type": "barrier",
+      "x": 28,
+      "z": 19,
+      "length": 4,
+      "axis": "x"
+    },
+    {
+      "type": "crate",
+      "x": 34,
+      "z": 22
+    },
+    {
+      "type": "rubble",
+      "x": 45,
+      "z": 20,
+      "radius": 2
+    },
+    {
+      "type": "car",
+      "x": 52,
+      "z": 18
+    },
+    {
+      "type": "low_wall",
+      "x": 57,
+      "z": 23,
+      "length": 6,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 66,
+      "z": 20,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "barrier",
+      "x": 75,
+      "z": 22,
+      "length": 4,
+      "axis": "x"
+    },
+    {
+      "type": "rubble",
+      "x": 85,
+      "z": 20,
+      "radius": 2
+    },
+    {
+      "type": "car",
+      "x": 90,
+      "z": 22
+    },
+    {
+      "type": "low_wall",
+      "x": 99,
+      "z": 19,
+      "length": 6,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 108,
+      "z": 23,
+      "length": 4,
+      "axis": "x"
+    },
+    {
+      "type": "crate",
+      "x": 117,
+      "z": 20
+    },
+    {
+      "type": "crate",
+      "x": 118,
+      "z": 20
+    },
+    {
+      "type": "low_wall",
+      "x": 124,
+      "z": 21,
+      "length": 6,
+      "axis": "x"
+    },
+    {
+      "type": "low_wall",
+      "x": 3,
+      "z": 44,
+      "length": 6,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 11,
+      "z": 46,
+      "length": 4,
+      "axis": "x"
+    },
+    {
+      "type": "barrier",
+      "x": 28,
+      "z": 44,
+      "length": 4,
+      "axis": "x"
+    },
+    {
+      "type": "crate",
+      "x": 34,
+      "z": 46
+    },
+    {
+      "type": "rubble",
+      "x": 45,
+      "z": 44,
+      "radius": 2
+    },
+    {
+      "type": "car",
+      "x": 52,
+      "z": 42
+    },
+    {
+      "type": "low_wall",
+      "x": 60,
+      "z": 47,
+      "length": 6,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 66,
+      "z": 44,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "barrier",
+      "x": 75,
+      "z": 46,
+      "length": 4,
+      "axis": "x"
+    },
+    {
+      "type": "rubble",
+      "x": 85,
+      "z": 44,
+      "radius": 2
+    },
+    {
+      "type": "car",
+      "x": 90,
+      "z": 46
+    },
+    {
+      "type": "low_wall",
+      "x": 99,
+      "z": 43,
+      "length": 6,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 108,
+      "z": 47,
+      "length": 4,
+      "axis": "x"
+    },
+    {
+      "type": "crate",
+      "x": 117,
+      "z": 44
+    },
+    {
+      "type": "crate",
+      "x": 118,
+      "z": 44
+    },
+    {
+      "type": "low_wall",
+      "x": 124,
+      "z": 45,
+      "length": 6,
+      "axis": "x"
+    },
+    {
+      "type": "low_wall",
+      "x": 20,
+      "z": 3,
+      "length": 6,
+      "axis": "z"
+    },
+    {
+      "type": "sandbag",
+      "x": 22,
+      "z": 11,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "barrier",
+      "x": 19,
+      "z": 26,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 21,
+      "z": 31,
+      "length": 6,
+      "axis": "z"
+    },
+    {
+      "type": "sandbag",
+      "x": 20,
+      "z": 50,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "crate",
+      "x": 20,
+      "z": 58
+    },
+    {
+      "type": "rubble",
+      "x": 20,
+      "z": 60,
+      "radius": 2
+    },
+    {
+      "type": "low_wall",
+      "x": 44,
+      "z": 3,
+      "length": 6,
+      "axis": "z"
+    },
+    {
+      "type": "sandbag",
+      "x": 46,
+      "z": 12,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "barrier",
+      "x": 43,
+      "z": 26,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 45,
+      "z": 32,
+      "length": 6,
+      "axis": "z"
+    },
+    {
+      "type": "sandbag",
+      "x": 44,
+      "z": 51,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "crate",
+      "x": 44,
+      "z": 58
+    },
+    {
+      "type": "rubble",
+      "x": 44,
+      "z": 60,
+      "radius": 2
+    },
+    {
+      "type": "low_wall",
+      "x": 68,
+      "z": 3,
+      "length": 6,
+      "axis": "z"
+    },
+    {
+      "type": "sandbag",
+      "x": 70,
+      "z": 11,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "barrier",
+      "x": 67,
+      "z": 26,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 69,
+      "z": 31,
+      "length": 6,
+      "axis": "z"
+    },
+    {
+      "type": "sandbag",
+      "x": 68,
+      "z": 50,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "crate",
+      "x": 68,
+      "z": 58
+    },
+    {
+      "type": "rubble",
+      "x": 68,
+      "z": 60,
+      "radius": 2
+    },
+    {
+      "type": "low_wall",
+      "x": 92,
+      "z": 3,
+      "length": 6,
+      "axis": "z"
+    },
+    {
+      "type": "sandbag",
+      "x": 94,
+      "z": 12,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "barrier",
+      "x": 91,
+      "z": 26,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 93,
+      "z": 32,
+      "length": 6,
+      "axis": "z"
+    },
+    {
+      "type": "sandbag",
+      "x": 92,
+      "z": 51,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "crate",
+      "x": 92,
+      "z": 58
+    },
+    {
+      "type": "rubble",
+      "x": 92,
+      "z": 60,
+      "radius": 2
+    },
+    {
+      "type": "low_wall",
+      "x": 116,
+      "z": 3,
+      "length": 6,
+      "axis": "z"
+    },
+    {
+      "type": "sandbag",
+      "x": 118,
+      "z": 11,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "barrier",
+      "x": 115,
+      "z": 26,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 117,
+      "z": 31,
+      "length": 6,
+      "axis": "z"
+    },
+    {
+      "type": "sandbag",
+      "x": 116,
+      "z": 50,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "crate",
+      "x": 116,
+      "z": 58
+    },
+    {
+      "type": "rubble",
+      "x": 116,
+      "z": 60,
+      "radius": 2
+    },
+    {
+      "type": "low_wall",
+      "x": 18,
+      "z": 17,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 21,
+      "z": 18,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 18,
+      "z": 41,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 21,
+      "z": 42,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 42,
+      "z": 17,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 45,
+      "z": 18,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 42,
+      "z": 41,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 45,
+      "z": 42,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 66,
+      "z": 17,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 69,
+      "z": 18,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 66,
+      "z": 41,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 69,
+      "z": 42,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 90,
+      "z": 17,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 93,
+      "z": 18,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 90,
+      "z": 41,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 93,
+      "z": 42,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 114,
+      "z": 17,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 117,
+      "z": 18,
+      "length": 4,
+      "axis": "z"
+    },
+    {
+      "type": "low_wall",
+      "x": 114,
+      "z": 41,
+      "length": 5,
+      "axis": "x"
+    },
+    {
+      "type": "sandbag",
+      "x": 117,
+      "z": 42,
+      "length": 4,
+      "axis": "z"
+    }
+  ]
+}

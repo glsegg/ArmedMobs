@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " P ",
+    "PBP",
+    " G "
+  ],
+  "key": {
+    "P": { "item": "minecraft:paper" },
+    "B": { "item": "minecraft:gunpowder" },
+    "G": { "item": "minecraft:glowstone_dust" }
+  },
+  "result": {
+    "item": "tarkovscav:signal_stick",
+    "count": 4
+  }
+}

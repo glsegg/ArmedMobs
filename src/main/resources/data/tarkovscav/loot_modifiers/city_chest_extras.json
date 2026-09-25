@@ -1,0 +1,13 @@
+{
+  "type": "tarkovscav:city_chest_extras",
+  "conditions": [
+    {
+      "condition": "tarkovscav:mod_loaded",
+      "modid": "tacz"
+    },
+    {
+      "condition": "forge:loot_table_id",
+      "loot_table_id": "minecraft:chests/abandoned_mineshaft"
+    }
+  ]
+}

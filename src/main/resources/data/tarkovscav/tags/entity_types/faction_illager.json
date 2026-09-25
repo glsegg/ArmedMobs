@@ -1,0 +1,14 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:pillager",
+    "minecraft:vindicator",
+    "minecraft:evoker",
+    "minecraft:illusioner",
+    "minecraft:ravager",
+    "tarkovscav:gunner_pillager",
+    "tarkovscav:sniper_pillager",
+    "tarkovscav:bear_pillager",
+    "tarkovscav:elite_pillager"
+  ]
+}

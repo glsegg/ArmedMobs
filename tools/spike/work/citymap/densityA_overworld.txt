@@ -1,0 +1,115 @@
+﻿structurePalette=67 block(s) from D:\deepseek\ArmedMobs\src\main\resources\data\tarkovscav\structures
+world=D:\deepseek\ArmedMobs\tools\spike\citysave\server\UrbanWasteland
+box=x[-240..271] z[-240..271] y[-64..319]  columns=262144
+
+=== 1. GENERATED STRUCTURES (from each chunk's structures.starts, by id) ===
+chunksRead=1024 chunksWithAStructureStart=7
+  minecraft:mineshaft x4
+  minecraft:village_plains x1
+  tarkovscav:city_a x1
+  tarkovscav:city_small x1
+  TOTAL structure starts in the sampled box = 7
+  wrote 7 start position(s) to D:\deepseek\ArmedMobs\tools\spike\work\citymap\runA_overworld_starts.txt
+
+=== 2. SURFACE BLOCK HISTOGRAM (topmost non-air block per column) ===
+  minecraft:grass_block         41268   22.11%
+  minecraft:water               29965   16.06%
+  minecraft:sand                28099   15.06%
+  minecraft:red_sand            18286    9.80%
+  minecraft:grass               15302    8.20%
+  minecraft:terracotta          13380    7.17%
+  minecraft:oak_leaves           7262    3.89%
+  minecraft:fern                 4381    2.35%
+  minecraft:jungle_leaves        3881    2.08%
+  minecraft:deepslate_tiles      2903    1.56%
+  minecraft:vine                 2789    1.49%
+  minecraft:brown_terracotta     2616    1.40%
+  minecraft:smooth_stone         2533    1.36%
+  minecraft:dead_bush            1898    1.02%
+  minecraft:red_terracotta       1790    0.96%
+  minecraft:orange_terracotta     1561    0.84%
+  minecraft:gray_concrete        1485    0.80%
+  minecraft:coarse_dirt          1132    0.61%
+  minecraft:stone                 956    0.51%
+  minecraft:white_terracotta      858    0.46%
+  minecraft:light_gray_terracotta      854    0.46%
+  minecraft:dirt_path             521    0.28%
+  minecraft:sandstone             491    0.26%
+  minecraft:yellow_terracotta      339    0.18%
+  minecraft:cobblestone           249    0.13%
+  minecraft:tall_grass            173    0.09%
+  minecraft:light_gray_concrete      167    0.09%
+  minecraft:gravel                160    0.09%
+  minecraft:polished_andesite      144    0.08%
+  minecraft:oak_stairs            136    0.07%
+  distinct surface blocks = 76
+
+=== 3. MAN-MADE vs WASTELAND SURFACE ===
+columns=186624 manMade(unique to a city palette)=26076 (13.97%) wastelandPalette=81843 (43.85%) both=22831 (12.23%) other=55874 (29.94%)
+  (the 'both' column is the honest one: stone/andesite/gravel/coarse_dirt/cobblestone are terrain blocks AND foundation blocks, so they are not claimed as man-made)
+  man-made top: minecraft:barrel               3
+  man-made top: minecraft:black_concrete      61
+  man-made top: minecraft:brown_concrete      14
+  man-made top: minecraft:brown_terracotta    2616
+  man-made top: minecraft:chain                2
+  man-made top: minecraft:cobblestone_slab      14
+  man-made top: minecraft:cobblestone_wall      46
+  man-made top: minecraft:cracked_stone_bricks       2
+  man-made top: minecraft:deepslate_bricks      14
+  man-made top: minecraft:deepslate_tiles    2903
+  man-made top: minecraft:end_rod              2
+  man-made top: minecraft:gray_concrete     1485
+  man-made top: minecraft:iron_bars           20
+  man-made top: minecraft:ladder               9
+  man-made top: minecraft:light_gray_concrete     167
+  man-made top: minecraft:oak_stairs         136
+  man-made top: minecraft:oak_trapdoor         8
+  man-made top: minecraft:orange_terracotta    1561
+  man-made top: minecraft:polished_andesite     144
+  man-made top: minecraft:polished_deepslate       2
+  man-made top: minecraft:red_sandstone       25
+  man-made top: minecraft:smooth_stone      2533
+  man-made top: minecraft:stone_brick_stairs       9
+  man-made top: minecraft:stone_brick_wall      17
+  man-made top: minecraft:stripped_dark_oak_log      12
+  man-made top: minecraft:terracotta       13380
+  man-made top: minecraft:tinted_glass        16
+  man-made top: minecraft:white_carpet        17
+  man-made top: minecraft:white_terracotta     858
+  OTHER top:    minecraft:azure_bluet          1
+  OTHER top:    minecraft:bamboo               1
+  OTHER top:    minecraft:cornflower           2
+  OTHER top:    minecraft:dandelion           56
+  OTHER top:    minecraft:grass_block      41268
+  OTHER top:    minecraft:jungle_leaves     3881
+  OTHER top:    minecraft:light_gray_terracotta     854
+  OTHER top:    minecraft:melon               29
+  OTHER top:    minecraft:oak_fence_gate       1
+  OTHER top:    minecraft:oak_leaves        7262
+  OTHER top:    minecraft:oxeye_daisy          6
+  OTHER top:    minecraft:poppy               67
+  OTHER top:    minecraft:red_terracotta    1790
+  OTHER top:    minecraft:seagrass            86
+  OTHER top:    minecraft:stripped_oak_wood       2
+  OTHER top:    minecraft:tall_grass         173
+  OTHER top:    minecraft:tall_seagrass       56
+  OTHER top:    minecraft:yellow_terracotta     339
+chunksWithStructure=7 of 1024 (0.68%)
+
+=== 4. RELIEF AND WATER (the noise-settings choices, measured) ===
+surfaceY min=19 max=120 mean=71.6 relief(max-min)=101
+waterColumns=0 (0.00%)
+surfaceY histogram (y=count, 1-block buckets, non-empty only):
+  19=1  20=2  21=6  22=7  23=11  24=9  25=15  26=7  
+  27=5  28=6  29=6  30=7  31=5  32=7  33=6  34=8  
+  35=7  36=7  37=8  38=6  39=9  40=31  41=34  42=35  
+  43=26  44=78  45=74  46=30  47=35  48=43  49=34  50=67  
+  51=134  52=164  53=84  54=103  55=151  56=150  57=115  58=121  
+  59=151  60=231  61=235  62=36676  63=13904  64=11113  65=11612  66=7930  
+  67=6841  68=6853  69=7299  70=7824  71=7632  72=4986  73=3833  74=4361  
+  75=3389  76=3402  77=3192  78=3492  79=3188  80=1756  81=1588  82=1793  
+  83=2116  84=1865  85=2194  86=2524  87=2560  88=1638  89=1402  90=1424  
+  91=1333  92=1347  93=1435  94=2036  95=1997  96=726  97=465  98=425  
+  99=366  100=434  101=621  102=742  103=595  104=318  105=310  106=392  
+  107=352  108=383  109=407  110=412  111=197  112=205  113=178  114=166  
+  115=80  116=10  117=6  118=18  119=3  120=7  

@@ -1,0 +1,12 @@
+# Urban-wasteland RCON proof, batch 1: the dimension exists, is populated, and is writable.
+list
+execute in tarkovscav:urban_wasteland run locate biome tarkovscav:urban_wasteland
+execute in tarkovscav:urban_wasteland run locate structure tarkovscav:city_strongpoint
+execute in tarkovscav:urban_wasteland run locate structure tarkovscav:city_small
+execute in tarkovscav:urban_wasteland run locate structure tarkovscav:city_district
+execute in tarkovscav:urban_wasteland run time query daytime
+execute in tarkovscav:urban_wasteland run setblock 0 300 0 minecraft:stone_bricks
+execute in tarkovscav:urban_wasteland run setblock 0 300 0 minecraft:air
+execute in tarkovscav:urban_wasteland run fill 0 302 0 4 302 4 minecraft:stone_bricks
+execute in tarkovscav:urban_wasteland run fill 0 302 0 4 302 4 minecraft:air
+execute in tarkovscav:urban_wasteland run forceload query

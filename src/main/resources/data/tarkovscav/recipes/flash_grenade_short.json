@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " I ",
+    "GQG",
+    " I "
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "G": {
+      "item": "minecraft:gunpowder"
+    },
+    "Q": {
+      "item": "minecraft:glowstone_dust"
+    }
+  },
+  "result": {
+    "item": "tarkovscav:flash_grenade_short",
+    "count": 1
+  }
+}

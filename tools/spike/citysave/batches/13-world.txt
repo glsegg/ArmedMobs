@@ -1,0 +1,42 @@
+# ---- world rules for editing ----
+difficulty peaceful
+gamerule doMobSpawning false
+gamerule doDaylightCycle false
+gamerule doWeatherCycle false
+gamerule keepInventory true
+gamerule mobGriefing false
+gamerule randomTickSpeed 0
+gamerule doFireTick false
+gamerule doInsomnia false
+gamerule doPatrolSpawning false
+gamerule doTraderSpawning false
+gamerule disableRaids true
+gamerule fallDamage false
+gamerule fireDamage false
+gamerule drowningDamage false
+gamerule announceAdvancements false
+gamerule commandBlockOutput false
+gamerule spawnRadius 2
+gamerule sendCommandFeedback true
+time set day
+weather clear
+setworldspawn 36 64 144 -90
+# ---- spawn hub: three signs with the coordinate table ----
+setblock 34 64 139 minecraft:oak_sign[rotation=0]
+data merge block 34 64 139 {front_text:{messages:['{"text":"=== 濉旂澶煄甯?缂栬緫娌欑洏 ==="}','{"text":"7 浠?tarkovscav:city_small"}','{"text":"娌?+X 涓€瀛楁帓寮€ 闂撮殧 160"}','{"text":"璇︾粏鍧愭爣瑙佹梺杈圭殑绠卞瓙"}']}}
+setblock 36 64 139 minecraft:oak_sign[rotation=0]
+data merge block 36 64 139 {front_text:{messages:['{"text":"鍩庡競1 鍘熺増 x40 y63 z120"}','{"text":"鍩庡競2 椤?0 x200 y63 z120"}','{"text":"鍩庡競3 杞?80 x360 y63 z120"}','{"text":"鍩庡競4 閫?0 x520 y63 z120"}']}}
+setblock 38 64 139 minecraft:oak_sign[rotation=0]
+data merge block 38 64 139 {front_text:{messages:['{"text":"鍩庡競5 宸﹀彸闀滃儚 x40 y89 z320"}','{"text":"鍩庡競6 鍓嶅悗+90 x200 y63 z320"}','{"text":"鍩庡競7 涓栫晫鐢熸垚 x384 y65 z336"}','{"text":"鑷劧鐢熸垚 x-31 y62 z-47"}']}}
+# ---- spawn hub: chest with the full guide as a written book ----
+setblock 34 64 141 minecraft:chest[facing=south]
+data merge block 34 64 141 {Items:[{Slot:0b,id:"minecraft:written_book",Count:1b,tag:{title:"鍩庡競缂栬緫涓庝氦鍥炴寚鍗?,author:"TarkovScav",pages:[]}},{Slot:1b,id:"minecraft:structure_block",Count:1b}]}
+data modify block 34 64 141 Items[{Slot:0b}].tag.pages append value '{"text":"濉旂澶煄甯?- 鍙紪杈戞矙鐩榎n\n涓栫晫锛?.20.1 Forge锛屾櫘閫?overworld)鍦板舰锛岀瀛?20240913\n\n8 浠?tarkovscav:city_small锛歕n7 浠芥槸鎴戞斁鐨?6 浠芥斁鍦ㄥ钩鏁寸煶鍙颁笂锛? 浠借蛋涓栫晫鐢熸垚)锛? 浠芥槸涓栫晫鑷繁鐢熸垚鐨勩€俓n\n涓栫晫瑙勫垯锛氬拰骞?/ 閿佸畾鐧藉ぉ / 鏃犲埛鎬?/ keepInventory / 涓嶆帀钀戒繚鎶ゃ€?}'
+data modify block 34 64 141 Items[{Slot:0b}].tag.pages append value '{"text":"鍧愭爣琛?(1/2)\n姣忎竴浠藉崰鍦?48x48x26锛屽潗鏍?= 鏈€灏忚(x, y, z)锛屽嵆浠庤鐐瑰欢浼稿埌 (x+47, y+25, z+47)銆俓n\n鍩庡競1 鍘熺増鏈濆悜\n  x40 y63 z120\n鍩庡競2 椤烘椂閽?0搴n  x200 y63 z120\n鍩庡競3 鏃嬭浆180搴n  x360 y63 z120\n鍩庡競4 閫嗘椂閽?0搴n  x520 y63 z120"}'
+data modify block 34 64 141 Items[{Slot:0b}].tag.pages append value '{"text":"鍧愭爣琛?(2/2)\n\n鍩庡競5 宸﹀彸闀滃儚\n  x40 y89 z320\n鍩庡競6 鍓嶅悗闀滃儚+90搴n  x200 y63 z320\n鍩庡競7 涓栫晫鐢熸垚鏀剧疆(甯﹀湴褰㈤€傚簲)\n  x384 y65 z336\n\n鑷劧鐢熸垚鐨勯偅涓€浠絓n  x-31 y62 z-47\n(瀹冨煁鍦ㄥ湴褰㈤噷 2~22 鏍硷紝鍙綔璇佹嵁)"}'
+data modify block 34 64 141 Items[{Slot:0b}].tag.pages append value '{"text":"鎬庝箞杩囧幓\n/tp @s 40 70 140\n鎶婂潗鏍囨崲鎴愯〃閲岀殑鍗冲彲銆俓n\n鍙板瓙锛氭瘡涓煄甯傚潗鍦ㄤ竴鍧?64x64 鐨勫钩婊戠煶鍙颁笂锛屽彴瀛愪笂鏂瑰凡缁忔竻绌哄埌 y=150锛屾墍浠ヤ笉浼氭寲鍒板北銆傚彴瀛愬闈㈣繕鏄師濮嬪湴褰紝鍙拌竟鍙兘鏈夐珮浣庡樊銆俓n\n鍒繕浜嗗浠藉瓨妗ｅ啀澶ф敼銆?}'
+data modify block 34 64 141 Items[{Slot:0b}].tag.pages append value '{"text":"鎬庝箞鏀筡n1) /gamemode creative 鍒涢€犳ā寮忥紝鐩存帴鎷嗘敼銆俓n2) 鍙敼涓€鏍嬫ゼ鐨勮瘽锛屽厛鐢ㄧ粨鏋勬柟鍧楁妸瀹冨崟鐙瓨鍑烘潵锛屽啀澶嶅埗鍒板埆澶勬敼锛屼笉瑕佸姩鏁村骇鍩庡競銆俓n3) 鍩庡競7 鏄?/place structure 鏀剧殑锛屽甫鍦板舰閫傚簲(搴曚笅浼氳濉湡)锛屽叾瀹?6 浠芥槸 /place template 鏀剧殑锛岃惤鍦ㄧ煶鍙颁笂銆?}'
+data modify block 34 64 141 Items[{Slot:0b}].tag.pages append value '{"text":"鎬庝箞瀵煎嚭(缁撴瀯鏂瑰潡)\n1) /give @s structure_block\n2) 鏀句笅缁撴瀯鏂瑰潡锛屾ā寮忛€?SAVE(淇濆瓨)銆俓n3) 鍚嶅瓧濉細mycity\n4) 鐩稿鍧愭爣锛氫粠鍩庡競鏈€灏忚(0,0,0)鍒?47,25,47)銆俓n5) 涓€瀹氳鎶?included 閲岀殑绌烘皵/缁撴瀯绌轰綅鎵撳紑(鍚﹀垯闂ㄧ獥绌烘礊浼氳濉垚瀹炲績)銆俓n6) 鐐逛繚瀛樸€俓n\n鏂囦欢钀藉湪锛?瀛樻。>/generated/minecraft/structures/mycity.nbt"}'
+data modify block 34 64 141 Items[{Slot:0b}].tag.pages append value '{"text":"鎬庝箞浜ゅ洖鏉n涓ゆ潯璺細\n\nA) 濡傛灉杩欎釜 jar 閲屾湁 /tarkovscav city import <鍚嶅瓧>锛歕n   /tarkovscav city import mycity\n   鐒跺悗 /tarkovscav city place mycity 鏍稿銆俓n\nB) 濡傛灉娌℃湁 import 鎸囦护锛氭妸 mycity.nbt 鏂囦欢鍙戠粰鎴戜滑锛屾垜浠杩涙ā缁勯噷銆俓n\n瀵煎嚭鍚庢牳瀵癸細/tarkovscav city place <鍚嶅瓧>"}'
+data modify block 34 64 141 Items[{Slot:0b}].tag.pages append value '{"text":"鍏充簬姝﹁鏆村緬\n杩欎釜瀛樻。鏄拰骞?+ 鍏冲埛鎬殑锛岀紪杈戞椂涓嶄細琚墦銆俓n\n鎯崇湅姝﹁鏆村緬鍦ㄥ煄甯傞噷娲诲姩锛歕n/difficulty easy\n/gamerule doMobSpawning true\n\n7 搴у煄甯傜殑鑼冨洿宸茬粡鍐欒繘 config/tarkovscav-common.toml 鐨?spawn.cityRegions锛屾墍浠ユ墦寮€鍒锋€悗瀹冧滑浼氳杩欎簺鍦版柟銆?}'
+data modify block 34 64 141 Items[{Slot:0b}].tag.pages append value '{"text":"缁撴瀯鏂瑰潡灏忚创澹玕n- 淇濆瓨鑼冨洿瑕佸寘浣忔暣鏍嬫ゼ锛岃竟缂樺鐣?1 鏍笺€俓n- 涓€瀹氳鍕锯€滃寘鍚┖姘?缁撴瀯绌轰綅鈥濓紝绌烘礊鎵嶄笉浼氳濉疄銆俓n- 鎯宠鏌愪釜鏂瑰潡鐣欑┖锛屽湪缁撴瀯鏂瑰潡鐣岄潰鐢ㄢ€滅粨鏋勭┖浣嶁€濇柟鍧楁爣璁般€俓n- 鎯宠繛绠卞瓙閲岀殑涓滆タ涓€璧峰瓨锛屽嬀鈥滃寘鍚疄浣撯€濄€俓n- .nbt 鏂囦欢鍙互鐩存帴鍙戠粰鎴戜滑銆?}'

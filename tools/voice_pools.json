@@ -1,0 +1,56 @@
+{
+  "_note": "Voice pool assignment table (README 5y / 5l). family -> category -> the EVENT NAMES to draw from, in priority order. A candidate source file matches a token when its name, stripped of the trailing index, STARTS WITH the token (so '标记敌人-located_1' and 'located_1' stay distinguishable). The plan sends an ordered candidate QUEUE per pool; the cutter takes the first perCategoryClips that pass the duration filter, so a too-short take is skipped instead of shipped. Change one line here to re-point a pool (for example: give the elite family the USEC death pool by adding 'usec' to deathSources below).",
+  "perCategoryClips": 5,
+  "minSeconds": 0.25,
+  "maxSeconds": 4.0,
+  "candidateMultiplier": 4,
+  "families": {
+    "usec": {
+      "label": "USEC (塔科夫 usec_voice_bundle_01, 790 ogg)",
+      "sourceDirs": ["tools/spike/work/voice_src/tarkov/usec_voice_bundle_01"],
+      "indexPattern": "^usec\\d+_",
+      "categories": {
+        "contact": ["enemy_contact", "attention", "ambush", "enemyonpoint"],
+        "chatter": ["fight", "gogogo", "suppressingfire", "inthefront", "enemy_down", "enemy_hit"],
+        "idle": ["mutter", "tired", "dontknow", "ready", "backpack"],
+        "grenade": ["grenade", "enemy_grenade", "grenadeflash"],
+        "mark": ["lostvisual", "onyourown", "regroup", "followme"],
+        "death": ["death", "agony", "hurt_neardeath", "hurt_medium"]
+      }
+    },
+    "bear": {
+      "label": "BEAR (塔科夫 bear_voice_bundle_01, 804 ogg)",
+      "sourceDirs": ["tools/spike/work/voice_src/tarkov/bear_voice_bundle_01"],
+      "indexPattern": "^bear\\d+_",
+      "categories": {
+        "contact": ["enemy_contact", "attention", "ambush", "enemyonpoint"],
+        "chatter": ["fight", "gogogo", "suppressingfire", "inthefront", "enemy_down", "enemy_hit"],
+        "idle": ["mutter", "tired", "dontknow", "ready", "backpack"],
+        "grenade": ["grenade", "enemy_grenade", "grenadeflash"],
+        "mark": ["lostvisual", "onyourown", "regroup", "followme"],
+        "death": ["death", "agony", "hurt_neardeath", "hurt_medium"]
+      }
+    },
+    "elite": {
+      "label": "Elite (优质PMC.zip, 82 ogg, 11 Chinese categories)",
+      "sourceDirs": ["tools/spike/work/voice_src/pmc/优质PMC"],
+      "indexPattern": "^(.*?)_\\d+$",
+      "categories": {
+        "contact": ["标记敌人-located"],
+        "chatter": ["被压制-suppressed", "被击中-fire", "队友击杀敌人-praise"],
+        "idle": ["嘲讽-insult"],
+        "grenade": ["有手雷-grenade"],
+        "mark": ["located"],
+        "death": ["受伤-hurt"]
+      }
+    }
+  },
+  "_unused": {
+    "elite": {
+      "友军火力-friendlyfire": "8 clips, available for a future hurt/friendly-fire trigger (there is no such pool today)",
+      "受伤-hit": "6 clips, a second hurt take set - kept out so death sounds like one performance",
+      "撤退-critical": "7 clips, would fit a retreat trigger the AI does not have",
+      "reload": "the elite family ships no reload/death/idle triple; README 5y records decision (A)"
+    }
+  }
+}

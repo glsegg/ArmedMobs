@@ -1,0 +1,63 @@
+# ---------- build / run / caches ----------
+build/
+.gradle/
+.gradle-home/
+run/
+run-data*/
+out/
+bin/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+# ---------- third-party mod jars: the user's own downloads, never bundled or committed ----------
+libs/*.jar
+!libs/README.md
+
+# ---------- jars in general: only the Gradle wrapper belongs in the repo ----------
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+tools/spike/citysave/backup/
+
+# ---------- scratch: keep the tooling scripts, drop the artifacts ----------
+_recon/
+_friendfix/
+tools/spike/out/
+tools/spike/work/*
+!tools/spike/work/*.js
+!tools/spike/work/*.ps1
+!tools/spike/work/*.java
+!tools/spike/work/citymap/
+tools/spike/work/citymap/*
+!tools/spike/work/citymap/*.js
+!tools/spike/work/citymap/*.java
+!tools/spike/work/citymap/*.ps1
+!tools/spike/work/citymap/*.txt
+
+# dev-server install (a second TaCZ jar + generated worlds)
+tools/spike/citysave/server/
+tools/spike/citysave/jar/
+tools/spike/citysave/tmp/
+tools/spike/citysave/*.log
+
+# ---------- delivery folder: keep the human-readable notes, drop the binaries ----------
+mods/*.jar
+mods/*.jar.*
+mods/*.zip
+mods/*.docx
+mods/武装暴徒-0.1.0-测试包/
+
+# ---------- archives and world copies ----------
+*.mca
+*.rar
+*.bak-*
+tools/spike/work/citycopy/
+
+# ---------- THIRD-PARTY AUDIO IS NOT REDISTRIBUTED HERE ----------
+# Every .ogg in this project is the user's own local rip (Tarkov SFX, BiliBili clips, third-party voice
+# packs) and is licensed for private use only. The manifests that describe the clips stay in the repo
+# (`assets/tarkovscav/sounds.json`, `assets/tarkovscav/voice_clips.txt`, `voice_levels.json`), so the
+# pack can be rebuilt as soon as the audio is supplied again. See `docs/素材说明.md`.
+*.ogg

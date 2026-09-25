@@ -1,0 +1,3 @@
+list
+time query daytime
+gamerule doDaylightCycle

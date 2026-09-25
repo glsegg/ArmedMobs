@@ -1,0 +1,7 @@
+# Does the gunner villager acquire a target and shoot? Damage it from a pillager, so HurtByTargetGoal
+# has an attacker to retaliate against (the target selector path), then let the fight run.
+kill @e[type=tarkovscav:gunner_villager]
+kill @e[type=minecraft:pillager]
+summon tarkovscav:gunner_villager 1000 100 1000
+summon minecraft:pillager 1000 100 1012
+damage @e[type=tarkovscav:gunner_villager,limit=1] 1 minecraft:player_attack by @e[type=minecraft:pillager,limit=1]

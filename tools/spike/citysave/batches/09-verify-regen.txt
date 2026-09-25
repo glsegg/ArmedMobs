@@ -1,0 +1,8 @@
+﻿seed
+locate structure tarkovscav:city_small
+tarkovscav city test
+execute if block -31 62 -47 minecraft:coarse_dirt run seed
+execute if block -20 62 -35 minecraft:coarse_dirt run seed
+execute if block 16 77 0 minecraft:coarse_dirt run seed
+execute unless block -20 84 -35 minecraft:air run seed
+execute unless block -43 64 -59 minecraft:air run seed

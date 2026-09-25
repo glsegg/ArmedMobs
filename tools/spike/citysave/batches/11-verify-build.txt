@@ -1,0 +1,17 @@
+﻿# does a self-replace /fill report the number of matching blocks? (city1 lot row, should be 48)
+fill 40 63 120 87 63 120 minecraft:coarse_dirt replace minecraft:coarse_dirt
+# city7 via the worldgen route: what did /place structure actually generate?
+execute positioned 392 63 344 run tarkovscav city test
+# lot corners of the six /place template copies (local y=0 is a full 48x48 coarse_dirt lot)
+fill 200 63 120 247 63 120 minecraft:coarse_dirt replace minecraft:coarse_dirt
+fill 360 63 120 407 63 120 minecraft:coarse_dirt replace minecraft:coarse_dirt
+fill 520 63 120 567 63 120 minecraft:coarse_dirt replace minecraft:coarse_dirt
+fill 40 89 320 87 89 320 minecraft:coarse_dirt replace minecraft:coarse_dirt
+fill 200 63 320 247 63 320 minecraft:coarse_dirt replace minecraft:coarse_dirt
+# pad flatness: marker at the pad centre must sit exactly on the pad top
+execute positioned 64 320 144 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["p1"]}
+data get entity @e[tag=p1,limit=1] Pos
+kill @e[tag=p1]
+execute positioned 224 320 344 positioned over motion_blocking run summon minecraft:marker ~ ~ ~ {Tags:["p5"]}
+data get entity @e[tag=p5,limit=1] Pos
+kill @e[tag=p5]

@@ -1,0 +1,140 @@
+{
+	"format_version": "1.19.0",
+	"animation_controllers": {
+		"player.parallel_1": {
+			"states": {
+				"default": {
+					"animations": [
+						{"Emotions_0": "v.roaming.Expression == 0"},
+						{"Emotions_1": "v.roaming.Expression == 1"},
+						{"Emotions_2": "v.roaming.Expression == 2"},
+						{"Emotions_3": "v.roaming.Expression == 3"},
+						{"Emotions_4": "v.roaming.Expression == 4"},
+						{"Emotions_5": "v.roaming.Expression == 5"},
+						{"Emotions_6": "v.roaming.Expression == 6"},
+						{"Emotions_7": "v.roaming.Expression == 7"},
+						{"Emotions_8": "v.roaming.Expression == 8"},
+						{"Emotions_9": "v.roaming.Expression == 9"},
+						{"Emotions_10": "v.roaming.Expression == 10"},
+						{"Emotions_11": "v.roaming.Expression == 11"},
+						{"Emotions_12": "v.roaming.Expression == 12"},
+						{"Emotions_13": "v.roaming.Expression == 13"}
+					]
+				}
+			}
+		},
+		"player.parallel_0": {
+			"states": {
+				"default": {
+					"animations": ["parallel0", "parallel1", "parallel2", "parallel3", "parallel4", "parallel5", "parallel6", "parallel7", "初始赋值"]
+				}
+			}
+		},
+		"player.parallel_3": {
+			"initial_state": "缓冲",
+			"states": {
+				"缓冲": {
+					"animations": [""],
+					"transitions": [
+						{"语音1": "v.voice_short==1"},
+						{"语音2": "v.voice_short==2"},
+						{"语音3": "v.voice_short==3"},
+						{"语音4": "v.voice_short==4"},
+						{"语音5": "v.voice_short==5"},
+						{"语音6": "v.voice_short==6"},
+						{"语音7": "v.voice_short==7"},
+						{"语音8": "v.voice_short==8"},
+						{"语音9": "v.voice_short==9"},
+						{"语音10": "v.voice_short==10"},
+						{"语音11": "v.voice_short==11"},
+						{"语音12": "v.voice_short==12"}
+					]
+				},
+				"语音1": {
+					"animations": ["voice_1"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished"}
+					]
+				},
+				"语音2": {
+					"animations": ["voice_2"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished\n"}
+					]
+				},
+				"语音3": {
+					"animations": ["voice_3"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished"}
+					]
+				},
+				"语音4": {
+					"animations": ["voice_4"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished"}
+					]
+				},
+				"语音5": {
+					"animations": ["voice_5"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished"}
+					]
+				},
+				"语音6": {
+					"animations": ["voice_6"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished"}
+					]
+				},
+				"语音7": {
+					"animations": ["voice_7"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished"}
+					]
+				},
+				"语音8": {
+					"animations": ["voice_8"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished"}
+					]
+				},
+				"语音9": {
+					"animations": ["voice_9"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished"}
+					]
+				},
+				"语音10": {
+					"animations": ["voice_10"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished"}
+					]
+				},
+				"语音11": {
+					"animations": ["voice_11"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished"}
+					]
+				},
+				"语音12": {
+					"animations": ["voice_12"],
+					"on_exit": ["v.voice_short=0;"],
+					"transitions": [
+						{"缓冲": "q.all_animations_finished"}
+					]
+				}
+			}
+		}
+	}
+}

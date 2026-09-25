@@ -1,0 +1,91 @@
+﻿structurePalette=67 block(s) from D:\deepseek\ArmedMobs\src\main\resources\data\tarkovscav\structures
+world=D:\deepseek\ArmedMobs\tools\spike\citysave\server\UrbanWasteland\dimensions\tarkovscav\urban_wasteland
+box=x[-240..271] z[-240..271] y[-64..319]  columns=262144
+
+=== 1. GENERATED STRUCTURES (from each chunk's structures.starts, by id) ===
+chunksRead=1024 chunksWithAStructureStart=116
+  tarkovscav:city_a x18
+  tarkovscav:city_b x18
+  tarkovscav:city_c x12
+  tarkovscav:city_district x4
+  tarkovscav:city_small x67
+  TOTAL structure starts in the sampled box = 119
+  wrote 119 start position(s) to D:\deepseek\ArmedMobs\tools\spike\work\citymap\final_wasteland_starts.txt
+
+=== 2. SURFACE BLOCK HISTOGRAM (topmost non-air block per column) ===
+  minecraft:coarse_dirt         71229   27.17%
+  minecraft:deepslate_tiles     68913   26.29%
+  minecraft:smooth_stone        38050   14.51%
+  minecraft:gray_concrete       32237   12.30%
+  minecraft:gravel              22708    8.66%
+  minecraft:cobblestone          8609    3.28%
+  minecraft:andesite             7313    2.79%
+  minecraft:light_gray_concrete     3419    1.30%
+  minecraft:polished_andesite     3273    1.25%
+  minecraft:stone_brick_wall      912    0.35%
+  minecraft:deepslate_bricks      711    0.27%
+  minecraft:cobblestone_wall      639    0.24%
+  minecraft:black_concrete        601    0.23%
+  minecraft:tinted_glass          530    0.20%
+  minecraft:cobblestone_slab      483    0.18%
+  minecraft:white_carpet          473    0.18%
+  minecraft:iron_bars             324    0.12%
+  minecraft:stone_brick_stairs      280    0.11%
+  minecraft:ladder                256    0.10%
+  minecraft:dead_bush             212    0.08%
+  minecraft:stone                 105    0.04%
+  minecraft:oak_fence             102    0.04%
+  minecraft:oak_stairs            102    0.04%
+  minecraft:cracked_stone_bricks      101    0.04%
+  minecraft:end_rod               101    0.04%
+  minecraft:chain                 100    0.04%
+  minecraft:polished_deepslate       98    0.04%
+  minecraft:water                  85    0.03%
+  minecraft:barrel                 80    0.03%
+  minecraft:brown_concrete         37    0.01%
+  distinct surface blocks = 33
+
+=== 3. MAN-MADE vs WASTELAND SURFACE ===
+columns=262144 manMade(unique to a city palette)=151781 (57.90%) wastelandPalette=7398 (2.82%) both=102965 (39.28%) other=0 (0.00%)
+  (the 'both' column is the honest one: stone/andesite/gravel/coarse_dirt/cobblestone are terrain blocks AND foundation blocks, so they are not claimed as man-made)
+  man-made top: minecraft:barrel              80
+  man-made top: minecraft:black_concrete     601
+  man-made top: minecraft:brown_concrete      37
+  man-made top: minecraft:chain              100
+  man-made top: minecraft:chiseled_stone_bricks      16
+  man-made top: minecraft:cobblestone_slab     483
+  man-made top: minecraft:cobblestone_wall     639
+  man-made top: minecraft:cracked_stone_bricks     101
+  man-made top: minecraft:deepslate_bricks     711
+  man-made top: minecraft:deepslate_tiles   68913
+  man-made top: minecraft:end_rod            101
+  man-made top: minecraft:gray_concrete    32237
+  man-made top: minecraft:iron_bars          324
+  man-made top: minecraft:ladder             256
+  man-made top: minecraft:light_gray_concrete    3419
+  man-made top: minecraft:oak_stairs         102
+  man-made top: minecraft:polished_andesite    3273
+  man-made top: minecraft:polished_deepslate      98
+  man-made top: minecraft:smooth_stone     38050
+  man-made top: minecraft:stone_brick_stairs     280
+  man-made top: minecraft:stone_brick_wall     912
+  man-made top: minecraft:stripped_dark_oak_log      21
+  man-made top: minecraft:terracotta          24
+  man-made top: minecraft:tinted_glass       530
+  man-made top: minecraft:white_carpet       473
+chunksWithStructure=116 of 1024 (11.33%)
+
+=== 4. RELIEF AND WATER (the noise-settings choices, measured) ===
+surfaceY min=19 max=148 mean=113.6 relief(max-min)=129
+waterColumns=0 (0.00%)
+surfaceY histogram (y=count, 1-block buckets, non-empty only):
+  19=2  20=15  21=21  22=5  23=4  24=1  76=17  77=8  
+  78=12  81=1  83=1  85=5  86=9  87=85  88=58  89=51  
+  90=65  91=97  92=57  93=45  94=190  95=123  96=713  97=329  
+  98=1406  99=854  100=950  101=3745  102=8984  103=12028  104=11567  105=12959  
+  106=9275  107=14192  108=18188  109=15625  110=13278  111=19540  112=10193  113=4942  
+  114=7817  115=4243  116=3422  117=4812  118=5197  119=7295  120=5286  121=4278  
+  122=4910  123=4316  124=5809  125=6351  126=5769  127=3039  128=4351  129=5009  
+  130=2878  131=2159  132=3694  133=3374  134=1415  135=2265  136=1474  137=390  
+  138=221  139=604  140=442  141=92  142=451  143=255  144=60  145=3  
+  146=475  147=291  148=57  

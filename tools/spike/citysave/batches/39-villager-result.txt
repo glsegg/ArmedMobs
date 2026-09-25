@@ -1,0 +1,4 @@
+data get entity @e[type=tarkovscav:gunner_villager,limit=1] Health
+data get entity @e[type=tarkovscav:gunner_villager,limit=1] Pos
+data get entity @e[type=minecraft:pillager,limit=1] Health
+data get entity @e[type=minecraft:villager,limit=1] Health

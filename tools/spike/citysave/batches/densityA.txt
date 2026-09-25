@@ -1,0 +1,11 @@
+# Run A: the wasteland sample (same 512x512 box as the sparse baseline) + the same 512x512 box in the
+# overworld (which must stay on the shipped sparse grid).
+execute in tarkovscav:urban_wasteland run forceload add -240 -240 15 15
+execute in tarkovscav:urban_wasteland run forceload add 16 -240 271 15
+execute in tarkovscav:urban_wasteland run forceload add -240 16 15 271
+execute in tarkovscav:urban_wasteland run forceload add 16 16 271 271
+execute in tarkovscav:urban_wasteland run forceload add 2176 1616 2367 1807
+execute in minecraft:overworld run forceload add -240 -240 15 15
+execute in minecraft:overworld run forceload add 16 -240 271 15
+execute in minecraft:overworld run forceload add -240 16 15 271
+execute in minecraft:overworld run forceload add 16 16 271 271

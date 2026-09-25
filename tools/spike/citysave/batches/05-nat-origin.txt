@@ -1,0 +1,98 @@
+execute if block -43 50 -59 minecraft:coarse_dirt run say HIT-mincorner d=0 at -43 50 -59
+execute if block -39 54 -55 minecraft:coarse_dirt run say HIT-mincorner d=4 at -39 54 -55
+execute if block -35 58 -51 minecraft:coarse_dirt run say HIT-mincorner d=8 at -35 58 -51
+execute if block -33 60 -49 minecraft:coarse_dirt run say HIT-mincorner d=10 at -33 60 -49
+execute if block -31 62 -47 minecraft:coarse_dirt run say HIT-mincorner d=12 at -31 62 -47
+execute if block -29 64 -45 minecraft:coarse_dirt run say HIT-mincorner d=14 at -29 64 -45
+execute if block -27 66 -43 minecraft:coarse_dirt run say HIT-mincorner d=16 at -27 66 -43
+execute if block -23 70 -39 minecraft:coarse_dirt run say HIT-mincorner d=20 at -23 70 -39
+execute if block -19 74 -35 minecraft:coarse_dirt run say HIT-mincorner d=24 at -19 74 -35
+execute if block -43 50 12 minecraft:coarse_dirt run say HIT-minxzmax corner d=0 at -43 50 12
+execute if block -39 54 8 minecraft:coarse_dirt run say HIT-minxzmax corner d=4 at -39 54 8
+execute if block -35 58 4 minecraft:coarse_dirt run say HIT-minxzmax corner d=8 at -35 58 4
+execute if block -31 62 0 minecraft:coarse_dirt run say HIT-minxzmax corner d=12 at -31 62 0
+execute if block -27 66 -4 minecraft:coarse_dirt run say HIT-minxzmax corner d=16 at -27 66 -4
+execute if block -19 74 -12 minecraft:coarse_dirt run say HIT-minxzmax corner d=24 at -19 74 -12
+execute if block 28 50 -59 minecraft:coarse_dirt run say HIT-maxxminz corner d=0 at 28 50 -59
+execute if block 24 54 -55 minecraft:coarse_dirt run say HIT-maxxminz corner d=4 at 24 54 -55
+execute if block 20 58 -51 minecraft:coarse_dirt run say HIT-maxxminz corner d=8 at 20 58 -51
+execute if block 16 62 -47 minecraft:coarse_dirt run say HIT-maxxminz corner d=12 at 16 62 -47
+execute if block 12 66 -43 minecraft:coarse_dirt run say HIT-maxxminz corner d=16 at 12 66 -43
+execute if block 4 74 -35 minecraft:coarse_dirt run say HIT-maxxminz corner d=24 at 4 74 -35
+execute if block -31 50 -47 minecraft:coarse_dirt run say HIT-sweep -31 50 -47
+execute if block -19 50 -35 minecraft:coarse_dirt run say HIT-sweep -19 50 -35
+execute if block -7 50 -23 minecraft:coarse_dirt run say HIT-sweep -7 50 -23
+execute if block 5 50 -11 minecraft:coarse_dirt run say HIT-sweep 5 50 -11
+execute if block 16 50 0 minecraft:coarse_dirt run say HIT-sweep 16 50 0
+execute if block -43 50 -59 minecraft:coarse_dirt run say HIT-sweep -43 50 -59
+execute if block 4 50 -12 minecraft:coarse_dirt run say HIT-sweep 4 50 -12
+execute if block -31 55 -47 minecraft:coarse_dirt run say HIT-sweep -31 55 -47
+execute if block -19 55 -35 minecraft:coarse_dirt run say HIT-sweep -19 55 -35
+execute if block -7 55 -23 minecraft:coarse_dirt run say HIT-sweep -7 55 -23
+execute if block 5 55 -11 minecraft:coarse_dirt run say HIT-sweep 5 55 -11
+execute if block 16 55 0 minecraft:coarse_dirt run say HIT-sweep 16 55 0
+execute if block -43 55 -59 minecraft:coarse_dirt run say HIT-sweep -43 55 -59
+execute if block 4 55 -12 minecraft:coarse_dirt run say HIT-sweep 4 55 -12
+execute if block -31 60 -47 minecraft:coarse_dirt run say HIT-sweep -31 60 -47
+execute if block -19 60 -35 minecraft:coarse_dirt run say HIT-sweep -19 60 -35
+execute if block -7 60 -23 minecraft:coarse_dirt run say HIT-sweep -7 60 -23
+execute if block 5 60 -11 minecraft:coarse_dirt run say HIT-sweep 5 60 -11
+execute if block 16 60 0 minecraft:coarse_dirt run say HIT-sweep 16 60 0
+execute if block -43 60 -59 minecraft:coarse_dirt run say HIT-sweep -43 60 -59
+execute if block 4 60 -12 minecraft:coarse_dirt run say HIT-sweep 4 60 -12
+execute if block -31 62 -47 minecraft:coarse_dirt run say HIT-sweep -31 62 -47
+execute if block -19 62 -35 minecraft:coarse_dirt run say HIT-sweep -19 62 -35
+execute if block -7 62 -23 minecraft:coarse_dirt run say HIT-sweep -7 62 -23
+execute if block 5 62 -11 minecraft:coarse_dirt run say HIT-sweep 5 62 -11
+execute if block 16 62 0 minecraft:coarse_dirt run say HIT-sweep 16 62 0
+execute if block -43 62 -59 minecraft:coarse_dirt run say HIT-sweep -43 62 -59
+execute if block 4 62 -12 minecraft:coarse_dirt run say HIT-sweep 4 62 -12
+execute if block -31 63 -47 minecraft:coarse_dirt run say HIT-sweep -31 63 -47
+execute if block -19 63 -35 minecraft:coarse_dirt run say HIT-sweep -19 63 -35
+execute if block -7 63 -23 minecraft:coarse_dirt run say HIT-sweep -7 63 -23
+execute if block 5 63 -11 minecraft:coarse_dirt run say HIT-sweep 5 63 -11
+execute if block 16 63 0 minecraft:coarse_dirt run say HIT-sweep 16 63 0
+execute if block -43 63 -59 minecraft:coarse_dirt run say HIT-sweep -43 63 -59
+execute if block 4 63 -12 minecraft:coarse_dirt run say HIT-sweep 4 63 -12
+execute if block -31 64 -47 minecraft:coarse_dirt run say HIT-sweep -31 64 -47
+execute if block -19 64 -35 minecraft:coarse_dirt run say HIT-sweep -19 64 -35
+execute if block -7 64 -23 minecraft:coarse_dirt run say HIT-sweep -7 64 -23
+execute if block 5 64 -11 minecraft:coarse_dirt run say HIT-sweep 5 64 -11
+execute if block 16 64 0 minecraft:coarse_dirt run say HIT-sweep 16 64 0
+execute if block -43 64 -59 minecraft:coarse_dirt run say HIT-sweep -43 64 -59
+execute if block 4 64 -12 minecraft:coarse_dirt run say HIT-sweep 4 64 -12
+execute if block -31 65 -47 minecraft:coarse_dirt run say HIT-sweep -31 65 -47
+execute if block -19 65 -35 minecraft:coarse_dirt run say HIT-sweep -19 65 -35
+execute if block -7 65 -23 minecraft:coarse_dirt run say HIT-sweep -7 65 -23
+execute if block 5 65 -11 minecraft:coarse_dirt run say HIT-sweep 5 65 -11
+execute if block 16 65 0 minecraft:coarse_dirt run say HIT-sweep 16 65 0
+execute if block -43 65 -59 minecraft:coarse_dirt run say HIT-sweep -43 65 -59
+execute if block 4 65 -12 minecraft:coarse_dirt run say HIT-sweep 4 65 -12
+execute if block -31 70 -47 minecraft:coarse_dirt run say HIT-sweep -31 70 -47
+execute if block -19 70 -35 minecraft:coarse_dirt run say HIT-sweep -19 70 -35
+execute if block -7 70 -23 minecraft:coarse_dirt run say HIT-sweep -7 70 -23
+execute if block 5 70 -11 minecraft:coarse_dirt run say HIT-sweep 5 70 -11
+execute if block 16 70 0 minecraft:coarse_dirt run say HIT-sweep 16 70 0
+execute if block -43 70 -59 minecraft:coarse_dirt run say HIT-sweep -43 70 -59
+execute if block 4 70 -12 minecraft:coarse_dirt run say HIT-sweep 4 70 -12
+execute if block -31 75 -47 minecraft:coarse_dirt run say HIT-sweep -31 75 -47
+execute if block -19 75 -35 minecraft:coarse_dirt run say HIT-sweep -19 75 -35
+execute if block -7 75 -23 minecraft:coarse_dirt run say HIT-sweep -7 75 -23
+execute if block 5 75 -11 minecraft:coarse_dirt run say HIT-sweep 5 75 -11
+execute if block 16 75 0 minecraft:coarse_dirt run say HIT-sweep 16 75 0
+execute if block -43 75 -59 minecraft:coarse_dirt run say HIT-sweep -43 75 -59
+execute if block 4 75 -12 minecraft:coarse_dirt run say HIT-sweep 4 75 -12
+execute if block -31 80 -47 minecraft:coarse_dirt run say HIT-sweep -31 80 -47
+execute if block -19 80 -35 minecraft:coarse_dirt run say HIT-sweep -19 80 -35
+execute if block -7 80 -23 minecraft:coarse_dirt run say HIT-sweep -7 80 -23
+execute if block 5 80 -11 minecraft:coarse_dirt run say HIT-sweep 5 80 -11
+execute if block 16 80 0 minecraft:coarse_dirt run say HIT-sweep 16 80 0
+execute if block -43 80 -59 minecraft:coarse_dirt run say HIT-sweep -43 80 -59
+execute if block 4 80 -12 minecraft:coarse_dirt run say HIT-sweep 4 80 -12
+execute if block -31 85 -47 minecraft:coarse_dirt run say HIT-sweep -31 85 -47
+execute if block -19 85 -35 minecraft:coarse_dirt run say HIT-sweep -19 85 -35
+execute if block -7 85 -23 minecraft:coarse_dirt run say HIT-sweep -7 85 -23
+execute if block 5 85 -11 minecraft:coarse_dirt run say HIT-sweep 5 85 -11
+execute if block 16 85 0 minecraft:coarse_dirt run say HIT-sweep 16 85 0
+execute if block -43 85 -59 minecraft:coarse_dirt run say HIT-sweep -43 85 -59
+execute if block 4 85 -12 minecraft:coarse_dirt run say HIT-sweep 4 85 -12

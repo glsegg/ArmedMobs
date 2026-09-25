@@ -1,0 +1,17 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven {
+            name = 'MinecraftForge'
+            url = 'https://maven.minecraftforge.net/'
+        }
+    }
+}
+
+// ForgeGradle runs its MCP steps on a Java 17 toolchain. If the machine only has a newer
+// JDK, this resolver lets Gradle download a matching JDK automatically.
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
+rootProject.name = 'tarkovscav'

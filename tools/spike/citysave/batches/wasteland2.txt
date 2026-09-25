@@ -1,0 +1,13 @@
+# Urban-wasteland RCON proof, batch 2: force 32x32 chunks (512x512 blocks) around the located city and
+# 12x12 chunks around the located strongpoint, then prove the area is writable.
+execute in tarkovscav:urban_wasteland run forceload add -240 -240 15 15
+execute in tarkovscav:urban_wasteland run forceload add 16 -240 271 15
+execute in tarkovscav:urban_wasteland run forceload add -240 16 15 271
+execute in tarkovscav:urban_wasteland run forceload add 16 16 271 271
+execute in tarkovscav:urban_wasteland run forceload add 2176 1616 2367 1807
+execute in tarkovscav:urban_wasteland run forceload query
+execute in tarkovscav:urban_wasteland run setblock 0 300 0 minecraft:stone_bricks
+execute in tarkovscav:urban_wasteland run fill 4 300 4 8 300 8 minecraft:stone_bricks
+execute in tarkovscav:urban_wasteland run setblock 0 300 0 minecraft:air
+execute in tarkovscav:urban_wasteland run fill 4 300 4 8 300 8 minecraft:air
+execute in tarkovscav:urban_wasteland run time query daytime

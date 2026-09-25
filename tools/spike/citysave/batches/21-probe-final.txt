@@ -1,0 +1,12 @@
+﻿forceload add 512 112 575 175
+forceload add 376 328 439 391
+forceload add -48 -64 16 0
+execute if block 520 63 120 minecraft:coarse_dirt run seed
+execute if block 567 63 167 minecraft:coarse_dirt run seed
+execute if block 384 65 336 minecraft:coarse_dirt run seed
+execute if block 431 65 383 minecraft:coarse_dirt run seed
+execute if block -31 62 -47 minecraft:coarse_dirt run seed
+execute if block 16 62 0 minecraft:coarse_dirt run seed
+execute if block 520 88 120 minecraft:deepslate_tiles run seed
+execute if block 40 85 120 minecraft:deepslate_tiles run seed
+forceload remove all

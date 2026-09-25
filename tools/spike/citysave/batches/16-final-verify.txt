@@ -1,0 +1,13 @@
+﻿seed
+tarkovscav city list
+execute positioned 64 70 144 run tarkovscav city test
+execute positioned 224 70 344 run tarkovscav city test
+execute positioned 400 80 360 run tarkovscav city test
+execute positioned -7 70 -23 run tarkovscav city test
+execute positioned 0 100 0 run locate structure tarkovscav:city_small
+execute positioned 420 100 405 run locate structure tarkovscav:city_small
+gamerule doMobSpawning
+gamerule doDaylightCycle
+gamerule keepInventory
+time query daytime
+difficulty

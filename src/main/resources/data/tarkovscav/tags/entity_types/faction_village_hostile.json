@@ -1,0 +1,30 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:raiders",
+    "#minecraft:skeletons",
+    "minecraft:zombie",
+    "minecraft:husk",
+    "minecraft:drowned",
+    "minecraft:zombie_villager",
+    "minecraft:zombified_piglin",
+    "minecraft:zombie_horse",
+    "minecraft:phantom",
+    "minecraft:wither",
+    "minecraft:spider",
+    "minecraft:cave_spider",
+    "minecraft:silverfish",
+    "minecraft:endermite",
+    "minecraft:creeper",
+    "minecraft:slime",
+    "minecraft:magma_cube",
+    "minecraft:blaze",
+    "minecraft:ghast",
+    "minecraft:guardian",
+    "minecraft:elder_guardian",
+    "minecraft:shulker",
+    "minecraft:vex",
+    "minecraft:hoglin",
+    "minecraft:zoglin"
+  ]
+}
