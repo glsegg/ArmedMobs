@@ -44,7 +44,7 @@
   "spawner_budget": 4,
   "chests_per_building": 2,
   "platform": {
-    "margin": 8,
+    "margin": 16,
     "clear_to": 150,
     "stone_below": 8
   },

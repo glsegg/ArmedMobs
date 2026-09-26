@@ -8,7 +8,7 @@
   "name": "city_a",
   "palette": "modern_scav",
   "size": [56, 30, 56],
-  "platform": { "margin": 8, "clear_to": 150, "stone_below": 8 },
+  "platform": { "margin": 16, "clear_to": 150, "stone_below": 8 },
   "plot_block": "walk",
   "interior_variation": 1,
   "extra_openings_per_wall": 2,

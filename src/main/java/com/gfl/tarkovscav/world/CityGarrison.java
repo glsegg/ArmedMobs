@@ -190,6 +190,11 @@ public final class CityGarrison {
                     continue;
                 }
                 applyCity(level, city, data, now);
+                // The capture HUD's steady state (README 7p): the same trigger that already knows this
+                // player is near this city pushes the bars, so walking away simply stops the packets and the
+                // client's own hide delay takes over. Overworld-only inside the call; a wasteland city sends
+                // nothing because it has no pools.
+                CityCapture.syncHud(level, city, data, player);
             }
         }
     }
@@ -210,22 +215,30 @@ public final class CityGarrison {
      * The city's faction row, rolled and RECORDED the first time the city is asked about - from the trigger
      * or from a natural-spawn check. A recorded roll is never recomputed, so editing the config chances
      * cannot flip a city that already exists.
+     *
+     * <p>The capture pools are built here too (README 7p), for the same "the first time the city is asked
+     * about" reason: this method IS the existing trigger, so pool creation needs no second scanner, and it
+     * runs for a city recorded before the capture feature existed as well
+     * ({@link CityCapture#ensurePools} builds the missing rows from the ledger's own building count). Once
+     * pools exist the call is a hash lookup and a no-op, which is what makes a captured city impossible to
+     * rebuild by walking past it.</p>
      */
     public static GarrisonData.CityRow factionFor(ServerLevel level, CityGate.Area city, GarrisonData data) {
         ResourceLocation dimension = level.dimension().location();
         GarrisonData.CityRow existing = data.city(dimension, city.key());
-        if (existing != null) {
-            return existing;
+        if (existing == null) {
+            Faction dominant = CityFactions.rollCity(level.getSeed(), dimension, city.key(),
+                    Config.GARRISON_FRIENDLY_CITY_CHANCE.get());
+            List<String> ids = buildingIds(city);
+            Faction[] rolled = CityFactions.rollBuildings(level.getSeed(), dimension, city.key(), dominant,
+                    Config.GARRISON_CITY_DOMINANT_FACTION_CHANCE.get(), ids.size());
+            data.recordCity(dimension, city.key(), dominant, ids, rolled);
+            TarkovScav.LOGGER.info("[garrison] {} -> faction {} decided ({} building(s))",
+                    city.name(), CityFactions.name(dominant), ids.size());
+            existing = data.city(dimension, city.key());
         }
-        Faction dominant = CityFactions.rollCity(level.getSeed(), dimension, city.key(),
-                Config.GARRISON_FRIENDLY_CITY_CHANCE.get());
-        List<String> ids = buildingIds(city);
-        Faction[] rolled = CityFactions.rollBuildings(level.getSeed(), dimension, city.key(), dominant,
-                Config.GARRISON_CITY_DOMINANT_FACTION_CHANCE.get(), ids.size());
-        data.recordCity(dimension, city.key(), dominant, ids, rolled);
-        TarkovScav.LOGGER.info("[garrison] {} -> faction {} decided ({} building(s))",
-                city.name(), CityFactions.name(dominant), ids.size());
-        return data.city(dimension, city.key());
+        CityCapture.ensurePools(level, city, data);
+        return existing;
     }
 
     /**
@@ -300,6 +313,7 @@ public final class CityGarrison {
         int cursor = 0;
         int placedSquads = 0;
         int placedUnits = 0;
+        int refusedByCapture = 0;
         Map<String, Integer> perFaction = new HashMap<>();
 
         for (int s = 0; s < squads; s++) {
@@ -317,6 +331,14 @@ public final class CityGarrison {
                 // mixed along building lines instead of mixing inside one building.
                 String buildingId = buildingIdAt(city, spot);
                 Faction faction = buildingFaction(data, dimension, city.key(), buildingId);
+                // The third spawn path (README 7p): a faction whose pool is spent is not put back into the
+                // city, so a city captured before its garrison could be placed does not refill itself. The
+                // veto reads the same ledger row as the natural-spawn and spawner vetoes, so the three can
+                // never disagree about who still has men.
+                if (CityCapture.vetoGarrison(level, city.key(), faction)) {
+                    refusedByCapture++;
+                    continue;
+                }
                 if (place(level, spot, isLeader, squadId, random, faction)) {
                     inThisSquad++;
                     perFaction.merge(CityFactions.name(faction), 1, Integer::sum);
@@ -331,6 +353,13 @@ public final class CityGarrison {
         if (placedUnits <= 0) {
             // No ledger write: the next coarse check retries. The alternative - marking it done - would
             // leave the city permanently empty without a single line in the log to explain it.
+            if (refusedByCapture > 0) {
+                // A captured city is a legitimate reason to place nothing, so it is not the WARN above: the
+                // city may be reset later, and the retry is what makes that work without a restart.
+                TarkovScav.LOGGER.info("[capture] {} -> garrison not placed: {} unit(s) refused by the capture"
+                        + " veto (and/or no valid standing spot); will retry", city.name(), refusedByCapture);
+                return;
+            }
             TarkovScav.LOGGER.warn("[garrison] {} -> no valid standing spot found, will retry",
                     city.name());
             return;

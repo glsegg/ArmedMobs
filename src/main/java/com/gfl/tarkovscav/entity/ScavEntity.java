@@ -171,17 +171,26 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
         // held, so the two can never issue competing navigation calls in the same tick.
         this.goalSelector.addGoal(2, new com.gfl.tarkovscav.gun.NoGunMeleeGoal(this, 1.1D, false));
         // Grenades (README 5v): priority 3, behind shooting and melee, and only when the target is out of
-        // sight. Completely inert for a mob with no grenades, so an ordinary scav is unaffected.
-        this.goalSelector.addGoal(3, new com.gfl.tarkovscav.grenade.GrenadeThrowGoal(this, this));
+        // sight. Completely inert for a mob with no grenades, so an ordinary scav is unaffected. Wrapped in
+        // the ladder gate (README 7o) because this goal takes no goal flags at all (it never calls
+        // setFlags), so nothing else can keep it from throwing while the unit is on the rungs.
+        this.goalSelector.addGoal(3, new com.gfl.tarkovscav.gun.LadderGatedGoal(this,
+                new com.gfl.tarkovscav.grenade.GrenadeThrowGoal(this, this)));
         // Grenade resupply (README 5v): a parallel path, priority 4, that only ever takes a THROWABLE
         // off a rack - an armed unit never collects a second gun.
         this.goalSelector.addGoal(4, new com.gfl.tarkovscav.grenade.GrenadeResupplyGoal(this, this));
-        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.8D));
-        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 12.0F));
-        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
-        // The command system: walk to a mark this unit was ordered to. Priority 5 is below every combat
-        // goal and takes only MOVE, so a fight pre-empts it and an idle unit obeys instead of wandering.
-        this.goalSelector.addGoal(5, new com.gfl.tarkovscav.command.AdvanceOrderGoal(this));
+        this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.8D));
+        this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 12.0F));
+        this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
+        // The command system: walk to a mark this unit was ordered to. Priority 6 is below every combat
+        // goal and above the stroll, and it takes only the MOVE flag - so a fight (GunAttackGoal,
+        // priority 1, MOVE+LOOK) pre-empts it for free, and an idle unit obeys instead of wandering.
+        this.goalSelector.addGoal(6, new com.gfl.tarkovscav.command.AdvanceOrderGoal(this));
+        // Ladder climbing (README 7o): priority 5, i.e. BELOW every combat goal (0..4) so a fight and a
+        // retreat win, and ABOVE the advance order and the stroll because it supplies the vertical leg
+        // those two cannot path. It outranks AdvanceOrderGoal on purpose: both take MOVE, and the climb
+        // ends the moment the unit stands on the destination floor, at which point the order resumes.
+        this.goalSelector.addGoal(5, new com.gfl.tarkovscav.gun.LadderClimbGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this, ScavEntity.class));
         // Faction layer (README 5m): a branded renegade is hunted by everybody. The predicate is inert

@@ -55,6 +55,7 @@
 | `gunpool [tier]` | `tier`：可省略；字面量为枪械档 id `pistol` \| `shotgun` \| `rifle` \| `sniper`；缺省按 `rifle` | 打印该档当前可被发放的全部 TaCZ 枪 id 及其 type，并报告被 `gunBlacklist`/`gunWhitelist`/`excludedGunTypes` 与脚本枪规则过滤掉的数量；池为空时红字提示检查 TaCZ 枪包 | `/armedmobs gunpool sniper` |
 | `debug` | 无 | 打印 32 格内每只持枪单位的完整状态机报告（`GunBrain#debugSummary`）＋ 阵营/叛变/警戒网络/精度档/护甲等级/语音池/当前目标（是否 `VILLAGE-HOSTILE`）；写 `[debug]` 日志 | `/armedmobs debug` |
 | `dimension [name]` | `name`：单词，可省略。省略 = `tarkovscav:urban_wasteland`；带命名空间按原样解析，不带则补 `tarkovscav:`。自动补全列出本服务器所有已加载维度 | 把**执行者**（必须是玩家）传送到城市废土维度（或指定维度），落点与部署信标**完全同一套**安全落地代码（`MOTION_BLOCKING` 高度图定 Y、悬空时铺 5×5 石砖平台＋火把），并打印落点坐标；写 `[wasteland]` 日志。非玩家来源、未知维度都会干净拒绝并说明 | `/armedmobs dimension`、`/armedmobs dimension minecraft:the_nether` |
+| `fillwater [radius] [block]` | `radius`：整数 `1..128`，可省略（默认 **48**）。`block`：字符串，可省略（默认 **`minecraft:stone`**），带不带 `minecraft:` 都认；`minecraft:air` = 抽干 | 以执行者为中心扫一个立方体，把 `minecraft:water` 替换成 `block`（1.20.1 没有独立的 `flowing_water` **方块**，流动与静止都是带 0..15 液面属性的 `minecraft:water`，所以一条判定就够）。**含水方块**（楼梯/栅栏/台阶等）只计数、不替换——替换它们等于把方块本身删掉；未加载的区块跳过并在结果里标注；替换位置落在扫描边界上的数量单独报告并提示「外面的水会流回来，再来一次或把半径放大」。打印 `[fillwater]` 行：维度、目标方块、包围盒、扫描数、替换数、含水跳过数、边界水数。未知道方块名干净拒绝返回 0 | `/armedmobs fillwater`、`/armedmobs fillwater 96`、`/armedmobs fillwater 128 minecraft:air` |
 | `marks` | 无 | 列出**当前维度**的全部存活标记：字母、坐标、来源（`tool` / `stick` / `point`）、剩余时间（`permanent` 或秒数），并打印本维度的上限 `command.maxMarks` 与影响半径 `command.radius`；返回 1 | `/armedmobs marks` |
 | `marks remove <letter>` | `letter`：单词（大小写不敏感，会先被 `CommandMark#sanitiseLetter` 归一化） | 删除该字母的标记（不分来源；信号点方块的标记也能这样删）。成功后提示「指向它的命令会被丢弃」；该维度没有这个字母则失败返回 0 | `/armedmobs marks remove B` |
 | `marks clear` | 无 | 清空**当前维度**的全部标记，打印清除数量；本来就没有标记时返回 0 | `/armedmobs marks clear` |
@@ -62,6 +63,9 @@
 | `city faction` | 无 | 只打印阵营账本：每个已决定阵营的城市一行（维度、城市标识、`dominant=`、可选 `override=`、`spawners=rewritten\|pending`），其下每栋楼一行（`<序号:楼名> -> 阵营`，覆写时另注 `override` 与原掷骰）。返回 1 | `/armedmobs city faction` |
 | `city faction <key> <faction>` | `key`：单词，账本里的城市标识；在末尾加 `#<buildingId>` 可只改一栋楼。`faction`：`village` / `illager` / `auto` | 覆写指定城市（或指定楼）的阵营，写入账本并清除「刷怪笼已改写」标记，因此**下一次驻军触发**会按新阵营重写刷怪笼。`auto` 清除覆写、回落到当初记录的掷骰。未知城市/楼、未知阵营返回 0 | `/armedmobs city faction structure/tarkovscav:city_small/10,-4,10 illager` |
 | `city faction <faction> [pos]` | `faction`：同上；`pos`：可选坐标，缺省用命令执行者所在位置 | 解析该位置（默认取最近的城市盒）所在的城市，覆写其阵营并**立即生效**：立刻按楼重写已加载区块的刷怪笼、并补刷尚未放置的驻军（覆写不会改变已经站好的驻军成员）。半径内没有城市（或区块未加载）时返回 0。控制台可用 `/execute positioned <x y z> run ...` | `/execute positioned 0 70 0 run armedmobs city faction village` |
+| `capture` | 无 | 先打印生效配置（开关、血条开关、池上下限、每栋楼增量、每次死亡扣减、是否只算玩家击杀、血条隐藏延迟），再**逐城**列出账本里的池：维度、城市标识、每个阵营的 `当前/上限`、是否已 `captured`（占领）。返回 1 | `/armedmobs capture` |
+| `capture reset [at [pos] \| <城市键>]` | 不写 = 最近的城市；`at [pos]` 同义（可给坐标）；`<城市键>` = 账本里的城市标识 | 按账本里记录的建筑数与该城当前阵营**重建**该城全部兵力池，并清掉 `captured` 标记，于是这座城重新进入争夺（已经站好的驻军成员不会被清除）。找不到城市返回 0。**只主世界有效** | `/armedmobs capture reset`、`/armedmobs capture reset at 0 70 0`、`/armedmobs capture reset structure/tarkovscav:city_small/10,-4,10` |
+| `capture set <faction> <value> [pos]` | `faction`：`village` / `illager`；`value`：整数 `0..400`；`pos`：可选坐标，缺省用执行者位置 | 把最近的城里该阵营的池**直接设成** `value`（0 = 立刻判占领并写 `[capture] ... captured by ...` 日志），用于不杀一百个怪就测终局与血条。设成 0 时同样只写一次占领日志。找不到城市或该城没有这个阵营的池返回 0 | `/armedmobs capture set illager 0`、`/armedmobs capture set village 5 120 70 -40` |
 
 **可召唤类型（`spawn <type>`）**：`tarkovscav:scav`、`tarkovscav:gunner_pillager`、`tarkovscav:gunner_villager`、`tarkovscav:sniper_pillager`、`tarkovscav:sniper_villager`、`tarkovscav:usec_villager`、`tarkovscav:bear_pillager`、`tarkovscav:elite_villager`、`tarkovscav:elite_pillager`。
 
@@ -638,6 +642,36 @@
 | `shield.durabilityPerBlockedHit` | `2.0` | 每点耐久抵多少被挡下的伤害：扣耐久 = `max(1, ceil(被挡伤害 / 此值))` | 0.1..100.0 |
 | `shield.protectFromExplosions` | `false` | false（默认）= 爆炸（手雷/TNT/苦力怕）**永不减免**；只有 true 才会把爆炸也送进锥形判定 |  |
 
+### 5.27 `[ladder]`（爬梯：九个武装单位自己上下梯子）
+
+原版里怪物**不会爬梯子**：`WalkNodeEvaluator` 不为梯子生成垂直边，`Mob` 也没有「贴梯上行」的分支（只有玩家 `LocalPlayer#aiStep` 有）。所以生成器造出来的梯井对怪物等同于一面墙。本模组自己补上三层：**垂直链接**（目标在另一层时在半径内找合法梯井，把路线拆成走到梯脚→爬→出开口）、**移动**（贴梯、按速度上下、到层才把控制权交回寻路器）、**意图**（只在目的地确实在另一层且找到梯井时才启动的 goal）。爬梯期间不开火、不换弹（枪口对着墙），战斗与撤退优先于爬梯；被打断时**落在某一层**，绝不挂在半空。核心在 `gun/LadderSearch`（纯逻辑，可无游戏执行）+ `gun/LadderClimbGoal`。诊断：生成器的竖井报告（`LADDER_REPORT`）。
+
+| 键名 | 默认值 | 作用 | 备注/推荐范围 |
+| --- | --- | --- | --- |
+| `ladder.enabled` | `true` | 总开关。false = 回到「完全不会用梯子」的旧行为（也方便 A/B 对比） |  |
+| `ladder.climbSpeed` | `0.15` | 上行速度（格/tick）。玩家约 0.2，默认比玩家慢，追击爬梯才像样 | 0.01..1.0 |
+| `ladder.downSpeed` | `0.10` | 下行速度（格/tick）。故意比上行慢：全速下坠看着像掉下去，而且会甩开队友 | 0.01..1.0 |
+| `ladder.searchRadius` | `8` | 愿意为找梯井绕多远（格）；8 覆盖隔壁房间或转角，再大就会出现「为了爬楼横穿整栋」 | 2..32 |
+| `ladder.maxHeight` | `48` | 单次连续攀爬的最大高度（格），超过就停下重新规划；防止「通向虚无的梯子」让单位永远往上爬 | 4..256 |
+| `ladder.combatWhileClimbing` | `false` | 是否允许在梯子上开火/换弹。默认禁（面朝梯子，枪口在墙里）；**手雷无论如何不在梯子上扔** |  |
+| `ladder.fallDamageInShaft` | `false` | 梯井内是否恢复摔落伤害。默认关闭（从梯子上滑一两格不算摔）；被**打出**梯井（脚下已无梯子）恢复原版摔落规则 |  |
+
+### 5.28 `[capture]`（主世界城市争夺战：兵力池 + 血条；废土无效）
+
+用户口径：「占领城市这种玩法**只在主世界**有」「不被占领会一直刷几个阵容的单位，直到一方兵力消失（思路和战地一样）」「废土世界完全是各种人乱斗，不需要占领」。所以两个维度规则**故意不同**：主世界按城建兵力池、扣到 0 该阵营永久停刷、幸存方占领；废土**不建池、不判占领、永不出血条**（照旧按楼分阵营乱斗）。池与占领标记存在 `data/tarkovscav_garrison.dat` 的 `pools` 列表里（`<维度>|<城>|<阵营>` + `strength`/`max`/`captured`），重启不丢。开池公式：`clamp(poolMin + 建筑数 × poolPerBuilding, poolMin, poolMax)`（同一座城两方开局一样多）。「停止刷新」是**运行时拦截**（`MobSpawnEvent.PositionCheck` 对自然刷怪与刷怪笼同时生效 + 驻军逐单位问一次），**从不改写或熄灭你的刷怪笼方块**。诊断：`/armedmobs capture`。
+
+| 键名 | 默认值 | 作用 | 备注/推荐范围 |
+| --- | --- | --- | --- |
+| `capture.enabled` | `true` | 总开关。false 时仍按楼分阵营、仍有驻军，但不建池、永不阻止刷新 |  |
+| `capture.hudEnabled` | `true` | 血条显示。纯客户端绘制（服务端只同步数字），关掉不可能改变胜负 |  |
+| `capture.poolMin` | `20` | 最小开局兵力（小城的地板） | 4..200 |
+| `capture.poolMax` | `100` | 最大开局兵力（大城的上限） | 4..400 |
+| `capture.poolPerBuilding` | `2` | 每栋楼给该阵营加多少人；4 栋 = 28 人，40 栋封顶 100 | 0..20 |
+| `capture.drainPerKill` | `1` | 该城该阵营每死一人扣多少；1 = 池就是人头数（归零即「这些人真的死光了」） | 1..10 |
+| `capture.playerKillsOnly` | `false` | 只算玩家造成的死亡。默认 false = 两方自己也会打出胜负，玩家是加速器 |  |
+| `capture.hudHideDelaySeconds` | `8` | 离开城市后血条再停留几秒；只剩一方时立即隐藏 | 0..60 |
+
+
 ---
 
 ## 6. 常用调参配方
@@ -952,6 +986,8 @@ assets/tarkovscav/lang/en_us.json / zh_cn.json
 | `[voice]` | `MobVoice`、`ModSounds`、`Config` | 播放的行/池/音高/音量、清单缺失、`pitchMin > pitchMax`、非法 `familyVolume` |
 | `[city]` | `CityStructures`、`CityDistrictAssembler`、`ModCommands`、`TarkovScav` | 导入/加载/放置/区域新增、池读取、地基深度不一致 WARN、缺件 WARN |
 | `[cityloot]` | `CityChestLootModifier` | 每次城区箱子真的收到 TaCZ 追加物时一行：位置、维度、收到了什么（`<数量>x<物品>`） |
+| `[fillwater]` | `WaterCleanup`、`ModCommands fillwater` | 维度、目标方块、包围盒、扫描方块数、替换数、含水方块跳过数、落在扫描边界上的水数（会流回来的那批） |
+| `[capture]` | `CityCapture`、`ModCommands capture` | 池建立、每次扣减、`captured by <胜者> (<败者> strength exhausted)`（**只写一次**）、驻军被拦截（`refused by the capture veto`）。废土维度永不出现 |
 | `[pose]` | `PoseWriters`、`RigSupport` | 每帧每根姿势骨骼的写入者、双写 WARN |
 | `[test]` | `FightHarness`、`ModCommands test fight/watch/stall` | `WATCH PASS/FAIL ... moved= shots= dummyDamage= stalls= state=`、`STALL PASS/FAIL ... escapes=`、`target=`/`los=` 上下文 |
 | `[cover]` | `ModCommands cover` | 候选点数、隐蔽数、最佳掩体 |

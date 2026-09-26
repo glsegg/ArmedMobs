@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "Layout for the 塔科夫Scav city preset 'city_small'. tools/spike/CityStructureGen.java reads every",
+    "Layout for the 濉旂澶玈cav city preset 'city_small'. tools/spike/CityStructureGen.java reads every",
     "tools/city-layout*.json and produces, from the same in-memory block grid, BOTH the datapack",
     "structure (data/tarkovscav/structures/<name>.nbt) and the RCON command lists",
     "(tools/spike/work/<name>_commands.txt and <name>_platform.txt) - so the .nbt and the sandbox build",
@@ -36,7 +36,7 @@
   "spawners_per_building": 2,
   "chests_per_building": 3,
   "size": [48, 26, 48],
-  "platform": { "margin": 8, "clear_to": 150, "stone_below": 8 },
+  "platform": { "margin": 16, "clear_to": 150, "stone_below": 8 },
   "street": {
     "band_from": 19,
     "band_to": 28,

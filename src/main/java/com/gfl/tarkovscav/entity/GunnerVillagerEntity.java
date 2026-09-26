@@ -225,22 +225,28 @@ public class GunnerVillagerEntity extends Villager implements GunUser, RangedAtt
         // melee fallback for the case where TaCZ's index yields no gun for this tier, exactly as on
         // the scav and the gunner pillager
         this.goalSelector.addGoal(2, new com.gfl.tarkovscav.gun.NoGunMeleeGoal(this, 1.1D, false));
-        // Grenades (README 5v), behind shooting and melee: thrown only when the target is out of sight.
-        this.goalSelector.addGoal(3, new com.gfl.tarkovscav.grenade.GrenadeThrowGoal(this, this));
+        // Grenades (README 5v), behind shooting and melee: thrown only when the target is out of sight. The
+        // ladder gate (README 7o) is required because this goal carries no goal flags of its own.
+        this.goalSelector.addGoal(3, new com.gfl.tarkovscav.gun.LadderGatedGoal(this,
+                new com.gfl.tarkovscav.grenade.GrenadeThrowGoal(this, this)));
         // Grenade resupply (README 5v): a parallel path, priority 4, that only ever takes a THROWABLE
         // off a rack - an armed unit never collects a second gun.
         this.goalSelector.addGoal(4, new com.gfl.tarkovscav.grenade.GrenadeResupplyGoal(this, this));
         // Weapon rack (README 5n): a mob that took a bow/crossbow shoots instead of closing in. The goal is
         // inert unless such a weapon is in hand, so an ordinary gunner is unaffected.
         this.goalSelector.addGoal(1, new com.gfl.tarkovscav.gun.ArmedRangedGoal(this, 1.0D, 15.0F));
-        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.6D));
-        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 12.0F));
-        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
-        // The command system: walk to a mark this unit was ordered to. Priority 5 puts it BELOW every
+        this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.6D));
+        this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 12.0F));
+        this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
+        // The command system: walk to a mark this unit was ordered to. Priority 6 puts it BELOW every
         // combat goal and above the stroll, and it takes only the MOVE flag - so a fight (GunAttackGoal,
         // priority 1, MOVE+LOOK) pre-empts it for free, and an idle unit obeys the order instead of
         // wandering. Inert until an order exists, so nothing changes for a unit nobody commanded.
-        this.goalSelector.addGoal(5, new com.gfl.tarkovscav.command.AdvanceOrderGoal(this));
+        this.goalSelector.addGoal(6, new com.gfl.tarkovscav.command.AdvanceOrderGoal(this));
+        // Ladder climbing (README 7o): priority 5, below every combat goal and above the advance order and
+        // the stroll. A villager is a Brain mob, but the brain is already parked while it has an order or a
+        // target (see customServerAiStep below), so the climb is not fought by a walk-target memory.
+        this.goalSelector.addGoal(5, new com.gfl.tarkovscav.gun.LadderClimbGoal(this));
 
         // Whoever hurts it, it shoots back - including a player who attacks a "friendly" villager.
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));

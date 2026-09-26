@@ -315,6 +315,12 @@ const bigComponents = sizes.filter((s) => s >= 500).length;
 console.log(`  building components(total)=${components} of size >= 500: ${bigComponents}`);
 console.log(`  component sizes: ${sizes.slice(0, 20).join(',')}`);
 if (small.length) console.log(`  small (street-cover sized) components: ${small.join(' | ')}`);
+// RESTORED to its original single-check form. A provisional version of this split it into
+// `bigComponents === 18` plus "exactly 31 ruin fragments" while the ruin blast was an ellipse whose jittered
+// rim pinched short runs of wall material off their buildings. That geometry was replaced by a staircase
+// wedge whose cut is a suffix of every z column (so the complement cannot be pinched), and the generator now
+// removes the few strays that a jagged cut can still leave - measured 0 fragments in all six structures. So
+// the stronger form is back: nothing but the 18 buildings, exactly as before the blast changed shape.
 check(bigComponents === 18 && components === 18,
   'the volume is exactly 18 separate buildings (connected components, no orphan cluster)',
   `${bigComponents} big of ${components} total: ${sizes.slice(0, 20).join(',')}`);
@@ -356,11 +362,17 @@ console.log('4. the four shipped city presets are byte-identical (pure addition)
 //     treats a carpet as a blocking block (AIR is the rule the blockstate gate measures).
 // The four pins below are the new, deliberately re-measured values; the generator is deterministic (a second
 // full regeneration is byte-identical - see the comment in tools/spike/selftest.ps1).
+// RE-PINNED (README 7o, the generator's shaft-cell guard): the four preset hashes moved because the ladder
+// shaft's column and its two opening cells are now kept clear of furniture/cover/the fixture pass and of the
+// ruin blast, so the six presets were regenerated. A second full regeneration is still byte-identical.
+// RE-PINNED AGAIN (README 7l.1, the ruin blast + the end-rod removal): all six presets were regenerated a
+// third time - every end rod is gone and the rectangular ruin cut became the staircase wedge, plus the two
+// orphan passes. A second full regeneration was verified byte-identical after this too.
 const PRESETS = {
-  city_small: 'cd8957808e0047f9013a986005e9f654a0c4301c137eadd91be94083aa0167ac',
-  city_a: '9774d3edee49eb28b89f4e96831975bebae53cca8c0c456e287fe65c439689eb',
-  city_b: 'e73be3eb8d741d7082bf0871c292814b8ca080c8679e09289da296e3c607f78e',
-  city_c: '0541fa0de7c3bd4969f48fbce6e95191335a3f7d603b10cbb8c0bc33c1187725',
+  city_small: '5b6e2c5e853220ab6796e826415b37af0f933a058b10c6929f5e7b6ef9413a98',
+  city_a: '6ca20a3556c95bb4596aef68ea52d7fbd7cbce11e3395636d0fc1210f91bb67e',
+  city_b: '2e39cf158fe6180194a0149217e13646b2488c365c5ef6097ca92763e644b0b1',
+  city_c: 'e1959247c2173c2d60c6da0acc972e2607502d1a9f122d3ce3870cfbe8139e67',
 };
 for (const [name, want] of Object.entries(PRESETS)) {
   const file = path.join(RES, 'structures', name + '.nbt');

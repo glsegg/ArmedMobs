@@ -81,6 +81,9 @@ public final class ClientSetup {
     @SubscribeEvent
     public static void onRegisterOverlays(net.minecraftforge.client.event.RegisterGuiOverlaysEvent event) {
         event.registerAboveAll("killfeed", KillFeedHud.INSTANCE);
+        // The city-capture strength bars (README 7p) sit above everything too: they are the other
+        // top-of-screen element, and the config decides whether they ever appear.
+        event.registerAboveAll("capture", CaptureHud.INSTANCE);
         // The flashbang white-out (README 5v) is BELOW the kill feed but above the hotbar: a flash must not
         // hide the feed (that would be a double punishment) but it does cover the world.
         event.registerBelow(net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CHAT_PANEL.id(),

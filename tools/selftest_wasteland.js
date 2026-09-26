@@ -110,7 +110,8 @@ check(effects.sky_color === biome.effects.sky_color && effects.fog_color === bio
   && effects.water_fog_color === biome.effects.water_fog_color,
   'the dimension type and the biome use the same dusty palette');
 
-check(settings.aquifers_enabled === true, 'noise settings: aquifers on');
+check(settings.aquifers_enabled === false,
+  'noise settings: aquifers OFF - standing water in the seams between city pieces was a hole to fall into');
 check(settings.disable_mob_generation === false, 'noise settings: mob generation on');
 check(settings.default_block && settings.default_block.Name === 'minecraft:stone',
   'noise settings: default block is stone', settings.default_block && settings.default_block.Name);
@@ -221,10 +222,13 @@ check(dimension.structures === undefined,
   dimension.structures === undefined ? 'absent, as it should be' : JSON.stringify(dimension.structures));
 const PLACEMENT_TYPE = 'tarkovscav:wasteland_spread';
 const FOOTPRINTS = {
+  // The wasteland pairs for city_small/city_variants were 4/1 and 5/2 (one city every 64 and 80 blocks,
+  // i.e. the presets touched each other) until the no-water/density pass; they are now the shipped grid's
+  // 24/8 = one city per 384 blocks. city_district and city_strongpoint are deliberately untouched.
   city_small: { ids: ['tarkovscav:city_small'], width: 48, normalSpacing: 24, normalSeparation: 8,
-    denseSpacing: 4, denseSeparation: 1 },
+    denseSpacing: 24, denseSeparation: 8 },
   city_variants: { ids: ['tarkovscav:city_a', 'tarkovscav:city_b', 'tarkovscav:city_c'], width: 64,
-    normalSpacing: 32, normalSeparation: 12, denseSpacing: 5, denseSeparation: 2 },
+    normalSpacing: 32, normalSeparation: 12, denseSpacing: 24, denseSeparation: 8 },
   city_district: { ids: ['tarkovscav:city_district'], width: 256, normalSpacing: 48, normalSeparation: 20,
     denseSpacing: 16, denseSeparation: 5 },
   city_strongpoint: { ids: ['tarkovscav:city_strongpoint'], width: 138, normalSpacing: 192,
@@ -428,6 +432,51 @@ check(/deployment_beacon/.test(readme), 'README documents the beacon item');
 const reference = fs.readFileSync(path.join(ROOT, 'docs', 'COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 check(/urban_wasteland/.test(reference), 'the command/config reference names the dimension');
 check(/deployment_beacon/.test(reference), 'the command/config reference documents the beacon');
+
+// ------------------------------------------------------------------ 7. the no-water / density hygiene
+console.log('');
+console.log('7. no standing water, one city per 384 blocks, and the fillwater retro-fit');
+const noise = readJson(path.join(DATA, 'worldgen', 'noise_settings', 'urban_wasteland.json'));
+check(noise.aquifers_enabled === false,
+  'the wasteland preset generates no aquifers', `aquifers_enabled=${noise.aquifers_enabled}`);
+check(noise.default_fluid && noise.default_fluid.Name === 'minecraft:air',
+  'and its default fluid is air, so the seams between city pieces cannot fill with water',
+  JSON.stringify(noise.default_fluid));
+
+// spacing is in CHUNKS. The four city sets on purpose do NOT all share one grid (the exact numbers are
+// asserted against FOOTPRINTS in section 3, which is the single place they live):
+//   city_variants / city_small -> one city per 24 chunks (384 blocks); they were 5 and 4 chunks, so the
+//     48-64 block presets were landing 64-80 blocks apart and could not help overlapping
+//   city_district -> 16 chunks, UNCHANGED: the street tiles are meant to chain into the big city
+//   city_strongpoint -> 192 chunks, UNCHANGED: the rare 18-building piece
+const margins = ['city-layout', 'city-layout-a', 'city-layout-b', 'city-layout-c', 'strongpoint-layout']
+  .map((name) => ({ name, margin: readJson(path.join(ROOT, 'tools', `${name}.json`)).platform.margin }));
+for (const { name, margin } of margins) {
+  check(margin === 16, `${name}: the test-build platform keeps a 16 block margin`, `margin=${margin}`);
+}
+
+const cleanup = read(path.join('world', 'WaterCleanup.java'));
+const commands = read(path.join('command', 'ModCommands.java'));
+check(fs.existsSync(path.join(JAVA, 'world', 'WaterCleanup.java')),
+  'the fillwater body exists as its own class');
+check(/DEFAULT_BLOCK = "minecraft:stone"/.test(cleanup),
+  'fillwater defaults to a block you can stand on, not to air');
+check(/here == Blocks\.WATER/.test(cleanup),
+  'it replaces the water block and nothing else');
+check(!/Blocks\.FLOWING_WATER/.test(cleanup),
+  'and does not pretend a flowing_water BLOCK exists (1.20.1 has one water block with a level property)');
+const waterloggedAt = cleanup.indexOf('waterlogged++');
+const setBlockAt = cleanup.indexOf('setBlock(');
+check(waterloggedAt > 0 && setBlockAt > waterloggedAt,
+  'a waterlogged block is counted and left alone - the count comes before any replacement',
+  `waterlogged@${waterloggedAt} setBlock@${setBlockAt}`);
+check(/Block\.UPDATE_CLIENTS/.test(cleanup) && !/Block\.UPDATE_ALL/.test(cleanup),
+  'the mass fill sends to clients only, so it cannot stall the tick on neighbour updates');
+check(/fillWater\(context, 48,/.test(commands) && /IntegerArgumentType\.integer\(1, 128\)/.test(commands),
+  'the command defaults to 48 and clamps the radius to 1..128');
+check(/root\.then\(fillWater\(\)\)/.test(commands), 'fillwater is registered on the operator tree');
+check(/Unknown block/.test(commands) && /return 0;/.test(commands),
+  'an unknown block is refused with a message instead of defaulting silently');
 
 console.log('');
 if (failures > 0) {

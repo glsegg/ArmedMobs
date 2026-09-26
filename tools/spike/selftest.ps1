@@ -49,6 +49,11 @@ $sources = Get-ChildItem -Path $spikeDir -Filter '*.java' | ForEach-Object { $_.
 $sources += Get-ChildItem -Path (Join-Path $spikeDir 'stubs') -Filter '*.java' -Recurse |
     ForEach-Object { $_.FullName }
 $sources += Join-Path $projectDir 'src\main\java\com\gfl\tarkovscav\grenade\GrenadeBallistics.java'
+# LadderSearch is the pure vertical-link core: LadderTest drives it, and CityStructureGen (compiled above as
+# one of the spikes) imports it for the ladder-shaft report. CapturePools is the pure strength-pool
+# arithmetic behind the overworld capture game. All three are JDK-only, so they compile against the stubs.
+$sources += Join-Path $projectDir 'src\main\java\com\gfl\tarkovscav\gun\LadderSearch.java'
+$sources += Join-Path $projectDir 'src\main\java\com\gfl\tarkovscav\world\CapturePools.java'
 & $javac -encoding UTF-8 -d $out @sources
 if ($LASTEXITCODE -ne 0) { throw 'the spikes do not compile' }
 
@@ -84,7 +89,8 @@ try {
         }
     }
 
-    foreach ($test in @('StructureNbtTest', 'GunPoolTest', 'AssetTest', 'GrenadeBallisticsTest')) {
+    foreach ($test in @('StructureNbtTest', 'GunPoolTest', 'AssetTest', 'GrenadeBallisticsTest',
+            'LadderTest', 'CaptureTest')) {
         Write-Host "--- $test ---" -ForegroundColor Cyan
         & $java -cp $out $test $projectDir
         if ($LASTEXITCODE -ne 0) {
@@ -217,6 +223,8 @@ try {
             'selftest_garrison'    = @('tools/selftest_garrison.js')
             'selftest_city_faction' = @('tools/selftest_city_faction.js')
             'selftest_command_marks' = @('tools/selftest_command_marks.js')
+            'selftest_ladder'      = @('tools/selftest_ladder.js')
+            'selftest_capture'     = @('tools/selftest_capture.js')
             'selftest_wiki_doc'    = @('tools/selftest_wiki_doc.js')
             'selftest_shield'      = @('tools/selftest_shield.js')
             'selftest_shield_assets' = @('tools/selftest_shield_assets.js')

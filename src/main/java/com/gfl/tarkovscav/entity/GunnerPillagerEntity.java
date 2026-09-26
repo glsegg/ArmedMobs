@@ -128,17 +128,22 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
         // it stood next to its target, unarmed, until it was killed. NoGunMeleeGoal keeps this mutually
         // exclusive with the gun goal, so the two never issue competing navigation calls in one tick.
         this.goalSelector.addGoal(2, new NoGunMeleeGoal(this, 1.1D, false));
-        // Grenades (README 5v), behind shooting and melee: thrown only when the target is out of sight.
-        this.goalSelector.addGoal(3, new com.gfl.tarkovscav.grenade.GrenadeThrowGoal(this, this));
+        // Grenades (README 5v), behind shooting and melee: thrown only when the target is out of sight. The
+        // ladder gate (README 7o) is required because this goal carries no goal flags of its own.
+        this.goalSelector.addGoal(3, new com.gfl.tarkovscav.gun.LadderGatedGoal(this,
+                new com.gfl.tarkovscav.grenade.GrenadeThrowGoal(this, this)));
         // Grenade resupply (README 5v): a parallel path, priority 4, that only ever takes a THROWABLE
         // off a rack - an armed unit never collects a second gun.
         this.goalSelector.addGoal(4, new com.gfl.tarkovscav.grenade.GrenadeResupplyGoal(this, this));
         // Weapon rack (README 5n): a bow/crossbow taken off the rack is shot, not swung. Inert otherwise
         // (the goal refuses to run unless a bow or crossbow is actually in hand).
         this.goalSelector.addGoal(1, new com.gfl.tarkovscav.gun.ArmedRangedGoal(this, 1.0D, 15.0F));
-        // The command system: walk to a mark this unit was ordered to. Priority 5 is below every combat
+        // The command system: walk to a mark this unit was ordered to. Priority 6 is below every combat
         // goal and takes only MOVE, so a fight pre-empts it and an idle unit obeys instead of wandering.
-        this.goalSelector.addGoal(5, new com.gfl.tarkovscav.command.AdvanceOrderGoal(this));
+        this.goalSelector.addGoal(6, new com.gfl.tarkovscav.command.AdvanceOrderGoal(this));
+        // Ladder climbing (README 7o): priority 5, below every combat goal and above the advance order and
+        // the inherited stroll, because it supplies the vertical leg the ground navigator cannot path.
+        this.goalSelector.addGoal(5, new com.gfl.tarkovscav.gun.LadderClimbGoal(this));
         // Faction layer (README 5m): a branded renegade is hunted by everybody, its own side included.
         // Inert while nobody is a renegade, so the inherited illager targeting is unchanged.
         this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, Mob.class, 10, true, false,

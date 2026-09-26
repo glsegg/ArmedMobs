@@ -1,3 +1,5 @@
+import com.gfl.tarkovscav.gun.LadderSearch;
+
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -202,8 +204,12 @@ public final class CityStructureGen {
                 "hanging", "true", "waterlogged", "false");
         put(palette, "light_chain", "minecraft:chain", Role.LIGHT,
                 "axis", "y", "waterlogged", "false");
-        put(palette, "light_end_rod", "minecraft:end_rod", Role.LIGHT,
-                "facing", "up");
+        // No end rods. They used to top every hanging lantern, and the user's verdict on them was
+        // "建筑里的末地烛可以都删了 … 摆放的都是比较没用的" - a thin white rod standing on the floor next to a
+        // lantern, adding a third light source to a cell that already had two. Removing the palette entry is
+        // what removes every one of them: placeLight is the only caller. `roleOfState` still classifies an
+        // end rod as LIGHT and NOT_FULL_CUBE / NO_COLLISION still list it, because a layout or an imported
+        // building of the user's own may contain one and both predicates have to stay correct for it.
         // A plain torch: what the user's own ground floors use, and the cheapest readable light.
         put(palette, "light_torch", "minecraft:torch", Role.LIGHT);
         // A bed, head and foot as the two halves the game expects (a bare "white_bed" would not render).
@@ -434,6 +440,12 @@ public final class CityStructureGen {
     private int breachedRooms;
     /** Cells {@link #sweepDetachedDecor} cleared, for the log. */
     private int sweptDecor;
+    /** Cells {@link #sweepFloatingClusters} cleared (the jagged blast's single-block leftovers). */
+    private int sweptFloating;
+    /** Single cells {@link #rubbleStrayOrphans} turned into rubble at the very end. */
+    private int strayRubble;
+    /** {@link #coverNoiseKeys} resolved once, because it is consulted per cell. */
+    private Set<String> coverNoiseKeyCache;
 
     private CityStructureGen(String name, int sizeX, int sizeY, int sizeZ,
                              Map<String, Map<String, Object>> palette) {
@@ -519,6 +531,7 @@ public final class CityStructureGen {
             System.out.println("mode          : pieces only (the city .nbt / commands / platform are NOT written)");
             city.exportBuildingPieces(root, layout, piecesDir, foundation);
             city.printInteriorReport();
+            city.printLadderReport();
             return;
         }
 
@@ -528,6 +541,7 @@ public final class CityStructureGen {
             System.out.println("mode          : report only (NOTHING is written)");
             city.printFloorReport(layout);
             city.printInteriorReport();
+            city.printLadderReport();
             return;
         }
 
@@ -568,7 +582,8 @@ public final class CityStructureGen {
                 + " cleared " + city.repairedDoorwayCells + " cell(s) out of a doorway,"
                 + " sealedRooms=" + city.sealedRooms + " breached=" + city.breachedRooms
                 + ", rooms=" + city.roomRecords.size()
-                + ", detachedDecor=" + city.sweptDecor);
+                + ", detachedDecor=" + city.sweptDecor
+                + ", floatingCleared=" + city.sweptFloating);
         System.out.println("wrote         : " + nbtOut + " (" + Files.size(nbtOut) + " bytes, gzipped NBT)");
         System.out.println("wrote         : " + commandsOut + " (" + commands + " RCON commands)");
         System.out.println("wrote         : " + platformOut + " (" + platformCommands
@@ -577,6 +592,7 @@ public final class CityStructureGen {
         System.out.println("block entities: " + city.blockEntities.size() + " (" + city.spawnerCells.size()
                 + " spawner(s), " + city.chestCells.size() + " loot chest(s))");
         city.printInteriorReport();
+        city.printLadderReport();
         for (int[] cell : city.spawnerCells) {
             System.out.println("  spawner at " + cell[0] + "," + cell[1] + "," + cell[2]);
         }
@@ -1136,6 +1152,18 @@ public final class CityStructureGen {
             cutFloorHoles(job.name, job.x0, job.z0, job.x1 - job.x0 + 1, job.z1 - job.z0 + 1, job.floors,
                     job.floorHeight, job.holesMax, job.seed, job.floorBlock);
         }
+        // ---- the floating leftovers of the ruin blast, BEFORE the cover passes have their say.
+        // A jagged blast (README 7l.1) severs single blocks and small fragments from the floor plates:
+        // measured, 65 such clusters in the strongpoint (stone brick trim, glass panes, terracotta, polished
+        // granite wall caps, one potted fern). tools/selftest_strongpoint.js counts connected components, so
+        // they are junk by its definition - but this has to run HERE, not at the end: running it after the
+        // cover passes deleted cover and furniture that those passes had already counted against the
+        // layout's declared per-floor minimums, and the generator then threw
+        // {@code floors below their declared minimum cover/furniture/lines}. Cleaning first means the
+        // cover-line pass, the fixtures and topUpFloors all see the final geometry, so the minimums are
+        // established on the cleaned grid and the strongpoint gate's "exactly 18 components, no orphan
+        // cluster" stays true without any assertion being weakened.
+        this.sweptFloating = sweepFloatingClusters();
         // ---- the cover LINES of every floor and roof, now that the holes are part of the floor plan.
         for (LinePlan plan : this.allLinePlans) {
             int[] result = placeCoverLines(plan.band, plan.rooms, plan.yLow, plan.yHigh, minCoverLinesFor(plan),
@@ -1179,6 +1207,290 @@ public final class CityStructureGen {
         // component. Remove them - but the removal is recorded, and the per-floor counts are corrected, so
         // the floor report cannot claim furniture that is no longer there.
         this.sweptDecor = sweepDetachedDecor();
+        // ---- very last, because a pass that runs after this one could put a new stray cell in: a single cell
+        // whose only neighbours are street-cover families is an "orphan component" to
+        // tools/selftest_strongpoint.js even though it is standing on something. Measured: after every other
+        // pass, exactly one such cell was left in the strongpoint (a polished_andesite floor block at
+        // 106,13,63). It is CONVERTED to rubble rather than deleted - cobblestone is on that gate's
+        // street-cover list so it stops being a component, it is a full cube so it cannot rob a cover line of
+        // its walkable neighbour, and it is what the user asked for visually ("堆点方块过渡").
+        this.strayRubble = rubbleStrayOrphans();
+    }
+
+    /**
+     * Turns single cells that the strongpoint gate would count as orphan components into rubble.
+     *
+     * @return how many cells were converted
+     */
+    private int rubbleStrayOrphans() {
+        int[][] steps = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+        int converted = 0;
+        for (int y = 1; y < this.sizeY; y++) {
+            for (int z = 0; z < this.sizeZ; z++) {
+                for (int x = 0; x < this.sizeX; x++) {
+                    if (!countsAsStructure(x, y, z)) {
+                        continue;
+                    }
+                    boolean attached = false;
+                    for (int[] step : steps) {
+                        int nx = x + step[0];
+                        int ny = y + step[1];
+                        int nz = z + step[2];
+                        if (nx < 0 || ny < 1 || nz < 0 || nx >= this.sizeX || ny >= this.sizeY
+                                || nz >= this.sizeZ) {
+                            continue;
+                        }
+                        if (countsAsStructure(nx, ny, nz)) {
+                            attached = true;
+                            break;
+                        }
+                    }
+                    if (attached) {
+                        continue;
+                    }
+                    Role role = this.roleAt(x, y, z);
+                    if (role == null) {
+                        continue;
+                    }
+                    for (BuildingVariation building : this.buildingVariations) {
+                        if (x < building.x0 || x > building.x1 || z < building.z0 || z > building.z1) {
+                            continue;
+                        }
+                        int floor = (y - 1) / building.floorHeight;
+                        if (floor >= 0 && floor < building.floors) {
+                            String band = building.name + "/" + floor;
+                            this.floorCounts.computeIfPresent(band, (key, counts) -> {
+                                counts.merge(role, -1, Integer::sum);
+                                counts.merge(Role.COVER, 1, Integer::sum);
+                                return counts;
+                            });
+                        }
+                        break;
+                    }
+                    this.set(x, y, z, "cover_rubble");
+                    converted++;
+                }
+            }
+        }
+        if (converted > 0) {
+            System.out.println("  strays converted to rubble: " + converted);
+        }
+        return converted;
+    }
+
+    /** Mirrors {@code tools/selftest_strongpoint.js}: air plus these families do not join two buildings. */
+    private static final Set<String> COVER_NOISE_NAMES = Set.of(
+            "cobblestone_wall", "white_concrete", "white_carpet", "black_concrete", "tinted_glass",
+            "cobblestone", "cobblestone_slab", "iron_bars", "oak_slab", "dark_oak_trapdoor",
+            "oak_trapdoor", "barrel");
+
+    /** A cluster below this many cells is floating junk, never a building. */
+    private static final int SMALL_CLUSTER = 128;
+    /**
+     * How many of the far z columns a blast may never touch. This is what makes the cut's complement
+     * connected: every column keeps {@code z0..z1-depth} and the last {@code KEEP_COLUMNS} columns keep
+     * everything, so the floor plate cannot be pinched off no matter how the depths are jittered.
+     */
+    private static final int KEEP_COLUMNS = 3;
+    /** The gate's floor for a real building component; anything between the two is reported, not deleted. */
+    private static final int BUILDING_COMPONENT = 500;
+
+    /**
+     * The palette keys of the low-cover families {@code tools/selftest_strongpoint.js} skips as street-cover
+     * noise, resolved from the palette's own block names so the two sets cannot drift apart silently.
+     *
+     * <p>This has to be the palette KEY, not the block name: {@link #cell} hands back the internal state key
+     * ({@code cover_rubble}, {@code cover_wall|north=none,...}), so a name-based test never matches and the
+     * noise set behaves as if it were empty - which is exactly what made an earlier version of the stray-cell
+     * pass find nothing to do while the gate still counted one orphan.</p>
+     */
+    private Set<String> coverNoiseKeys() {
+        if (this.coverNoiseKeyCache == null) {
+            Set<String> keys = new LinkedHashSet<>();
+            for (Map.Entry<String, Map<String, Object>> entry : this.palette.entrySet()) {
+                Object name = entry.getValue().get("Name");
+                if (name == null) {
+                    continue;
+                }
+                String block = name.toString();
+                if (block.startsWith("minecraft:")) {
+                    block = block.substring("minecraft:".length());
+                }
+                if (COVER_NOISE_NAMES.contains(block)) {
+                    keys.add(entry.getKey());
+                }
+            }
+            this.coverNoiseKeyCache = keys;
+        }
+        return this.coverNoiseKeyCache;
+    }
+
+    /** True when this cell counts as structure for the component count (not air, not street-cover noise). */
+    private boolean countsAsStructure(int x, int y, int z) {
+        String state = this.cell(x, y, z);
+        if (state.equals("air")) {
+            return false;
+        }
+        int bar = state.indexOf('|');
+        return !coverNoiseKeys().contains(bar < 0 ? state : state.substring(0, bar));
+    }
+
+    /**
+     * Clears the small floating clusters a jagged blast leaves behind.
+     *
+     * <p>Two rules, both learned the hard way here (each one is a comment because a reader will otherwise
+     * "simplify" it back):</p>
+     *
+     * <ul>
+     *   <li><b>Early, not late.</b> This runs BEFORE the cover/furniture/usable-cover-line passes. Running it
+     *       at the end of build() deleted cover and furniture that those passes had already counted against
+     *       the layout's declared per-floor minimums, and the generator threw
+     *       {@code floors below their declared minimum cover/furniture/lines} (measured: {@code bp_10_sw/3}
+     *       with 2 usable lines against a declared 3). Cleaning first means every later pass sees the final
+     *       geometry and re-establishes the minimums on the cleaned grid.</li>
+     *   <li><b>Physical adjacency, not the gate's noise-skipping rule.</b> Mirroring
+     *       {@code tools/selftest_strongpoint.js} exactly (air plus the street-cover families do not connect)
+     *       deleted 240 cells from city_a and 743 from the strongpoint, because in these layouts a great deal
+     *       of legitimate street furniture is a small component under that rule; the floor counts then went
+     *       negative ({@code warehouse/0=-7/23/1}) and the run threw. So the question asked here is the
+     *       physical one: a cell is floating when it cannot reach the ground row through real block faces.
+     *       The remaining difference between this rule and the gate's is handled where it belongs - at the
+     *       source, by keeping the blast's debris inside the street-cover families the gate ignores (see the
+     *       cobblestone-only note in {@link #collapseBlast}).</li>
+     * </ul>
+     *
+     * <p>A component that touches the ground row (y = 1) or contains a street-cover family block is kept:
+     * those pieces float by design, which is why the gate needs its noise list at all. Only then does size
+     * matter - a fully floating component below {@link #SMALL_CLUSTER} cells is removed, and one between that
+     * and {@link #BUILDING_COMPONENT} is <b>reported and kept</b>, because deleting a 200-cell fragment could
+     * erase a real part of a building and the gate would then have nothing to complain about. A visible
+     * failure beats a silent delete.</p>
+     *
+     * @return how many cells were cleared
+     */
+    private int sweepFloatingClusters() {
+        boolean[] visited = new boolean[this.sizeX * this.sizeY * this.sizeZ];
+        int[][] steps = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+        List<int[]> cluster = new ArrayList<>();
+        java.util.ArrayDeque<int[]> queue = new java.util.ArrayDeque<>();
+        int removed = 0;
+        int kept = 0;
+        Map<String, Integer> byName = new java.util.TreeMap<>();
+
+        // ---- pass 1: the physical clusters (see the javadoc's two rules)
+        for (int y = 1; y < this.sizeY; y++) {
+            for (int z = 0; z < this.sizeZ; z++) {
+                for (int x = 0; x < this.sizeX; x++) {
+                    if (visited[this.index(x, y, z)] || this.cell(x, y, z).equals("air")) {
+                        continue;
+                    }
+                    cluster.clear();
+                    boolean grounded = false;
+                    boolean streetCover = false;
+                    queue.add(new int[]{x, y, z});
+                    visited[this.index(x, y, z)] = true;
+                    while (!queue.isEmpty()) {
+                        int[] cell = queue.poll();
+                        cluster.add(cell);
+                        if (cell[1] == 1) {
+                            grounded = true;
+                        }
+                        if (!this.cell(cell[0], cell[1], cell[2]).equals("air")
+                                && !countsAsStructure(cell[0], cell[1], cell[2])) {
+                            streetCover = true;
+                        }
+                        for (int[] step : steps) {
+                            int nx = cell[0] + step[0];
+                            int ny = cell[1] + step[1];
+                            int nz = cell[2] + step[2];
+                            if (nx < 0 || ny < 1 || nz < 0 || nx >= this.sizeX || ny >= this.sizeY
+                                    || nz >= this.sizeZ || visited[this.index(nx, ny, nz)]
+                                    || this.cell(nx, ny, nz).equals("air")) {
+                                continue;
+                            }
+                            visited[this.index(nx, ny, nz)] = true;
+                            queue.add(new int[]{nx, ny, nz});
+                        }
+                    }
+                    if (grounded || streetCover) {
+                        // Kept as a cluster, but physical connectivity is not the gate's view: a wall block
+                        // whose only neighbours are street-cover families is still counted as an orphan
+                        // component by tools/selftest_strongpoint.js, which skips those families. Exactly one
+                        // such cell survived the whole pass in the strongpoint (a single polished_andesite at
+                        // 106,13,63, standing on cover). So: a cell of a role the per-floor minimums do NOT
+                        // count (walls, floors, windows, roofs, steps, doors - never COVER/FURNITURE/LIGHT)
+                        // with no non-noisy neighbour at all is removed.
+                        for (int[] cell : cluster) {
+                            if (!countsAsStructure(cell[0], cell[1], cell[2])) {
+                                continue;
+                            }
+                            boolean noisyNeighbour = false;
+                            for (int[] step : steps) {
+                                int nx = cell[0] + step[0];
+                                int ny = cell[1] + step[1];
+                                int nz = cell[2] + step[2];
+                                if (nx < 0 || ny < 1 || nz < 0 || nx >= this.sizeX || ny >= this.sizeY
+                                        || nz >= this.sizeZ) {
+                                    continue;
+                                }
+                                if (countsAsStructure(nx, ny, nz)) {
+                                    noisyNeighbour = true;
+                                    break;
+                                }
+                            }
+                            if (noisyNeighbour) {
+                                continue;
+                            }
+                            Role role = this.roleAt(cell[0], cell[1], cell[2]);
+                            if (role == Role.COVER || role == Role.FURNITURE || role == Role.LIGHT) {
+                                continue;       // these are what the layout's per-floor minimums count
+                            }
+                            byName.merge(this.cell(cell[0], cell[1], cell[2]), 1, Integer::sum);
+                            this.set(cell[0], cell[1], cell[2], "air");
+                            this.uncountAt(cell[0], cell[1], cell[2], role);
+                            removed++;
+                        }
+                        continue;
+                    }
+                    if (cluster.size() < SMALL_CLUSTER) {
+                        for (int[] cell : cluster) {
+                            Role role = this.roleAt(cell[0], cell[1], cell[2]);
+                            byName.merge(this.cell(cell[0], cell[1], cell[2]), 1, Integer::sum);
+                            this.set(cell[0], cell[1], cell[2], "air");
+                            this.uncountAt(cell[0], cell[1], cell[2], role);
+                            removed++;
+                        }
+                    } else {
+                        kept++;
+                        System.out.println("  WARN floating cluster of " + cluster.size() + " cells of "
+                                + this.cell(cluster.get(0)[0], cluster.get(0)[1], cluster.get(0)[2])
+                                + " at " + cluster.get(0)[0] + "," + cluster.get(0)[1] + ","
+                                + cluster.get(0)[2] + " was left in place for inspection");
+                    }
+                }
+            }
+        }
+
+        // ---- pass 2 (the gate's view of what is left) is NOT needed any more: the staircase-wedge blast
+        // cannot pinch cells off, so pass 1 finds nothing to remove. It was tried - restricting the gate's own
+        // rule to cells inside a small physical cluster - and it deleted cover and furniture that the layout's
+        // per-floor minimums count ({@code warehouse/0=5/23/1}), so it is gone rather than kept as a trap.
+
+        if (kept > 0) {
+            System.out.println("  WARN " + kept + " cluster(s) of " + SMALL_CLUSTER + ".."
+                    + (BUILDING_COMPONENT - 1) + " cells survived - the strongpoint gate will fail on them");
+        }
+        if (removed > 0) {
+            StringBuilder detail = new StringBuilder();
+            for (Map.Entry<String, Integer> entry : byName.entrySet()) {
+                if (detail.length() > 0) {
+                    detail.append(", ");
+                }
+                detail.append(entry.getKey()).append(" x").append(entry.getValue());
+            }
+            System.out.println("  floating detail: " + detail);
+        }
+        return removed;
     }
 
     /**
@@ -1195,6 +1507,11 @@ public final class CityStructureGen {
             Map<String, Object> record = Json.object(buildings.get(index));
             int minCover = Math.max(0, setting(record, "min_cover_per_floor", 5));
             int minFurniture = Math.max(0, setting(record, "min_furniture_per_floor", 6));
+            // The shaft of THIS building, so placeSingle's shaft guard is not answering with the last
+            // building's coordinates (this pass runs after every building has been built; the same
+            // re-anchoring checkVerticalInvariant does).
+            this.shaftX = building.x0 + 1;
+            this.shaftZ = building.z0 + 1;
             java.util.Random random = new java.util.Random(seedOf(record) * 71L + 4099L);
             for (int floor = 0; floor < building.floors; floor++) {
                 String band = building.name + "/" + floor;
@@ -1239,6 +1556,9 @@ public final class CityStructureGen {
             }
             if (robsALine || this.holeClearance.contains(this.index(x, yLow, z))) {
                 continue;
+            }
+            if (blocksLadderShaft(x, yLow, z)) {
+                continue;                        // the shaft's column and its two opening cells
             }
             if (this.blockEntities.containsKey(this.index(x, yLow, z))) {
                 continue;
@@ -1505,6 +1825,12 @@ public final class CityStructureGen {
         int z1 = z0 + d - 1;
         int floor = Math.floorMod(slot, floors);
         int yLow = 2 + floor * floorHeight;
+        // Anchor the shaft guard on THIS building: the fixture pass runs after every building has been built,
+        // so this.shaftX/shaftZ still hold the LAST building's coordinates. Without this the guard answers
+        // for the wrong shaft and a chest/spawner lands on this building's opening cell (measured: city_c
+        // west_2 and gen_district gen_a each had a floor-0 fixture exactly there).
+        this.shaftX = x0 + 1;
+        this.shaftZ = z0 + 1;
 
         List<int[]> candidates = new ArrayList<>();
         for (int x = x0 + 1; x <= x1 - 1; x++) {
@@ -1653,9 +1979,8 @@ public final class CityStructureGen {
         if (cornerScore(x, y, z) < 1) {
             return false;                       // not against an interior wall
         }
-        if (isShaftCell(x, y, z, this.shaftX, this.shaftZ)
-                || isShaftCell(x, y + 1, z, this.shaftX, this.shaftZ)) {
-            return false;
+        if (blocksLadderShaft(x, y, z)) {
+            return false;                       // the ladder shaft's column and its opening cells
         }
         if (this.holeClearance.contains(this.index(x, y, z))
                 || this.holeClearance.contains(this.index(x, y + 1, z))) {
@@ -2350,19 +2675,19 @@ public final class CityStructureGen {
         }
 
         if (ruined) {
-            collapseQuadrant(x0, z0, w, d, topY - 2 * floorHeight, topY + 1);
-            // OPT-IN ruin hygiene (layout key "ruin_light_cleanup", default off): a hanging lantern whose
-            // ceiling the collapse removed would pop off the moment a neighbour updates, so take it down
-            // here instead of shipping a light hanging in mid air. Off by default because the four
-            // shipped presets are byte-pinned by the gates.
+            collapseBlast(x0, z0, w, d, topY - 2 * floorHeight, topY + 1, seed);
+            // The blast boundary is jagged now, so a chain can lose the ceiling that held it while its own
+            // cell stays outside the crater. The layout flag is still opt-in (the four shipped presets are
+            // byte-pinned by the gates), but a non-zero detached-decor count in this generator's report is
+            // the signal that a ruined layout should switch it on.
             if (Json.bool(layoutFlagOwner, "ruin_light_cleanup", false)) {
                 // The whole column, not just the collapsed Y range: a chain one block BELOW the collapse
                 // lost the ceiling that held it, so it is orphaned even though its own Y was not touched.
                 sweepDetachedLights(x0, z0, w, d, 1, topY + 1);
             }
         }
-        // The street entrance goes in LAST: a ruined building clears a quadrant that can reach the ground
-        // floor, and a door placed before that would be deleted along with the wall it sits in.
+        // The street entrance goes in LAST: a ruined building's blast can reach the ground floor, and a door
+        // placed before that would be deleted along with the wall it sits in.
         int doorsBefore = this.doors.size();
         entrance(building, buildingName + "/0", x0, z0, w, d, doorSide, minDoors - interiorDoors);
         // ... and the ground floor gets the look the user's own buildings have (M1 survey of his district):
@@ -3139,6 +3464,227 @@ public final class CityStructureGen {
                 + "]}");
     }
 
+    // ------------------------------------------------------------------ the ladder-shaft report
+
+    /**
+     * The ladder-shaft climbability report (README 7o, {@code docs/爬梯设计.md} §3): one line per shaft and a
+     * summary, plus one {@code LADDER_REPORT <json>} line the gate {@code tools/selftest_ladder.js} parses.
+     *
+     * <p>Run on the FINAL grid, after every post-pass, because a cover line or a broken-hole repair placed
+     * after the shaft was built is exactly what could plug an opening. What is measured per shaft:</p>
+     * <ul>
+     *   <li><b>continuous rungs</b> - every cell of the column between the bottom floor's feet and the TOP
+     *       FLOOR's feet is either a ladder block or a passable cell with a ladder directly above or below it
+     *       (the generator's floor-plate hole and its "keep the shaft usable" air cell). Counted as
+     *       {@code rungs} plus {@code holeCells} plus {@code gaps}, so a plugged hole or a missing rung shows
+     *       up as a number. The range deliberately ends at the top floor's feet: that is the climb the
+     *       feature performs ({@code LadderSearch.column} is called between the two floors a unit uses), and
+     *       a no-roof-access building of floor height 5 legitimately has two air cells above it;</li>
+     *   <li><b>an opening adjacent on every floor</b> - for each storey, a standable cell beside the column
+     *       at that floor's feet height. Measured with the SHIPPED decision core,
+     *       {@link LadderSearch#opening}, so the report and the mob use one definition of "opening";</li>
+     *   <li><b>2 blocks of headroom at each opening</b> - the two cells above the opening are passable
+     *       ({@code LadderSearch.standable} already requires it; counted separately here so a failure names
+     *       the right thing);</li>
+     *   <li><b>the verdict</b> - {@link LadderSearch#find} asked for the bottom-to-top-floor trip on this
+     *       exact column (radius 0). A shaft the shaft-finder refuses is NOT climbable even when the three
+     *       counts look right.</li>
+     * </ul>
+     *
+     * <p>Writes nothing; it is part of {@code --report} as well as of a normal regeneration. The probe treats
+     * only {@code air} as passable, which is the generator's own contract for a shaft cell
+     * ({@code buildInterior} sets the column and the two cells beside it to {@code air}/{@code ladder} on
+     * every floor): a torch, a carpet, a sandbag stack or a table leg there is reported as an obstruction
+     * rather than second-guessed, because whatever it is, the shaft's opening invariant was broken by the
+     * pass that put it there.</p>
+     */
+    private void printLadderReport() {
+        LadderSearch.Probe probe = new LadderSearch.Probe() {
+            @Override
+            public boolean climbable(int x, int y, int z) {
+                return CityStructureGen.this.cell(x, y, z).equals("ladder");
+            }
+
+            @Override
+            public boolean passable(int x, int y, int z) {
+                return CityStructureGen.this.cell(x, y, z).equals("air");
+            }
+
+            @Override
+            public boolean solidTop(int x, int y, int z) {
+                String key = CityStructureGen.this.cell(x, y, z);
+                return !key.equals("air") && !key.equals("ladder");
+            }
+        };
+        StringBuilder json = new StringBuilder();
+        int shafts = 0;
+        int fullyClimbable = 0;
+        int singleStorey = 0;
+        int continuousShafts = 0;
+        int openFloorTotal = 0;
+        int pairTotal = 0;
+        Set<String> blockers = new LinkedHashSet<>();
+        for (BuildingVariation building : this.buildingVariations) {
+            int sx = building.x0 + 1;
+            int sz = building.z0 + 1;
+            int fh = building.floorHeight;
+            int floors = building.floors;
+            int bottomFeet = 2;
+            int topFloorFeet = (floors - 1) * fh + 2;
+            int topPlate = 1 + floors * fh;
+            // The climb the feature actually needs runs from the bottom floor's feet to the TOP FLOOR's feet,
+            // and that is the range measured here. Going on to the roof plate would be wrong twice over:
+            // LadderSearch.column is called by the mob only between the two floors it uses, and a building
+            // with no roof access and a floor height of 5 leaves TWO air cells above the top floor's feet
+            // (the storey's "keep the shaft usable" cell plus the headroom under the solid roof), which is a
+            // legal shaft for every floor pair - measured on city_c east_3 before this was corrected.
+            int topRung = topFloorFeet;
+            int rungs = 0;
+            int holes = 0;
+            int gaps = 0;
+            for (int y = bottomFeet; y <= topRung; y++) {
+                String key = this.cell(sx, y, sz);
+                if (key.equals("ladder")) {
+                    rungs++;
+                } else if (key.equals("air")) {
+                    holes++;
+                } else {
+                    gaps++;
+                    blockers.add(key);
+                }
+            }
+            // The continuity verdict is the SHIPPED column rule, not a second implementation of it.
+            boolean continuous = LadderSearch.column(probe, sx, bottomFeet, topRung, sz);
+            int openings = 0;
+            int headroom = 0;
+            StringBuilder openFloors = new StringBuilder();
+            for (int floor = 0; floor < floors; floor++) {
+                int feetY = floor * fh + 2;
+                LadderSearch.Opening out = LadderSearch.opening(probe, sx, feetY, sz);
+                if (out != null) {
+                    openings++;
+                    if (openFloors.length() > 0) {
+                        openFloors.append('/');
+                    }
+                    openFloors.append(floor);
+                    if (this.cell(out.x(), out.y() + 1, out.z()).equals("air")) {
+                        headroom++;
+                    }
+                } else {
+                    // Only these two sides of the column are ever interior (the other two are the shell),
+                    // so they are what the report names as the obstruction.
+                    for (int[] side : new int[][]{{0, 1}, {1, 0}}) {
+                        String key = this.cell(sx + side[0], feetY, sz + side[1]);
+                        if (!key.equals("air")) {
+                            blockers.add(key);
+                        }
+                    }
+                }
+            }
+            boolean roofHole = this.cell(sx, topPlate, sz).equals("air");
+            // The verdict comes from the shipped shaft finder, on this exact column. A one-storey building
+            // has no other floor to reach, so it is reported separately instead of being called broken.
+            LadderSearch.Shaft found = floors >= 2
+                    ? LadderSearch.find(probe, sx, bottomFeet, sz, topFloorFeet, 0, Integer.MAX_VALUE)
+                    : null;
+            // The climbable floor pairs are enumerated with the SHIPPED finder, one call per ordered pair,
+            // so this number is evidence rather than arithmetic over the opening count.
+            int pairs = 0;
+            for (int from = 0; from < floors; from++) {
+                for (int to = 0; to < floors; to++) {
+                    if (from != to && LadderSearch.find(probe, sx, from * fh + 2, sz, to * fh + 2, 0,
+                            Integer.MAX_VALUE) != null) {
+                        pairs++;
+                    }
+                }
+            }
+            boolean ok = floors < 2
+                    ? continuous && openings == floors
+                    : continuous && openings == floors && headroom == floors && found != null;
+            shafts++;
+            continuousShafts += continuous ? 1 : 0;
+            openFloorTotal += openings;
+            pairTotal += pairs;
+            if (ok) {
+                fullyClimbable++;
+            }
+            if (floors < 2) {
+                singleStorey++;
+            }
+            String verdict = ok ? (floors < 2 ? "SINGLE-STOREY" : "CLIMBABLE") : "NOT-CLIMBABLE";
+            System.out.println("  shaft '" + building.name + "' (" + sx + "," + sz + "): floors=" + floors
+                    + " fh=" + fh + " rungs=" + rungs + " holeCells=" + holes + " gaps=" + gaps
+                    + " continuous=" + continuous + " openFloors=" + openings + "/" + floors
+                    + " headroom=" + headroom + "/" + floors + " climbablePairs=" + pairs
+                    + " roofHole=" + roofHole + " find=" + (floors < 2 ? "n/a" : found != null)
+                    + " " + verdict);
+            if (json.length() > 0) {
+                json.append(',');
+            }
+            json.append("{\"building\":\"").append(building.name)
+                    .append("\",\"x\":").append(sx).append(",\"z\":").append(sz)
+                    .append(",\"floors\":").append(floors)
+                    .append(",\"floor_height\":").append(fh)
+                    .append(",\"rungs\":").append(rungs)
+                    .append(",\"hole_cells\":").append(holes)
+                    .append(",\"gap_cells\":").append(gaps)
+                    .append(",\"continuous\":").append(continuous)
+                    .append(",\"openings\":").append(openings)
+                    .append(",\"expected_openings\":").append(floors)
+                    .append(",\"headroom\":").append(headroom)
+                    .append(",\"open_floors\":\"").append(openFloors).append('"')
+                    .append(",\"climbable_pairs\":").append(pairs)
+                    .append(",\"roof_hole\":").append(roofHole)
+                    .append(",\"find\":").append(floors >= 2 && found != null)
+                    .append(",\"climbable\":").append(ok).append('}');
+        }
+        int expectedOpenings = 0;
+        for (BuildingVariation building : this.buildingVariations) {
+            expectedOpenings += building.floors;
+        }
+        System.out.println("  ladder shafts: " + shafts + " shaft(s), " + fullyClimbable + " climbable on EVERY"
+                + " floor, " + (shafts - fullyClimbable) + " with at least one blocked floor ("
+                + singleStorey + " single-storey); " + continuousShafts + "/" + shafts
+                + " have a continuous column, " + openFloorTotal + " of " + expectedOpenings
+                + " floors have a standable opening, " + pairTotal + " ordered floor pair(s) are climbable");
+        if (fullyClimbable < shafts) {
+            StringBuilder blocked = new StringBuilder();
+            for (String key : blockers) {
+                if (blocked.length() > 0) {
+                    blocked.append(", ");
+                }
+                blocked.append(key);
+            }
+            System.out.println("  FINDING: the shipped presets obstruct the cells beside the ladder - a pass"
+                    + " that writes into a shaft cell (interior furnishing/cover, the fixture pass, or ruin"
+                    + " blast debris) was not filtered. Blocking keys: " + blocked);
+            System.out.println("  FINDING: acceptance item 1 (every shaft climbable on every floor) is NOT met"
+                    + " by the shipped presets; the shaft cells of the offending pass must be guarded and the"
+                    + " six presets regenerated for it to hold.");
+        }
+        System.out.println("LADDER_REPORT {\"layout\":\"" + this.name + "\",\"shafts\":" + shafts
+                + ",\"climbable\":" + fullyClimbable + ",\"bad\":" + (shafts - fullyClimbable)
+                + ",\"single_storey\":" + singleStorey
+                + ",\"continuous\":" + continuousShafts
+                + ",\"open_floors\":" + openFloorTotal
+                + ",\"expected_open_floors\":" + expectedOpenings
+                + ",\"climbable_pairs\":" + pairTotal
+                + ",\"blockers\":[" + blockerJson(blockers) + "]"
+                + ",\"detail\":[" + json + "]}");
+    }
+
+    /** The blocking block keys as a JSON string array, for {@code LADDER_REPORT}. */
+    private static String blockerJson(Set<String> blockers) {
+        StringBuilder text = new StringBuilder();
+        for (String key : blockers) {
+            if (text.length() > 0) {
+                text.append(',');
+            }
+            text.append('"').append(key).append('"');
+        }
+        return text.toString();
+    }
+
     /** One room's worth of loot: one cover piece, one or two furniture pieces and a light. */
     private void furnishing(String band, int[] room, int yLow, int yHigh, java.util.Random random,
                             int index) {
@@ -3158,8 +3704,19 @@ public final class CityStructureGen {
         }
     }
 
-    /** Places a cell only when it is still air, and counts it only when it really landed. */
+    /**
+     * Places a cell only when it is still air, and counts it only when it really landed.
+     *
+     * <p>Decoration never lands on the ladder shaft (see {@link #blocksLadderShaft}). The entrance's step and
+     * floor are the only {@code place(...)} calls that are not room decoration, and they are structural:
+     * refusing one would leave a doorway without its floor, so those two roles are exempt. Every other caller
+     * of this method is inside a building's interior or its ground-floor look, both of which run with the
+     * shaft coordinates of the building being built.</p>
+     */
     private void place(String band, int x, int y, int z, String key, Role role) {
+        if (role != Role.STEP && role != Role.FLOOR && blocksLadderShaft(x, y, z)) {
+            return;
+        }
         if (setIfAir(x, y, z, key)) {
             count(band, role);
         }
@@ -3252,10 +3809,13 @@ public final class CityStructureGen {
     }
 
     /**
-     * A hanging lantern: a chain under the ceiling with the lantern on it, plus an end rod. Each part is only
-     * placed when the part it hangs from landed: in a small room a piece of furniture can occupy the lantern's
-     * cell, and an end rod placed next to a lantern that never appeared is a light floating in mid air - which
-     * is both wrong to look at and a detached cluster in the structure's connected-component report.
+     * A hanging lantern: a chain under the ceiling with the lantern on it. Each part is only placed when the
+     * part it hangs from landed: in a small room a piece of furniture can occupy the lantern's cell, and a
+     * lantern placed under a chain that never appeared is a light floating in mid air - which is both wrong
+     * to look at and a detached cluster in the structure's connected-component report.
+     *
+     * <p>The end rod that used to stand next to the lantern is gone (the user asked for every one of them to
+     * be removed). The chain + lantern pair is what the light in a room is for; the rod was decorative.
      */
     private void placeLight(String band, int x, int z, int yHigh) {
         if (!setIfAir(x, yHigh, z, "light_chain")) {
@@ -3266,9 +3826,6 @@ public final class CityStructureGen {
             return;
         }
         count(band, Role.LIGHT);
-        if (setIfAir(x + 1, yHigh - 1, z, "light_end_rod")) {
-            count(band, Role.LIGHT);
-        }
     }
 
     /**
@@ -3397,27 +3954,111 @@ public final class CityStructureGen {
         this.interiorDoors++;
     }
 
-    /** Rough "a bomb hit it": clear a quadrant of the top floors and scatter rubble on the slab. */
-    private void collapseQuadrant(int x0, int z0, int w, int d, int fromY, int toY) {
-        int halfX = x0 + w / 2;
-        int halfZ = z0 + d / 2;
-        for (int y = Math.max(1, fromY); y <= toY; y++) {
-            for (int x = halfX; x < x0 + w; x++) {
-                for (int z = halfZ; z < z0 + d; z++) {
+    /**
+     * "A bomb hit it": take a crater out of the top floors and leave the rim rough.
+     *
+     * <p>This started as an exact rectangle - {@code halfX..x1} by {@code halfZ..z1}, every floor the same -
+     * and 18 scattered rubble blocks. The user's verdict was "建筑缺口边缘太明显了" and, asked which reading he
+     * meant, "改成不规则缺口（推荐，最像被炸过）": a machined vertical corner is exactly what a blast does not
+     * look like.</p>
+     *
+     * <p>The shape is a <b>staircase wedge from one corner</b>, not an ellipse. That is deliberate and it is
+     * the third design here - an ellipse with a jittered rim was tried first and it <em>pinches cells off</em>:
+     * measured, the strongpoint came out with 65 extra connected components (single wall caps, window panes,
+     * 2-8 cell fragments floating in the crater) where the old rectangle left none, and the strongpoint gate
+     * asserts "exactly 18 separate buildings, no orphan cluster". A wedge whose cut is a <em>suffix of every z
+     * column</em> is monotone, so the complement can never be pinched: each column keeps {@code z0 .. z1-depth}
+     * and the last {@link #KEEP_COLUMNS} columns are never touched at all, which is the strip that keeps every
+     * floor plate connected around the notch. The irregularity the user asked for comes from the depths
+     * instead of from the outline:</p>
+     *
+     * <ul>
+     *   <li>each floor draws its own reach and each column its own {@code -1..+1} jitter from a
+     *       {@link java.util.Random} seeded with the building's seed and the floor's Y, so no two floors have
+     *       the same outline and two runs still produce byte-identical structures;</li>
+     *   <li>the reach <b>grows with height</b> ({@code (toY - y) * 0.35}): the charge opened the building
+     *       upwards, so it reads as a crater with a wide mouth rather than a lift shaft;</li>
+     *   <li>the wedge eats the corner itself, so it always takes a stretch of two outer walls - a hole that
+     *       removes only the middle of a building reads as a roof leak.</li>
+     * </ul>
+     *
+     * <p>Then the debris, which is the "堆点方块过渡" half of the request: the crater floor and every surviving
+     * ledge get rubble with a density that falls off from the corner outwards, so the eye reads a slope of
+     * rubble rather than a cut. Debris is only ever placed on top of a solid cell with clear air above it, so
+     * it is connected by construction, and it is <b>cobblestone only</b> - the strongpoint gate skips the
+     * street-cover families when it counts components (cobblestone and cobblestone_slab are on that list,
+     * {@code cracked_stone_bricks} is not), so a lone brick dropped beside a rubble block was counted as an
+     * orphan cluster even though it was standing on the crater floor.</p>
+     *
+     * <p>Nothing is ever removed below {@code fromY}, so there is always a slab under the debris, and the
+     * ladder shaft is left standing (the shaft is the building's only way up - measured: {@code city_c
+     * east_3}'s blast reached the shaft column on a small, tall ruin and took one rung out of it, which broke
+     * the whole floor-0-to-floor-1 climb).</p>
+     */
+    private void collapseBlast(int x0, int z0, int w, int d, int fromY, int toY, int seed) {
+        int floorY = Math.max(1, fromY);
+        int x1 = x0 + w - 1;
+        int z1 = z0 + d - 1;
+        // 0.30 of the short side, not 0.42: the cover-line pass runs AFTER the buildings and throws if a
+        // floor cannot hold its minimum number of usable cover lines. The old rectangle took a quarter of
+        // the floor (25 %); a 0.42 ellipse took 55 % and the strongpoint's bp_04_c/3 failed on exactly that
+        // ("placed only 1 of 3 requested usable cover line(s)").
+        double baseReach = Math.max(2.0D, Math.min(w, d) * 0.30D);
+
+        // ---- 1. the irregular cut: a suffix of every z column, jittered per column and per floor
+        int cut = 0;
+        for (int y = floorY; y <= toY; y++) {
+            java.util.Random random = new java.util.Random(seed * 91L + 7717L + y * 131L);
+            double reach = baseReach + (toY - y) * 0.35D + (random.nextDouble() - 0.5D) * 1.6D;
+            for (int x = x0; x <= x1; x++) {
+                int depth = (int) Math.round(reach) - (x1 - x) + random.nextInt(3) - 1;
+                depth = Math.min(depth, d - KEEP_COLUMNS);
+                for (int i = 0; i < depth; i++) {
+                    int z = z1 - i;
+                    if (this.cell(x, y, z).equals("air") || blocksLadderShaft(x, y, z)) {
+                        continue;               // the shaft is the building's only way up (README 7o)
+                    }
                     this.set(x, y, z, "air");
+                    cut++;
                 }
             }
         }
-        for (int i = 0; i < 18; i++) {
-            int x = x0 + 1 + (i * 7) % Math.max(1, w - 2);
-            int z = z0 + 1 + (i * 11) % Math.max(1, d - 2);
-            this.set(x, Math.max(1, fromY), z, "cover_rubble");
-            count("ruins", Role.COVER);
-            if (i % 3 == 0) {
-                this.set(x, Math.max(1, fromY) + 1, z, "cover_rubble_top");
-                count("ruins", Role.COVER);
+
+        // ---- 2. the debris field: denser at the crater floor, thinner on every ledge above it
+        int rubble = 0;
+        for (int y = floorY; y <= toY; y++) {
+            java.util.Random random = new java.util.Random(seed * 97L + 3371L + y * 137L);
+            double falloff = y == floorY ? 0.62D : 0.30D;
+            for (int x = x0; x <= x1; x++) {
+                for (int z = z0; z <= z1; z++) {
+                    // only a cell that is empty with something solid underneath can hold debris, and only
+                    // when the way up is clear - otherwise the rubble would replace a wall or a light
+                    if (!this.cell(x, y, z).equals("air")
+                            || this.cell(x, y - 1, z).equals("air")
+                            || !this.cell(x, y + 1, z).equals("air")
+                            || blocksLadderShaft(x, y, z)) {
+                        continue;
+                    }
+                    double dx = (x1 - x) / baseReach;
+                    double dz = (z1 - z) / baseReach;
+                    double distance = Math.sqrt(dx * dx + dz * dz);
+                    if (random.nextDouble() >= falloff - 0.16D * distance) {
+                        continue;
+                    }
+                    this.set(x, y, z, "cover_rubble");
+                    count("ruins", Role.COVER);
+                    rubble++;
+                    if (random.nextInt(100) < 35) {
+                        this.set(x, y + 1, z, "cover_rubble_top");
+                        count("ruins", Role.COVER);
+                    }
+                }
             }
         }
+        // One line per ruin, so the gate can pin the shape of the damage instead of trusting the picture.
+        System.out.println("  blast at corner " + x1 + "," + z1 + " floors " + floorY + ".." + toY
+                + " reach=" + String.format(java.util.Locale.ROOT, "%.1f", baseReach)
+                + " cut=" + cut + " rubble=" + rubble);
     }
 
     /**
@@ -3770,6 +4411,25 @@ public final class CityStructureGen {
         }
         return (x == shaftX && z == shaftZ) || (x == shaftX && z == shaftZ + 1)
                 || (x == shaftX + 1 && z == shaftZ);
+    }
+
+    /**
+     * True when a cell must stay clear for the ladder shaft: its own column - where the plate holes and the
+     * "keep the shaft usable" air cells are - or one of the two cells beside it that a climber steps through,
+     * at this height OR one block above.
+     *
+     * <p>This is deliberately the same rule {@link #validFixtureCell} (spawners/chests) and the cover-line
+     * span helper ({@link #usableSpan}) have always used, exposed as one predicate so the decoration passes
+     * call it instead of a second copy. It exists because they did not: measured with
+     * {@code CityStructureGen --report}, the interior furnishing pass put cover and furniture on the opening
+     * cells of almost every floor (cover_sandbag stacks, table legs, carpets, rubble in the plate hole, the
+     * ground-floor wainscot, the corner torch), so 0 of the 37 shipped shafts was climbable on every floor
+     * (README 7o). Two heights are checked because a fixture is two blocks tall (a sandbag stack, a table, a
+     * cabinet): filtering only the lower cell would leave the piece's head block filling the opening.</p>
+     */
+    private boolean blocksLadderShaft(int x, int y, int z) {
+        return isShaftCell(x, y, z, this.shaftX, this.shaftZ)
+                || isShaftCell(x, y + 1, z, this.shaftX, this.shaftZ);
     }
 
     /**

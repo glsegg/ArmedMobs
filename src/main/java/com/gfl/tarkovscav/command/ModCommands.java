@@ -96,6 +96,8 @@ public final class ModCommands {
 
         root.then(city());
         root.then(garrison());
+        root.then(capture());
+        root.then(fillWater());
         root.then(marks());
         root.then(spawn());
         root.then(test());
@@ -377,6 +379,216 @@ public final class ModCommands {
             }
             return 1;
         });
+    }
+
+    // ------------------------------------------------------------------ /tarkovscav capture
+
+    /**
+     * {@code /armedmobs capture ...} - the overworld capture game's operator console (README 7p).
+     *
+     * <ul>
+     *   <li>{@code capture} - the config actually in force and every known city with its dimension, its
+     *       factions, its pools and its captured state (the same shape {@code /armedmobs garrison} prints);</li>
+     *   <li>{@code capture reset} - rebuild the pools of the city the caller is standing in and clear the
+     *       captured flags, so a decided city becomes contested again. The line-up is NOT re-rolled: it comes
+     *       from the ledger's building rows;</li>
+     *   <li>{@code capture reset at [pos]} - the same, explicitly anchored at a position (the console-friendly
+     *       form, for {@code /execute positioned ...});</li>
+     *   <li>{@code capture reset <cityKey>} - the same by ledger key, in the caller's dimension, so it works
+     *       without loading the city's chunks;</li>
+     *   <li>{@code capture set <village|illager> <value> [pos]} - force one faction's pool to a value. Set it
+     *       to 1 and kill the last man to watch the end-game without killing 100 mobs first; set it to 0 to
+     *       decide the capture immediately through the same path a real death takes.</li>
+     * </ul>
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> capture() {
+        return Commands.literal("capture")
+                .executes(ModCommands::captureList)
+                .then(Commands.literal("reset")
+                        .executes(context -> captureResetAt(context, null))
+                        .then(Commands.literal("at")
+                                .executes(context -> captureResetAt(context, null))
+                                .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                        .executes(context -> captureResetAt(context,
+                                                BlockPosArgument.getBlockPos(context, "pos")))))
+                        .then(Commands.argument("key", StringArgumentType.word())
+                                .executes(ModCommands::captureResetByKey)))
+                .then(Commands.literal("set")
+                        .then(Commands.argument("faction", StringArgumentType.word())
+                                .suggests((context, builder) -> {
+                                    builder.suggest("village");
+                                    builder.suggest("illager");
+                                    return builder.buildFuture();
+                                })
+                                .then(Commands.argument("value", IntegerArgumentType.integer(0, 400))
+                                        .executes(context -> captureSet(context, null))
+                                        .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                                                .executes(context -> captureSet(context,
+                                                        BlockPosArgument.getBlockPos(context, "pos")))))));
+    }
+
+    /** {@code capture}: the config in force, then every city the ledger knows about. */
+    private static int captureList(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        for (String line : com.gfl.tarkovscav.world.CityCapture.describe(source.getServer())) {
+            source.sendSuccess(() -> Component.literal("  " + line), false);
+        }
+        return 1;
+    }
+
+    /** The nearest city within the garrison trigger radius of a position, or null with the failure sent. */
+    @Nullable
+    private static CityGate.Area nearestCity(CommandSourceStack source, BlockPos where) {
+        ServerLevel level = source.getLevel();
+        int radius = (int) Math.round(Config.GARRISON_TRIGGER_RADIUS.get());
+        List<CityGate.Area> near = CityGate.citiesNear(level, where, radius);
+        if (near.isEmpty()) {
+            source.sendFailure(Component.literal("No city within " + radius + " blocks of "
+                    + where.toShortString() + " in " + level.dimension().location()
+                    + " (only loaded chunks are inspected)"));
+            return null;
+        }
+        return near.stream()
+                .min(Comparator.comparingDouble((CityGate.Area area) -> CityGate.distanceToBox(area.box(), where)))
+                .orElse(near.get(0));
+    }
+
+    /** {@code capture reset [at] [pos]}: the city at the caller (or at {@code pos}) becomes contested again. */
+    private static int captureResetAt(CommandContext<CommandSourceStack> context, @Nullable BlockPos pos) {
+        CommandSourceStack source = context.getSource();
+        BlockPos where = pos != null ? pos : BlockPos.containing(source.getPosition());
+        CityGate.Area city = nearestCity(source, where);
+        if (city == null) {
+            return 0;
+        }
+        com.gfl.tarkovscav.world.GarrisonData data =
+                com.gfl.tarkovscav.world.GarrisonData.get(source.getServer());
+        if (!com.gfl.tarkovscav.world.CityCapture.resetPools(source.getLevel(), data, city.key())) {
+            source.sendFailure(Component.literal("Could not rebuild the pools of " + city.name()
+                    + " - is capture.enabled on, and is this the overworld?"));
+            return 0;
+        }
+        reportCity(source, data, source.getLevel().dimension().location(), city.key(), city.name());
+        return 1;
+    }
+
+    /** {@code capture reset <cityKey>}: the by-key form, in the caller's dimension (no chunks loaded). */
+    private static int captureResetByKey(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        String cityKey = StringArgumentType.getString(context, "key");
+        ResourceLocation dimension = source.getLevel().dimension().location();
+        com.gfl.tarkovscav.world.GarrisonData data =
+                com.gfl.tarkovscav.world.GarrisonData.get(source.getServer());
+        if (data.city(dimension, cityKey) == null) {
+            source.sendFailure(Component.literal("No decided city '" + cityKey + "' in " + dimension
+                    + ". /armedmobs capture lists the keys."));
+            return 0;
+        }
+        if (!com.gfl.tarkovscav.world.CityCapture.resetPools(source.getLevel(), data, cityKey)) {
+            source.sendFailure(Component.literal("Could not rebuild the pools of " + cityKey
+                    + " - is capture.enabled on, and is this the overworld?"));
+            return 0;
+        }
+        reportCity(source, data, dimension, cityKey, cityKey);
+        return 1;
+    }
+
+    /** {@code capture set <faction> <value> [pos]}: forces one faction's pool in the city at the caller. */
+    private static int captureSet(CommandContext<CommandSourceStack> context, @Nullable BlockPos pos) {
+        CommandSourceStack source = context.getSource();
+        String rawFaction = StringArgumentType.getString(context, "faction");
+        Faction faction = CityFactions.parse(rawFaction);
+        if (faction != Faction.VILLAGE && faction != Faction.ILLAGER) {
+            source.sendFailure(Component.literal("Unknown capture faction '" + rawFaction
+                    + "' - expected village or illager (the scav third party has no pool)."));
+            return 0;
+        }
+        int value = IntegerArgumentType.getInteger(context, "value");
+        BlockPos where = pos != null ? pos : BlockPos.containing(source.getPosition());
+        CityGate.Area city = nearestCity(source, where);
+        if (city == null) {
+            return 0;
+        }
+        com.gfl.tarkovscav.world.GarrisonData data =
+                com.gfl.tarkovscav.world.GarrisonData.get(source.getServer());
+        if (!com.gfl.tarkovscav.world.CityCapture.setPool(source.getLevel(), city, data, faction, value)) {
+            source.sendFailure(Component.literal("City " + city.name() + " has no " + rawFaction
+                    + " pool (was it ever approached in the overworld with capture.enabled on?)"));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal("Capture pool of " + CityFactions.name(faction)
+                + " in " + city.name() + " forced to " + value).withStyle(ChatFormatting.GREEN), true);
+        reportCity(source, data, source.getLevel().dimension().location(), city.key(), city.name());
+        return 1;
+    }
+
+    /** Prints one city's capture line after a command changed it, so the result is never a guess. */
+    private static void reportCity(CommandSourceStack source, com.gfl.tarkovscav.world.GarrisonData data,
+                                   ResourceLocation dimension, String cityKey, String cityName) {
+        String summary = com.gfl.tarkovscav.world.CityCapture.summary(data, dimension, cityKey);
+        source.sendSuccess(() -> Component.literal("  " + cityName + " -> " + summary), false);
+    }
+
+    // ------------------------------------------------------------------ /tarkovscav fillwater
+
+    /**
+     * {@code /armedmobs fillwater [radius] [block]} - replace the water in a cube around the caller.
+     *
+     * <p>The wasteland no longer generates standing water ({@code aquifers_enabled: false} and
+     * {@code default_fluid: minecraft:air} in {@code noise_settings/urban_wasteland.json}), but chunks that
+     * are already on disk keep whatever the old preset put there - which is the water the seams between
+     * city pieces used to be filled with. This is the retro-fit: a cube of {@code radius} (default 48,
+     * capped at 128) centred on the caller, swept from top to bottom, with every {@code water} /
+     * {@code flowing_water} block replaced by {@code block} (default {@code minecraft:stone}, so the result
+     * is something a player and a mob can walk on; {@code air} drains instead).</p>
+     *
+     * <p>Waterlogged blocks are counted and left alone, unloaded chunks are skipped and reported, and water
+     * still touching the swept boundary is counted - that is the water that will flow back in, so the
+     * message says when a second pass (or a larger radius) is needed. The whole calculation lives in
+     * {@link com.gfl.tarkovscav.world.WaterCleanup}.</p>
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> fillWater() {
+        return Commands.literal("fillwater")
+                .executes(context -> fillWater(context, 48, com.gfl.tarkovscav.world.WaterCleanup.DEFAULT_BLOCK))
+                .then(Commands.argument("radius", IntegerArgumentType.integer(1, 128))
+                        .executes(context -> fillWater(context, IntegerArgumentType.getInteger(context, "radius"),
+                                com.gfl.tarkovscav.world.WaterCleanup.DEFAULT_BLOCK))
+                        .then(Commands.argument("block", StringArgumentType.string())
+                                .executes(context -> fillWater(context,
+                                        IntegerArgumentType.getInteger(context, "radius"),
+                                        StringArgumentType.getString(context, "block")))));
+    }
+
+    private static int fillWater(CommandContext<CommandSourceStack> context, int radius, String blockName) {
+        CommandSourceStack source = context.getSource();
+        ServerLevel level = source.getLevel();
+        net.minecraft.world.level.block.state.BlockState target =
+                com.gfl.tarkovscav.world.WaterCleanup.parseTarget(blockName);
+        if (target == null) {
+            source.sendFailure(Component.literal("Unknown block '" + blockName
+                    + "' - use a block id such as minecraft:stone, minecraft:cobblestone or"
+                    + " minecraft:air to drain."));
+            return 0;
+        }
+        BlockPos center = BlockPos.containing(source.getPosition());
+        com.gfl.tarkovscav.world.WaterCleanup.Report report =
+                com.gfl.tarkovscav.world.WaterCleanup.run(level, center, radius, target);
+        // The same line goes to the server log, so a head-less RCON session has the evidence too.
+        TarkovScav.LOGGER.info("[fillwater] {} {}", level.dimension().location(), report.describe());
+        source.sendSuccess(() -> Component.literal("[fillwater] " + level.dimension().location()
+                + " " + report.describe()).withStyle(ChatFormatting.GREEN), true);
+        if (report.boundaryWater() > 0) {
+            source.sendSuccess(() -> Component.literal("  " + report.boundaryWater()
+                    + " replaced block(s) sit on the sweep boundary - water outside will flow back in;"
+                    + " run again or use a larger radius for a stable result.")
+                    .withStyle(ChatFormatting.YELLOW), false);
+        }
+        if (report.waterlogged() > 0) {
+            source.sendSuccess(() -> Component.literal("  " + report.waterlogged()
+                    + " waterlogged block(s) were left as they are (replacing them would have deleted"
+                    + " the block itself).").withStyle(ChatFormatting.GRAY), false);
+        }
+        return report.replaced();
     }
 
     // ------------------------------------------------------------------ /tarkovscav marks

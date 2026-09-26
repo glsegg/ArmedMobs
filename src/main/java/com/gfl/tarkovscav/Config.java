@@ -371,6 +371,25 @@ public final class Config {
     public static final ForgeConfigSpec.BooleanValue COMMAND_COORDINATION;
     public static final ForgeConfigSpec.IntValue COMMAND_MAX_MARKS;
 
+    // ------------------------------------------------------------------ ladder climbing (README 7o)
+    public static final ForgeConfigSpec.BooleanValue LADDER_ENABLED;
+    public static final ForgeConfigSpec.DoubleValue LADDER_CLIMB_SPEED;
+    public static final ForgeConfigSpec.DoubleValue LADDER_DOWN_SPEED;
+    public static final ForgeConfigSpec.IntValue LADDER_SEARCH_RADIUS;
+    public static final ForgeConfigSpec.IntValue LADDER_MAX_HEIGHT;
+    public static final ForgeConfigSpec.BooleanValue LADDER_COMBAT_WHILE_CLIMBING;
+    public static final ForgeConfigSpec.BooleanValue LADDER_FALL_DAMAGE_IN_SHAFT;
+
+    // ------------------------------------------------------------------ city capture (README 7p)
+    public static final ForgeConfigSpec.BooleanValue CAPTURE_ENABLED;
+    public static final ForgeConfigSpec.BooleanValue CAPTURE_HUD_ENABLED;
+    public static final ForgeConfigSpec.IntValue CAPTURE_POOL_MIN;
+    public static final ForgeConfigSpec.IntValue CAPTURE_POOL_MAX;
+    public static final ForgeConfigSpec.IntValue CAPTURE_POOL_PER_BUILDING;
+    public static final ForgeConfigSpec.IntValue CAPTURE_DRAIN_PER_KILL;
+    public static final ForgeConfigSpec.BooleanValue CAPTURE_PLAYER_KILLS_ONLY;
+    public static final ForgeConfigSpec.IntValue CAPTURE_HUD_HIDE_DELAY_SECONDS;
+
     // ------------------------------------------------------------------ client / gunner villager pose
     public static final ForgeConfigSpec.DoubleValue GUNNER_VILLAGER_AIM_ARM_PITCH;
     public static final ForgeConfigSpec.DoubleValue GUNNER_VILLAGER_HOLD_ARM_PITCH;
@@ -1699,6 +1718,129 @@ public final class Config {
                         "the filter can never block everything by accident. Manual /summon and spawn eggs",
                         "are exempt unless spawn.gateCommandSpawns is on.")
                 .define("factionSpawnFilter", true);
+        b.pop();
+
+        // ================================================================= ladder climbing
+        b.comment("Ladder climbing for the nine armed units (README 7o).",
+                "",
+                "Mobs cannot climb ladders in vanilla: WalkNodeEvaluator grows no vertical edges for a",
+                "ladder, and Mob has no 'shove yourself up the rungs' branch - only LocalPlayer#aiStep has",
+                "one. So the generator's ladder shafts were, for a mob, a wall it could never use: a unit",
+                "ordered to a mark on the next floor would stand at the shaft foot until the order expired.",
+                "",
+                "The mod now adds all three missing layers itself:",
+                "  1. a vertical link - when the destination is on another floor, find a climbable shaft",
+                "     near the unit (ladder block, headroom, a usable opening on the target floor) and split",
+                "     the trip into 'walk to the foot -> climb -> step out -> carry on';",
+                "  2. the movement - stick to the ladder, move up (or down) at the configured speed, and",
+                "     hand control back to the normal navigator only once the unit is standing on the",
+                "     target floor;",
+                "  3. the intent - a goal that only runs when the destination really is on another floor",
+                "     and a shaft was found.",
+                "",
+                "While a unit is on the rungs it does not shoot or reload (a muzzle pointed at the ceiling",
+                "hits nothing); combat and retreat still win over climbing, and an interrupted climb ends",
+                "standing on a floor, never hanging in the shaft. Falling inside a shaft does not hurt by",
+                "default, because a one-block slip off a rung is not a fall. Set enabled = false to get the",
+                "old behaviour back. Diagnostics: the shaft report is printed by the structure generator and",
+                "asserted by tools/selftest_ladder.js.").push("ladder");
+        LADDER_ENABLED = b
+                .comment("Master switch. false = exactly the old behaviour (a mob will not use a ladder at",
+                        "all), which is also the way to A/B the feature in game.")
+                .define("enabled", true);
+        LADDER_CLIMB_SPEED = b
+                .comment("Upward speed while on the rungs, in blocks per tick. The player climbs at about",
+                        "0.2; 0.15 keeps a unit slower than a player so being chased up a shaft still",
+                        "reads the way it should.")
+                .defineInRange("climbSpeed", 0.15D, 0.01D, 1.0D);
+        LADDER_DOWN_SPEED = b
+                .comment("Downward speed, in blocks per tick. Deliberately slower than the climb: a unit",
+                        "that drops down a shaft at full speed looks like it fell, not like it climbed,",
+                        "and it would outrun the squadmates it is supposed to arrive with.")
+                .defineInRange("downSpeed", 0.10D, 0.01D, 1.0D);
+        LADDER_SEARCH_RADIUS = b
+                .comment("How far, in blocks, a unit will detour to find a shaft before giving up and",
+                        "walking the long way. 8 covers a shaft in the next room or just around a corner;",
+                        "much more and units start crossing the whole building to a ladder they did not",
+                        "need.")
+                .defineInRange("searchRadius", 8, 2, 32);
+        LADDER_MAX_HEIGHT = b
+                .comment("The tallest single continuous climb, in blocks, before a unit stops and",
+                        "re-plans. A guard against a shaft that leads nowhere (or a mod-added infinite",
+                        "ladder) turning into a unit that climbs forever.")
+                .defineInRange("maxHeight", 48, 4, 256);
+        LADDER_COMBAT_WHILE_CLIMBING = b
+                .comment("Allow shooting and reloading while on the rungs. Default false: the unit is",
+                        "facing the ladder, so its muzzle is in the wall, and letting it fire there both",
+                        "wastes ammo and produces shots with no visible source. true is for experimenting.",
+                        "Grenades are never thrown from a ladder regardless of this key.")
+                .define("combatWhileClimbing", false);
+        LADDER_FALL_DAMAGE_IN_SHAFT = b
+                .comment("Take fall damage inside a shaft. Default false: slipping one or two blocks off a",
+                        "rung is part of climbing, and vanilla fall damage for it reads as a bug. A unit",
+                        "knocked OUT of the shaft (no ladder under it any more) always takes normal fall",
+                        "damage - this key only affects the shaft itself.")
+                .define("fallDamageInShaft", false);
+
+        // ================================================================= city capture
+        b.comment("City capture, OVERWORLD ONLY (README 7p).",
+                "",
+                "The user's rule, verbatim: 'occupying cities only exists in the overworld', 'if it is not",
+                "captured, units of a few line-ups keep spawning until one side's strength is gone (the",
+                "idea is the same as Battlefield)', 'the wasteland is a free-for-all between everyone, no",
+                "capture needed'.",
+                "",
+                "So the two dimensions are deliberately different:",
+                "  overworld     - every city gets a strength pool per faction present, sized from the",
+                "                  city's building count. Both sides keep receiving reinforcements while",
+                "                  their pool is above zero, every death drains that faction's pool, and",
+                "                  when a pool reaches zero that faction stops spawning in that city for",
+                "                  good: natural spawns, spawner spawns and garrison top-ups are all",
+                "                  refused. The surviving faction has TAKEN the city.",
+                "  wasteland     - the same per-building line-ups, no pools, no HUD, no winner. It stays",
+                "                  a brawl, as asked.",
+                "",
+                "Nothing is written into the terrain: a captured city is a ledger entry, and stopping the",
+                "loser's spawns is a runtime veto (LivingSpawnEvent.SpecialSpawn), so the spawners keep",
+                "their blocks and the whole thing is reversible with a command. The pools and the capture",
+                "flag survive a restart. Diagnostics: /armedmobs capture.").push("capture");
+        CAPTURE_ENABLED = b
+                .comment("Master switch for the overworld capture game. false keeps per-building factions",
+                        "and the garrison, but builds no pools and never stops a faction from spawning.")
+                .define("enabled", true);
+        CAPTURE_HUD_ENABLED = b
+                .comment("Show the strength bars while a player is inside a contested city. Client-side",
+                        "rendering only - the server just syncs the two numbers - so turning it off cannot",
+                        "change who wins.")
+                .define("hudEnabled", true);
+        CAPTURE_POOL_MIN = b
+                .comment("The smallest starting pool, for the smallest city. The design bounds are 20..100",
+                        "men; this is the floor of that range.")
+                .defineInRange("poolMin", 20, 4, 200);
+        CAPTURE_POOL_MAX = b
+                .comment("The largest starting pool, for a city with enough buildings to reach it. A pool",
+                        "is clamp(poolMin + buildings * poolPerBuilding, poolMin, poolMax), so a city with",
+                        "few buildings sits near poolMin and a big one is capped here.")
+                .defineInRange("poolMax", 100, 4, 400);
+        CAPTURE_POOL_PER_BUILDING = b
+                .comment("How many men each building in the city adds to that faction's pool. 2 puts a",
+                        "4-building city at 28 and a 40-building city at the 100 cap.")
+                .defineInRange("poolPerBuilding", 2, 0, 20);
+        CAPTURE_DRAIN_PER_KILL = b
+                .comment("How much each death drains from that faction's pool in that city. 1 means the",
+                        "pool is literally a head count: it reaches zero exactly when that many of that",
+                        "faction have died there.")
+                .defineInRange("drainPerKill", 1, 1, 10);
+        CAPTURE_PLAYER_KILLS_ONLY = b
+                .comment("Only deaths caused by a player drain the pool. Default false is the Battlefield",
+                        "reading the user described: the two line-ups fight each other whether or not a",
+                        "player is there, so the front moves on its own and the player is an accelerator",
+                        "rather than the only cause.")
+                .define("playerKillsOnly", false);
+        CAPTURE_HUD_HIDE_DELAY_SECONDS = b
+                .comment("How long the bars stay on screen after the player leaves the city, in seconds.",
+                        "They also hide immediately once only one faction is left alive there.")
+                .defineInRange("hudHideDelaySeconds", 8, 0, 60);
         b.pop();
 
         // ================================================================= the command system

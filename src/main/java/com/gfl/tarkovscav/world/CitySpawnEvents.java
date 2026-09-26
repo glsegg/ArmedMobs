@@ -57,6 +57,24 @@ public final class CitySpawnEvents {
             return;
         }
 
+        // City capture (README 7p): overworld only. A faction whose strength pool in this city is spent has
+        // been driven out for good, so it may not come back through EITHER of the two paths this event
+        // serves. In Forge 1.20.1 those are the same event: NaturalSpawner and BaseSpawner both call
+        // ForgeEventFactory.checkSpawnPosition, which fires this PositionCheck - the spawner side via
+        // checkSpawnPositionSpawner, carrying MobSpawnType.SPAWNER. There is no LivingSpawnEvent.SpecialSpawn
+        // in 1.20.1 at all (it was replaced by MobSpawnEvent); the spawner BLOCK is never rewritten or
+        // extinguished, which is what keeps the whole feature reversible.
+        //
+        // Placed BEFORE the faction-purity block so a spent faction is refused by the cheaper, decisive rule
+        // first. A manual spawn (/summon, a spawn egg) is deliberately exempt, exactly like the city gate.
+        if (!manual && event.getLevel() instanceof ServerLevel captureLevel
+                && CityCapture.vetoSpawn(captureLevel,
+                        BlockPos.containing(event.getX(), event.getY(), event.getZ()), Faction.of(mob),
+                        event.getSpawnType())) {
+            event.setResult(Event.Result.DENY);
+            return;
+        }
+
         // City faction purity (garrison.factionSpawnFilter): inside a city a mob of one line-up may not
         // appear in a building of the other, so a village building never spawns an illager unit and an
         // illager building never spawns a village one. SCAV is the unaligned third party and is allowed in

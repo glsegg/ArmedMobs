@@ -17,8 +17,8 @@
     "type": "tarkovscav:wasteland_spread",
     "spacing": 32,
     "separation": 12,
-    "dense_spacing": 5,
-    "dense_separation": 2,
+    "dense_spacing": 24,
+    "dense_separation": 8,
     "frequency": 0.25,
     "salt": 987654321
   }

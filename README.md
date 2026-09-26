@@ -3502,6 +3502,31 @@ table above (including `frequency === 0.25` on all four sets), the placement cla
 the beacon's registration/assets/recipe/tab and that every message key exists in both languages.
 `node tools/selftest_datapack.js` checks every shipped datapack JSON against its codec ranges.
 
+#### 7j.1 收尾：不再生成积水、城市间距 384 格、`/armedmobs fillwater`（2026-10 收尾）
+
+用户原话：「生成的这个大城市 连接中间会有可以掉下去的水 可以把这些空隙填上吗」。成因是两层：**地形**层面
+预设开着含水层（`aquifers_enabled`），结构没盖到的缝隙里就积了水；**结构**层面缝隙本身就是城市块之间
+没被覆盖的地方。两层都处理了：
+
+* **新生成的区块不再有水**：`noise_settings/urban_wasteland.json` 现在是 `aquifers_enabled: false` +
+  `default_fluid: {"Name": "minecraft:air"}`（与原版末地同一套写法），缝隙里不会再生成水。
+* **已经落在存档里的水**：数据包改不了已生成的区块，所以加了 `/armedmobs fillwater [radius] [block]`
+  （半径默认 48、上限 128；`block` 默认 `minecraft:stone`，写 `minecraft:air` 就是抽干）。它以执行者为中心
+  扫一个立方体，只把 `minecraft:water` 换掉——1.20.1 **没有独立的 `flowing_water` 方块**，流动与静止都是
+  带 0..15 液面属性的同一个 `minecraft:water`，所以一条判定就够；**含水方块**（楼梯/栅栏等）只计数、不替换，
+  因为替换它们等于把方块本身删掉；未加载的区块跳过并说明；边界上还有水会明确提示「外面的水会流回来，
+  再来一次或把半径放大」。日志标记 `[fillwater]`。
+* **城市间距**：废土里 `city_variants` / `city_small` 原本是 5 格 / 4 格区块（**每 80 / 64 格一座城**，
+  而预制体本身就宽 48~64 格），所以城市几乎贴在一起，缝隙里的水也就格外显眼。现在两套都是
+  **24 格区块 = 384 格一座城**（主世界那一对 `spacing/separation` 一字未改）；`city_district`（16 格，
+  就是那个「大城市」拼装器）与 `city_strongpoint`（192 格，十八栋楼的稀有据点）**故意不动**。
+* 测试用平台的边缘留白 `platform.margin` 8 → 16（只影响我用 RCON 搭的测试城，不影响世界生成）。
+
+**门槛**：`tools/selftest_wasteland.js` 第 7 节断言含水层关闭、默认流体是空气、四套 set 的间距数字与
+「dense 栅格 ≥ 预制体宽度」、五个布局文件的 `margin = 16`，以及 `fillwater` 的默认方块是实心、
+只替换水方块、含水方块的计数发生在任何替换之前（按源码下标比较）、只用 `UPDATE_CLIENTS`（不会因邻居更新
+卡 tick）、半径钳在 1..128、已注册进操作员命令树。
+
 ### 7k. Interior connection states + doorways: two generator post-passes (2026-09-25)
 
 The user reported two defects against the four shipped presets:
@@ -3696,6 +3721,44 @@ pieces_buildings）已用 `CityMap` 重画。生成器是**确定性的**：连�
 
 ---
 
+#### 7l.1 末地烛清空 + 废墟断口改成不规则爆破（2026-10 追加）
+
+用户原话：「建筑里的末地烛可以都删了 我看了一下这个东西目前在建筑里摆放的都是比较没用的，以及建筑缺口边缘太明显了 可以堆点方块过度。」（追问确认：「建筑缺口」指的是**被炸开的废墟楼断口**，做法选**不规则缺口**。）
+
+* **末地烛全部移除**。它们只来自一处——「悬挂链 + 灯笼 + 末地烛」那一组吊灯（`placeLight`）：删掉调色板条目
+  `light_end_rod` 与那一句放置，**链子和灯笼保留**（房间照明靠这两件，末地烛只是旁边多出来的第三个光源）。
+  核对：六个结构 NBT 里 `end_rod` 出现次数**全部为 0**。`roleOfState` 的 end_rod 分支、`NOT_FULL_CUBE`、
+  `NO_COLLISION` **故意保留**——布局或用户自己导入的建筑里仍可能有末地烛，这三处判定必须对它依然正确。
+* **废墟断口从「整块直角切」改成不规则爆破**。旧实现 `collapseQuadrant` 把四分之一整块设为空气，断口是一条
+  笔直竖线。现在是 `collapseBlast(x0, z0, w, d, fromY, toY, seed)`：**从一角挖进去的阶梯状缺口**——每个楼层
+  自己抽一次「能挖多深」，**每一列再各自抖动 ±1**（种子 = 建筑种子 × 91 + 楼层 Y × 131，所以没有两层轮廓
+  相同），因此边缘是一格一格的台阶而不是直线、也不是曲线。**为什么是「阶梯」而不是椭圆**：椭圆试过，
+  它的弧线会把墙皮/瓦片**掐成孤立小块**——实测据点从 18 个连通块涨到 83 个（65 个 1~8 格的碎片），
+  而据点门禁钉的正是「恰好 18 栋、没有孤儿块」。阶梯缺口的挖除部分是**每一列 z 的后缀**、并且**永远保留
+  最里面 3 列**，所以剩下的楼板在数学上不可能被掐断（`KEEP_COLUMNS`）。爆心就在角上，所以一定会啃掉
+  两段外墙——只挖中间会像屋顶漏水。
+* **「堆点方块过渡」**：弹坑底面与每一层残留的台阶边缘按**离角落递减**的密度铺碎石（中心偶尔再叠一层
+  `cover_rubble_top`），读起来是一坡瓦砾而不是一个切口。**只用 `cover_rubble`/`cover_rubble_top`
+  （cobblestone / cobblestone_slab）**——据点门禁在数连通块时会把「街面掩体族」跳过（cobblestone 在名单里，
+  `cracked_stone_bricks` 不在），所以丢一块砖在旁边会被它算成一个孤儿块（实测就是这样多出 10 个碎片）。
+  `fromY` 以下永不挖穿，所以瓦砾下面总有楼板。本次每处废墟 **挖掉 146~223 格、铺 17~28 块碎石**
+  （生成器为每处废墟打印 `blast at corner x,z floors A..B reach=R cut=C rubble=N`，可核对）。
+* **两个孤儿块清理遍（都跑在掩体/家具「之前」，这一点很关键）**：①`build()` 在掩体线那一遍**之前**跑
+  `sweepFloatingClusters()`，把爆破留下的**物理上悬空**的小簇清掉（实测四个城 28~58 格、据点 105 格）；
+  ②`rubbleStrayOrphans()` 在**所有**流程之后跑最后一次，把「只挨着街面掩体、在门禁眼里算孤立」的单格
+  **换成碎石**（实测据点正好 1 格）而不是删掉——碎石在上面那份名单里、又是完整方块，所以既不会再被算成
+  孤儿块，也不会夺走某条掩体线的可走邻居。**顺序**踩过坑：清理放在掩体线之后，会把那一遍已经记进
+  「每层最低掩体/家具」的方块删掉，生成器直接抛 `floors below their declared minimum cover/furniture/lines`
+  （实测 `bp_10_sw/3` 只剩 2 条可用掩体线，声明要 3 条）。
+* **挖多深为什么是「短边 × 0.30」**：第一版取 0.42，结果**据点生成直接抛异常**——
+  `floor bp_04_c/3: placed only 1 of 3 requested usable cover line(s)`。原因写进代码注释了：旧矩形只吃掉
+  25 % 楼面，而 0.42 的椭圆要吃掉 55 %，掩体线那一遍（跑在建筑之后）就凑不够下限。0.30 + 每层 0.35
+  把面积拉回 25~35 %，缺口形状照样不规则。
+* **仍然是确定性的**：所有随机数都由建筑种子派生、循环顺序固定，所以连跑两遍逐字节相同
+  （`selftest.ps1` 的 workspace-unchanged 每次都在钉这一条）。
+
+---
+
 ### 7m. 指挥系统：三件阵营道具 + 信号棒 + 信号点方块（2026-10）
 
 **设计定稿见 `docs/指挥系统设计.md`；这一节是实现说明 + 生效配置，`docs/COMMAND_AND_CONFIG_REFERENCE.md` 的 5.24 / 5.25 是逐键表。**
@@ -3839,6 +3902,102 @@ pieces_buildings）已用 `CityMap` 重画。生成器是**确定性的**：连�
 > 限制（诚实记录）：命令只能下给**本模组自己的三个武装基类**。`faction_village` 标签里的原版
 > `minecraft:villager` 等也在阵营内，但 Forge 没有给"给别的类加 Goal"的入口，所以它们**不会**被命令
 > 驱动——`CommandMarks.isCommandable` 直接跳过，不会收到一条永远执行不了的命令。阵营判定本身仍然只有标签那一条。
+
+### 7o. 爬梯：九个武装单位自己上下梯子（2026-10）
+
+用户原话：「可以让这些大兵会正常的爬梯子吗。」设计定稿见 `docs/爬梯设计.md`；逐键表见 `docs/COMMAND_AND_CONFIG_REFERENCE.md` 的 5.27。
+
+**为什么原版怪物不会爬**（实测，不是推测）：1.20.1 的 `WalkNodeEvaluator` **不为梯子生成垂直边**，`Mob`/`LivingEntity` 也没有「贴梯上行」的移动分支——只有玩家的 `LocalPlayer#aiStep` 有。所以生成器造出来的梯井对怪物等于一面墙：把标记点放到上一层，单位会永远站在梯脚直到命令过期。这不是调参能解决的，三层都得自己补。
+
+**三层实现**（`docs/爬梯设计.md` 的方案 A，不替换寻路器）：
+
+| 层 | 类 | 做什么 |
+| --- | --- | --- |
+| 垂直链接 | `gun/LadderSearch.java` | **纯逻辑、零 Minecraft 类型**：在半径内找合法梯井（梯子列从本层连到目标层、梯脚与目标层都有「站得住 + 头顶 2 格净空」的开口、不超过 `maxHeight`），把行程拆成「走到梯脚 → 爬 → 从开口走出 → 继续走」；同时给出 `shouldStart`／`nearestLanding`／中断退出判据。因为纯 JDK，`tools/spike/LadderTest.java` 编译并运行的是**真代码**（74 个用例，含 6 个方向的合成竖井） |
+| 移动 | `gun/LadderClimb.java` | 真实 `Level`→该纯逻辑的探针适配层、攀爬原语（贴梯上行/下行、把单位拉正到梯子列中轴、`onRungs`）、以及 `LivingFallEvent` 处理器：`ladder.fallDamageInShaft = false` 时**取消梯井内的摔落伤害**，只对本模组的持枪单位生效 |
+| 意图 | `gun/LadderClimbGoal.java` | `TO_FOOT → CLIMB → STEP_OUT / LAND` 状态机；目的地来源是**指挥标记**（默认）以及可选的目标/`GunBrain.currentSpot`；被打断时落到**最近的一层**，`stop()` 里还有一次兜底落地 |
+
+**优先级**：爬梯 goal 占用 **MOVE+LOOK**、优先级 **5**，指挥推进从 5 挪到 6，闲逛/看玩家/四处张望顺延到 7/8/9（`GunnerPillagerEntity` 自己没有闲逛那几条，只挪了指挥）。挪之前先 grep 过全部 `tools/*.js` 与 `tools/spike/*.java`：**只有 `selftest_antistall.js` 钉了 1 和 2**，5~8 没有任何门槛在钉。爬梯必须压过指挥推进（两者都占 MOVE），因为「上楼」正是命令目的地所在的那一段；横向那一腿在垂直那一段结束后自然继续。
+
+**爬梯时不开火、不换弹**——用的是这套代码**本来就有**的机制，没有新造第二套开关：爬梯时 goal 握着 MOVE+LOOK，而 `GunBrain#tick` **只**从 `GunAttackGoal#tick` 调用，所以枪的 goal 根本跑不起来，脑子已经在 `GunBrain#onGoalStop` 里落到 `GunAiState.IDLE`（武器放下）；`NoGunMeleeGoal`／`GrenadeResupplyGoal`／`ArmedRangedGoal` 同样要 MOVE。再加一条：梯子上 `isInterruptable()` 返回 false，所以战斗**抢不走**正在爬的单位（它会自己发现交火并先落地）；战斗/撤退的否决沿用命令层原有的 `AdvanceOrder.combatOverrides`／`retreatOverrides`，没有重写一遍规则。
+
+**一处实测例外，值得记**：`GrenadeThrowGoal` **完全没有调用 `setFlags`**（空 flag 集合），而原版 `goalCanBeReplacedForAllFlags` 对空集合是**恒真**，也就是说 flag 机制对它是无效的——单靠 flag 无法保证「不在梯子上扔雷」。所以新增了一个薄包装 `gun/LadderGatedGoal.java`：`canUse = 扔雷的 canUse() && !onRungs(mob)`，其余全部转发（包括它自己的 `isInterruptable() == false`）。`selftest_grenades.js` 只钉 `GrenadeResupplyGoal` 的注册文本，没有被这次改动影响。
+
+**九个单位全覆盖**：`ScavEntity`／`GunnerPillagerEntity`／`GunnerVillagerEntity` 三个基类注册，其余六个继承它们，门槛逐个断言（不是「应该会继承」）。
+
+**生成器侧的实测缺陷（已修）**：出厂六个结构共 **37 个梯井，修之前 0 个「每层都能爬」**——原因是**家具/掩体那一遍会占掉梯子旁边那两格**（`placeCover`／`placeFurniture` 只做「若为空气就放」，没有避开竖井格；个别竖井连柱子本身都被 `cover_rubble` 占了）。修法是在家具/掩体路径上跳过每层梯子旁的两格（复用 `placeFixture` 里已有的那条守卫，不新写规则），然后重新生成六个结构。
+
+**修完的实测数字**（`CityStructureGen --report`，逐结构，被 `tools/selftest_ladder.js` 钉住）：
+
+| 结构 | 梯井 | 每层都能爬 | 连续梯柱 | 有可用开口的楼层 | 被寻梯器接受的有序楼层对 |
+| --- | --- | --- | --- | --- | --- |
+| city_small | 4 | **4**（原 0） | 4（原 2） | 17/17（原 7/17） | 58（原 2） |
+| city_a | 4 | **4**（0） | 4（3） | 14/14（4/14） | 40（4） |
+| city_b | 3 | **3**（0） | 3（2） | 11/11（1/11） | 38（0） |
+| city_c | 6 | **6**（0） | 6（4） | 18/18（5/18） | 40（2） |
+| city_strongpoint | 18 | **18**（0） | 18（13） | 73/73（21/73） | 234（6） |
+| gen_district | 2 | **2**（0） | 2（0） | 9/9（3/9） | 32（2） |
+| **合计** | **37** | **37** | **37** | **142/142** | **442** |
+
+**刻意没做的一件事（诚实记录）**：设计稿 §3 的「撤退时允许用梯子下楼」**没有实现**——撤退逻辑住在 `GunAttackGoal` 里，而爬梯 goal 握着 MOVE 会把它挡住，实现它就会违背更硬的那条规则「自保优先于爬梯」。所以按字面实现了需求 3：撤退**否决**爬梯。
+
+**一个实现细节的原因**：上/下梯与「落到最近的层」用的是**精确 ≤1 格的摆位**（`moveIntoCell`），不是寻路——那两个格子紧挨着楼板洞，让怪物「走过去」会有一 tick 脚下无方块、直接掉下去。
+
+**生效配置（`[ladder]`，默认值）**
+
+| 键 | 默认 | 说明 |
+| --- | --- | --- |
+| `ladder.enabled` | `true` | 总开关；false = 回到「完全不会用梯子」的旧行为（也方便 A/B 对比） |
+| `ladder.climbSpeed` | `0.15` | 上行速度（格/tick）；玩家约 0.2，默认比玩家慢；`0.01..1.0` |
+| `ladder.downSpeed` | `0.10` | 下行速度（格/tick）；故意比上行慢：全速下坠像掉下去，而且会甩开队友；`0.01..1.0` |
+| `ladder.searchRadius` | `8` | 愿意为找梯井绕多远（格）；`2..32` |
+| `ladder.maxHeight` | `48` | 单次连续攀爬最大高度（格），超过就停下重新规划；`4..256` |
+| `ladder.combatWhileClimbing` | `false` | 是否允许在梯子上开火/换弹；**手雷无论如何不在梯子上扔** |
+| `ladder.fallDamageInShaft` | `false` | 梯井内是否恢复摔落伤害；被**打出**梯井（脚下已无梯子）恢复原版规则 |
+
+**门槛**：`node tools/selftest_ladder.js`（117 项：生成器 `--report` 对六个布局的真实竖井报告 + `LadderTest` 驱动真 `LadderSearch` 的 74 个可执行用例 + 结构性断言）；`tools/spike/LadderTest.java` 也注册进套件的 Java 测试清单。**没有人在游戏里看过它爬**——这是模拟级 + 结构性证据，观感（速度、姿势、卡顿）只能你进游戏判断。
+
+### 7p. 主世界城市争夺战：兵力池 + 血条（2026-10）
+
+用户口径（原话）：「占领城市的这种玩法**只在主世界**有」「如果不被占领会**一直刷几个阵容的单位，直到一方兵力消失**（思路和战地一样）」「**废土世界完全是各种人乱斗。不需要占领**」。设计定稿见 `docs/争夺战设计.md`；逐键表见 `docs/COMMAND_AND_CONFIG_REFERENCE.md` 的 5.28。
+
+**两个维度规则不同，而且是硬判断。** `CityCapture.isOverworld(level)` 是**所有入口的第一道**判断：主世界按城建**兵力池**、扣到 0 该阵营永久停刷、幸存方占领；废土里**不建池、不判占领、永不出血条**（照旧按楼分阵营乱斗）。门槛里废土那几条是断言，不是注释。
+
+**池有多大**：`clamp(poolMin + 建筑数 × poolPerBuilding, poolMin, poolMax)`，默认 20 起步、每栋楼 +2、上限 100 —— 4 栋楼的城 28 人，40 栋楼的城封顶 100。**同一座城里两方开局一样多**，这是"战地式拉锯"能成立的前提。这套数字住在 `world/CapturePools.java`（**纯 JDK、不带任何 Minecraft 类型**），所以 `tools/spike/CaptureTest.java` 编译并运行的是**真代码**，不是把公式抄一遍：34 个可执行用例覆盖钳位（含 `poolMin > poolMax` 的手改 toml）、每栋楼增量、扣减永不为负、**正好归零**判占领、键形状。
+
+**扣减与结算**：该城该阵营每死一个单位扣 `drainPerKill`（默认 1，所以池字面上就是人头数：归零意味着"这些人真的死光了"）。击杀归属**复用** `killfeed/KillFeed.killerOf`；`playerKillsOnly = false`（默认）时**任何来源**的死亡都算——这正是战地式：你不去，两边自己也会推进战线。池归零 = 该阵营在这座城**永久停止刷新**，幸存方占领，日志写一行
+`[capture] <城> captured by <胜者> (<败者> strength exhausted)`，**只写一次**（标记存进账本，重启也不会重复）。
+
+**「停止刷新」不碰你的地形**——三条路径分别拦截：
+
+| 路径 | 做法 |
+| --- | --- |
+| 自然刷怪 | `CitySpawnEvents.onPositionCheck` → `CityCapture.vetoSpawn` |
+| **刷怪笼** | **同一个事件**。设计稿写的 `LivingSpawnEvent.SpecialSpawn` 在 Forge 1.20.1 **不存在**（反汇编 `forge-…-universal.jar` 只有 `MobSpawnEvent$PositionCheck`；Forge 的 `BaseSpawner.java.patch` 把原版判定换成 `ForgeEventFactory.checkSpawnPositionSpawner(…, SPAWNER, …)`，也就是同一个事件、`DENY` 时 `continue`），所以一条判定真的同时覆盖两条路，而且**刷怪笼方块一个字节都不改**（非破坏、可逆） |
+| 驻军补员 | `CityGarrison.spawn` 逐单位问 `vetoGarrison`；一个都放不下时**不写"已放置"**（下次会重试），并写 `[capture] … refused by the capture veto`，而不是那句会误导人的「找不到站立点」 |
+
+**性能**：`veto` 的第一句是 `capturedPoolCount() == 0 → 放行`，也就是说**在世界上第一次出现占领之前，刷怪热路径上没有任何新增查询**；只有真出现过占领，才会开始查城市盒。刷怪笼内容不再被改写，所以也不存在"每次触发重写方块"的成本。
+
+**账本与老存档**：池存在原来的 `<world>/data/tarkovscav_garrison.dat`（新增 `pools` 列表，每行 `<维度>|<城>|<阵营>` + `strength`/`max`/`captured`），内存里是「城 → 阵营 → 池」的嵌套 map，所以"这座城有没有池"是一次哈希查询。`max` 是**存下来的**而不是重算的，重启后血条仍显示 `0/28`。**先于本特性的老存档**在第一次靠近时，按账本里已经记着的建筑数**补建池，且不重掷阵营**（不重掷这一条有断言）。
+
+**HUD**：纯客户端绘制（服务端只同步 城名 + 每阵营的 当前/上限/是否已占领），屏幕顶部居中的细条，归零变灰并标「已占领」；离开城市 `hudHideDelaySeconds`（默认 8 秒）后隐藏，只剩一方时立即隐藏，`hudEnabled = false` 整个不画。**不需要资源包**，废土永不出现。
+
+**命令**：`/armedmobs capture`（生效配置 + 逐城的阵营/池/是否占领）、`/armedmobs capture reset [at [pos] | <城市键>]`（按账本重建池并清掉占领标记，城重新进入争夺；已站好的驻军成员不动）、`/armedmobs capture set <阵营> <0..400> [pos]`（把最近城市某阵营的池直接设成指定值，设 0 就立刻判占领——不杀一百个怪也能测终局与血条）。
+
+**生效配置（`[capture]`，默认值）**
+
+| 键 | 默认 | 说明 |
+| --- | --- | --- |
+| `capture.enabled` | `true` | 总开关；false 时仍按楼分阵营、仍有驻军，但不建池、永不阻止刷新 |
+| `capture.hudEnabled` | `true` | 血条；纯客户端，关掉不可能改变胜负 |
+| `capture.poolMin` | `20` | 最小开局兵力（小城地板）；`4..200` |
+| `capture.poolMax` | `100` | 最大开局兵力（大城上限）；`4..400` |
+| `capture.poolPerBuilding` | `2` | 每栋楼给该阵营加多少人；`0..20` |
+| `capture.drainPerKill` | `1` | 每次死亡扣多少；`1..10`，1 = 池就是人头数 |
+| `capture.playerKillsOnly` | `false` | 只算玩家击杀；默认 false = 两方自己也会打出胜负 |
+| `capture.hudHideDelaySeconds` | `8` | 离开城市后血条再停留几秒；`0..60` |
+
+**门槛**：`node tools/selftest_capture.js`（169 项，其中 **34 项是编译并运行真 `CapturePools`** 的可执行证据，其余逐条标注为结构性断言）；`tools/spike/CaptureTest.java` 也注册进套件的 Java 测试清单。
 
 ### TODO (recorded, not done)
 

@@ -116,6 +116,10 @@ public class TarkovScav {
         // The one-time city garrison (garrison.*): a coarse server-tick trigger that places each city's
         // fixed squads once and then only ever consults the SavedData ledger.
         MinecraftForge.EVENT_BUS.register(com.gfl.tarkovscav.world.CityGarrison.class);
+        // City capture (README 7p): the kill drain and the pool-at-zero veto for the overworld only. The
+        // pool creation itself rides the garrison trigger (CityGarrison#factionFor), so this is one handler,
+        // not a second scanner.
+        MinecraftForge.EVENT_BUS.register(com.gfl.tarkovscav.world.CityCapture.class);
     }
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
@@ -124,6 +128,8 @@ public class TarkovScav {
         com.gfl.tarkovscav.lean.LeanNetwork.register();
         // The kill feed's one packet (README 5u): server -> client only.
         com.gfl.tarkovscav.killfeed.KillFeedNetwork.register();
+        // The capture HUD's one packet (README 7p): server -> client only, names and numbers.
+        com.gfl.tarkovscav.world.CaptureHudNetwork.register();
         // Grenades (README 5v) teach the kill feed to name them: ONE registered resolver, no change to the kill
         // feed itself - which is the extension point that batch was built around.
         com.gfl.tarkovscav.killfeed.KillFeedWeapons.register(com.gfl.tarkovscav.grenade.GrenadeAttribution::resolve);
