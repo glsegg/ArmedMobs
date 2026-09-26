@@ -25,19 +25,6 @@ tasks.withType(JavaCompile).configureEach {
 minecraft {
     mappings channel: mapping_channel, version: mapping_version
 
-    // The player lean moves the camera sideways (README 5t), which needs Camera#setPosition(Vec3) to be public.
-    // An access transformer is the supported way to do that, and declaring it here means ForgeGradle applies it
-    // to the dev classes (so the code compiles as a direct call) and ships it to the game in SRG form. The gate
-    // tools/selftest_lean.js asserts the shipped bytecode contains that direct call and no reflection.
-    //
-    // The line inside the .cfg is:  public net.minecraft.client.Camera m_90581_(Lnet/minecraft/world/phys/Vec3;)V
-    //   * SRG member name, because that is what the runtime uses (checked against srg_to_official_1.20.1.tsrg,
-    //     which maps m_90581_ -> setPosition for Camera);
-    //   * and the .cfg must contain NOTHING but AT lines - Forge's parser rejects "#" comments outright
-    //     ("Invalid access transformer line"), which the build surfaces immediately, so no comment is kept
-    //     there on purpose. This comment block is where the explanation lives instead.
-    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
-
     // This property allows configuring Gradle's ProcessResources task(s) to run on IDE output locations before launching the game.
     copyIdeResources = true
 

@@ -40,8 +40,8 @@ import java.util.Optional;
  * wasteland's. That single fact is the discriminator: a fixed biome source holding
  * {@code tarkovscav:urban_wasteland} means "use the dense grid", anything else means "use the shipped
  * grid, exactly as {@code minecraft:random_spread} would". The state's {@code biomeSource} field is
- * private in vanilla, so {@code META-INF/accesstransformer.cfg} publishes it (the same mechanism this mod
- * already uses for the camera).</p>
+ * private in vanilla, so a cached reflective lookup reads it using the mapped and runtime field names.
+ * No access transformer is required.</p>
  *
  * <h2>The two grids</h2>
  * <p>{@code spacing}/{@code separation} are the shipped values and are what the overworld uses;
@@ -171,7 +171,7 @@ public class WastelandSpreadPlacement extends RandomSpreadStructurePlacement {
      * the vanilla formula, parameterised by (spacing, separation).
      */
     @Override
-    public boolean isStructureChunk(ChunkGeneratorStructureState state, int chunkX, int chunkZ) {
+    protected boolean isPlacementChunk(ChunkGeneratorStructureState state, int chunkX, int chunkZ) {
         long seed = state.getLevelSeed();
         if (isWasteland(state)) {
             return matchesAt(seed, chunkX, chunkZ, this.denseSpacing, this.denseSeparation);

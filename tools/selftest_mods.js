@@ -177,8 +177,16 @@ check(/GunAttachments\.apply\(stack, random, owner\)[\s\S]{0,200}?GunAttachments
   'GunPool builds the magazine first, then mods, then tops up');
 check(/GunPool\.buildGun\(loadout, this\.mob\.getRandom\(\), name\(\)\)/.test(brain),
   'the brain passes its own random source, so each gun differs');
-check(/GunAttachments\.refillToCapacity\(this\.gunStack\)/.test(brain),
-  'and tops the held gun up after the loadout is applied');
+const generatedLoadout = /private void applyLoadout\(GunLoadout loadout, String verb\)\s*\{([^}]*)\}/.exec(brain);
+check(!!generatedLoadout
+  && /GunPool\.buildGun[\s\S]*GunAttachments\.refillToCapacity\(stack\)[\s\S]*applyLoadout\(loadout, stack, verb\)/
+    .test(generatedLoadout[1]),
+  'newly generated guns are filled before the exact stack is equipped');
+const existingLoadout = /private void applyLoadout\(GunLoadout loadout, ItemStack stack, String verb\)\s*\{([^}]*)\}/.exec(brain);
+check(!!existingLoadout && /this\.gunStack = stack;/.test(existingLoadout[1])
+  && !/buildGun|refillToCapacity|setCurrentAmmoCount/.test(existingLoadout[1])
+  && /equipLoadout\(loadout, this\.mob\.getMainHandItem\(\)\)/.test(brain),
+  'existing saved guns keep their exact stack and magazine contents during restoration');
 check(/int capacity = capacityOf\(held\);/.test(brain)
   && /Math\.max\(0, capacity - gun\.getCurrentAmmoCount\(held\)\)/.test(brain),
   'the reload path uses the re-read capacity, not the loadout magazine size');

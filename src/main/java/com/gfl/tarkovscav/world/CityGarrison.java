@@ -19,6 +19,7 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
 
@@ -96,11 +97,18 @@ public final class CityGarrison {
     private CityGarrison() {
     }
 
+    @SubscribeEvent
+    public static void onServerStopped(ServerStoppedEvent event) {
+        LAST_CHECK.clear();
+        squadIdCounter = 1;
+    }
+
     // ------------------------------------------------------------------ the deterministic core
 
     /** Is the coarse check due? A never-run dimension is always due. */
     public static boolean due(long now, long lastCheck, int intervalTicks) {
-        return lastCheck == Long.MIN_VALUE || now - lastCheck >= Math.max(1, intervalTicks);
+        return lastCheck == Long.MIN_VALUE || now < lastCheck
+                || now - lastCheck >= Math.max(1, intervalTicks);
     }
 
     /** The trigger radius guard: a non-positive radius never triggers, so "off" cannot mean "everywhere". */
@@ -389,7 +397,9 @@ public final class CityGarrison {
         // triggered it walks away, and "a fixed garrison that never respawns" would quietly become "none".
         mob.setPersistenceRequired();
         SquadCoordinator.assignSquad(mob, squadId);
-        level.addFreshEntity(mob);
+        if (!level.addFreshEntity(mob)) {
+            return false;
+        }
         SquadCoordinator.claimFor(mob, coverAnchor(level, pos));
         return true;
     }
@@ -432,6 +442,9 @@ public final class CityGarrison {
                 if (pos == null) {
                     break;
                 }
+                if (!level.hasChunkAt(pos)) {
+                    continue;
+                }
                 if (pass == 0 && level.canSeeSky(pos)) {
                     continue;
                 }
@@ -466,18 +479,22 @@ public final class CityGarrison {
      * cell above, and not a door (a garrison must never stand in a doorway it then blocks).
      */
     public static boolean isValidStandingSpot(ServerLevel level, BlockPos pos) {
+        if (!level.hasChunkAt(pos) || pos.getY() <= level.getMinBuildHeight()
+                || pos.getY() >= level.getMaxBuildHeight() - 1) {
+            return false;
+        }
         BlockPos below = pos.below();
         BlockState floor = level.getBlockState(below);
         if (!floor.isFaceSturdy(level, below, Direction.UP)) {
             return false;
         }
         BlockState here = level.getBlockState(pos);
-        if (!here.getCollisionShape(level, pos).isEmpty()) {
+        if (!here.getCollisionShape(level, pos).isEmpty() || !here.getFluidState().isEmpty()) {
             return false;
         }
         BlockPos above = pos.above();
         BlockState head = level.getBlockState(above);
-        if (!head.getCollisionShape(level, above).isEmpty()) {
+        if (!head.getCollisionShape(level, above).isEmpty() || !head.getFluidState().isEmpty()) {
             return false;
         }
         if (here.is(BlockTags.DOORS) || head.is(BlockTags.DOORS) || floor.is(BlockTags.DOORS)) {
@@ -506,7 +523,8 @@ public final class CityGarrison {
     private static BlockPos coverAnchor(ServerLevel level, BlockPos pos) {
         for (Direction direction : Direction.Plane.HORIZONTAL) {
             BlockPos side = pos.relative(direction);
-            if (level.getBlockState(side).isFaceSturdy(level, side, direction.getOpposite())) {
+            if (level.hasChunkAt(side)
+                    && level.getBlockState(side).isFaceSturdy(level, side, direction.getOpposite())) {
                 return side;
             }
         }

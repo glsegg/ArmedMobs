@@ -771,8 +771,8 @@ public final class ModCommands {
                     .withStyle(ChatFormatting.DARK_GRAY), false);
         }
         source.sendSuccess(() -> Component.translatable("tarkovscav.command.city.structures.placed",
-                CityStructures.placed().size()).withStyle(ChatFormatting.AQUA), false);
-        for (CityStructures.Placed placed : CityStructures.placed()) {
+                CityStructures.placed(source.getServer()).size()).withStyle(ChatFormatting.AQUA), false);
+        for (CityStructures.Placed placed : CityStructures.placed(source.getServer())) {
             source.sendSuccess(() -> Component.literal("  " + placed.name() + " " + placed.dimension()
                     + " " + placed.box()).withStyle(ChatFormatting.GRAY), false);
         }

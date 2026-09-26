@@ -21,6 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const { spawnSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const JAVA = path.join(ROOT, 'src', 'main', 'java', 'com', 'gfl', 'tarkovscav');
@@ -38,6 +39,7 @@ const skip = (label, why) => console.log(`  SKIP  ${label}  (${why})`);
 const entity = strip(read('entity/GunnerVillagerEntity.java'));
 const model = strip(read('client/GunnerVillagerModel.java'));
 const renderer = strip(read('client/GunnerVillagerRenderer.java'));
+const handLayer = strip(read('client/TaczItemInHandLayer.java'));
 const entities = strip(read('registry/ModEntities.java'));
 const items = strip(read('registry/ModItems.java'));
 const tabs = strip(read('registry/ModCreativeTabs.java'));
@@ -72,17 +74,17 @@ check(/super\.setupAnim\(/.test(model), 'the vanilla setupAnim still runs first'
 check(/ArmPose\.forState\(entity\.gunAiState\(\)\)/.test(model),
   'the arm angle comes from the synced gun state through ArmPose',
   'the same single source of truth the rig uses');
-check(/anchor\.translateAndRotate\(poseStack\)/.test(model) && model.includes('translateToHand(HumanoidArm'),
-  'translateToHand is the HumanoidModel body, now on the configurable anchor',
-  'with it the vanilla ItemInHandLayer adds the hand frame TaCZ is authored for');
-check(/Config\.gunnerVillagerGunOnBody\(\) \? this\.root\(\) : this\.arms/.test(model),
-  'the anchor key really selects between the arms block and the torso',
-  'arms = follows the aiming pose, body = pinned to the torso');
+check(model.includes('implements ArmedModel, GunGripModel') && model.includes('translateToGunGrip(HumanoidArm'),
+  'the villager exposes a separate physical grip socket for TaCZ guns');
+check(handLayer.includes('grip.translateToGunGrip(arm, poseStack)')
+  && handLayer.includes('grip.applyGunGripTransform(poseStack)'),
+  'the held-gun layer uses the socket and applies scale after the hand orientation');
 check(/Config\.gunnerVillagerGunRotation\(\)/.test(model) && /Config\.gunnerVillagerGunOffset\(\)/.test(model)
     && /Config\.gunnerVillagerGunScale\(\)/.test(model),
-  'rotation, offset and scale are all applied in that transform, live from the config');
-check(/DEFAULT_GUNNER_VILLAGER_GUN_OFFSET = List\.of\("0", "0\.06", "-0\.09"\)/.test(config),
-  'the offset default is the user-calibrated "a bit further back" value (release baseline: z = -0.09)');
+  'rotation, offset and scale remain live config controls');
+const defaultList = name => JSON.parse('[' + new RegExp(name + ' = List\\.of\\(([^)]*)\\)').exec(config)[1] + ']');
+check(defaultList('DEFAULT_GUNNER_VILLAGER_GUN_OFFSET').every(value => Number(value) === 0),
+  'default correction offset is zero: the grip starts on the actual hand socket');
 check(/extends MobRenderer<GunnerVillagerEntity, GunnerVillagerModel>/.test(renderer), 'the renderer is a vanilla MobRenderer');
 check(renderer.includes('ModelLayers.VILLAGER'), 'it bakes ModelLayers.VILLAGER', 'the vanilla mesh, not a copy');
 check(renderer.includes('"textures/entity/villager/villager.png"'), 'it uses the vanilla villager texture');
@@ -90,7 +92,7 @@ check(/new VillagerProfessionLayer<>\(this, context\.getResourceManager\(\), "vi
   'it adds the vanilla profession layer with vanilla\'s own path prefix',
   'biome type + profession + level skins, no assets shipped');
 check(renderer.includes('new HeldGunLayer(this, context.getItemInHandRenderer())')
-  && /class HeldGunLayer[\s\S]{0,300}?extends ItemInHandLayer/.test(renderer),
+  && /class HeldGunLayer[\s\S]{0,300}?extends TaczItemInHandLayer/.test(renderer),
   'it adds the held-item layer so the gun is visible',
   'our HeldGunLayer subclass - the vanilla layer plus the hideGunWhenIdle switch');
 check(!/TarkovScav\.id\("/.test(model + renderer), 'no new asset path is referenced from the client code',
@@ -194,54 +196,20 @@ check(/armPitch aim\/hold\/reload\/hunker=/.test(clientCommands)
   && /gunnerVillagerHunkerArmPitch = /.test(clientCommands),
   'the echo and the "Written to config" list print all four arm pitches, in the same order as client state');
 
-// The gun pitch baseline: -40 was the ORIGINAL in-game confirmation ("at -90 it pointed at the sky, come back
-// 50 degrees"), and the user later calibrated it to 5 in his own instance - which is the released baseline
-// since 2026-09-25. The arm angle adds to it, so the numbers below are the silhouette table.
-check(/DEFAULT_GUNNER_VILLAGER_GUN_ROTATION = List\.of\("5", "0", "0"\)/.test(config),
-  'client.gunnerVillagerGunRotation defaults to the USER-CALIBRATED ["5","0","0"] (release baseline)',
-  '-40 was the old confirmation, 5 is what he settled on');
-check(/triple\(DEFAULT_GUNNER_VILLAGER_GUN_ROTATION, 5\.0F, 0\.0F, 0\.0F\)/.test(config),
-  'the "value could not be parsed" fallback is 5 too, so a broken toml cannot restore the old angle');
-check(/DEFAULT_GUNNER_VILLAGER_AIM_ARM_PITCH = -57\.0D/.test(config)
-    && /DEFAULT_GUNNER_VILLAGER_RELOAD_ARM_PITCH = 0\.0D/.test(config)
-    && /DEFAULT_GUNNER_VILLAGER_HUNKER_ARM_PITCH = 0\.0D/.test(config),
-  'the aim offset ships -57 (his confirmed -100 absolute) and reload/hunker ship 0 = the vanilla arms',
-  'all four are OFFSETS since the four-pose unification; only the aim pose is not 0');
+// Test the current arm-space calibration against the baked vanilla crossed-arms angle.
+const ARMS_REST = -0.75 * 180 / Math.PI;
+const aimOffset = Number(/DEFAULT_GUNNER_VILLAGER_AIM_ARM_PITCH = (-?[\d.]+)D/.exec(config)[1]);
+const baseRotation = defaultList('DEFAULT_GUNNER_VILLAGER_GUN_ROTATION').map(Number);
+const neutralAim = ARMS_REST + aimOffset + baseRotation[0] - 90;
+check(baseRotation.every(Number.isFinite) && Math.abs(neutralAim + 180) < 0.1,
+  'default aim frame points forward within 0.1 degree', neutralAim.toFixed(6) + ' degrees');
 check(/DEFAULT_GUNNER_VILLAGER_HOLD_ARM_PITCH = 0\.0D/.test(config),
-  'and the HOLD pose ships 0 = an OFFSET of nothing, which is exactly the vanilla crossed-arms rest (the 2026 '
-  + 'third idle report: writing a bare 0 as an ANGLE laid the arms flat against the body)');
-const villagerRow = (readme.match(/\| `gunnerVillagerGunRotation` \| `([^`]+)` \|/) || [])[1];
-check(villagerRow === '["5","0","0"]',
-  'the README table carries the same default', String(villagerRow));
-check(/USER-CONFIRMED in game/.test(readme) && /-40/.test(readme),
-  'README §5j keeps the history: -40 was the original confirmation ("-90 pointed at the sky, 50 degrees back")');
-check(/armPitch \+ gunPitch - 90/.test(readme) && /arm angle[^.]*ADD/.test(readme)
-    && ['**-185**', '**-130**', '-128'].every((total) => readme.includes(total)),
-  'README §5j states that the arm angle ADDS to the gun rotation, with the resulting silhouette table',
-  '-220 aim / -220 idle (with the idle-only offset) / -190 reload / -150 hunker');
-check(/原版村民/.test(readme) && /0\.75|43/.test(readme) && /偏移/.test(readme),
-  'and states in so many words that 0 IS the vanilla villager arm position, that the key is an OFFSET, and '
-  + 'where the number behind it comes from (the baked -0.75 rad, about -43 degrees)');
-// The composition itself, as arithmetic: all are X rotations on one pose stack, and the idle-only offset is
-// part of the sum ONLY on the LOWERED row. ARMS_REST is the vanilla mesh's baked crossed-arms rotation
-// (PartPose.offsetAndRotation(0, 3, -1, -0.75F, 0, 0)), which the model now captures and restores.
-const ARMS_REST = -0.75 * 180 / Math.PI;   // about -42.97 degrees
-// Since 2026-09-24 ALL FOUR poses use the same meaning: an OFFSET from ARMS_REST, so the arm contribution is
-// ARMS_REST + offset and the tilt is ARMS_REST + armOffset + gunPitch + poseGunPitch - 90.
-const villagerSilhouette = (armOffset, gunPitch = -40, posePitch = 0) =>
-  ARMS_REST + armOffset + gunPitch + posePitch - 90;
-check(Math.abs(villagerSilhouette(-47) - villagerSilhouette(0) + 47) < 1e-9,
-  'the arm pitch is a PURE offset: 47 degrees more offset = 47 degrees more tilt');
-check(Math.abs(villagerSilhouette(0) - (ARMS_REST - 130)) < 1e-9,
-  'all four ship 0.0, so every pose starts from the vanilla crossed arms (no pose flattens them any more)');
-check(Math.abs(villagerSilhouette(-57, -40, -70) - (ARMS_REST - 57 - 40 - 70 - 90)) < 1e-9,
-  'and the three contributions (arm offset + base gun rotation + pose gun rotation) simply ADD');
-check(Math.abs((villagerSilhouette(0, -40, 0) - villagerSilhouette(-100, -40, 0)) - 100) < 1e-9,
-  'the old absolute aim=-100 is now the offset -57 (offset = absolute + 43), same tilt as before');
-check(readme.includes('gunnerVillagerIdleGunRotation'), 'README documents the idle-only key');
-check(Math.abs(villagerSilhouette(0, -90) - (ARMS_REST - 180)) < 1e-9,
-  'and -90 on the gun base still swings the muzzle 50 degrees above the user-confirmed -130 offset frame',
-  'which is the "pointing at the sky" the user reported when it shipped that way');
+  'idle arms retain the vanilla baked rest');
+const productionPoseCheck = spawnSync(process.execPath, [path.join(__dirname, 'selftest_vanilla_poses.js')],
+  { cwd: ROOT, encoding: 'utf8' });
+check(productionPoseCheck.status === 0 && /production vanilla pose\/frame\/grip checks/.test(productionPoseCheck.stdout || ''),
+  'production model frame, aim direction and invariant grip regression runs',
+  (productionPoseCheck.stdout || productionPoseCheck.stderr || productionPoseCheck.error || '').toString().trim());
 // The idle fix itself, source level: LOWERED must be handled by its own early return that only RESETS the
 // crossed-arms block, and it must no longer be one arm of the pose switch (which is what held the arms up).
 const setupAnim = model.slice(model.indexOf('public void setupAnim'), model.indexOf('translateToHand'));
@@ -269,19 +237,21 @@ check(/HIDE_GUN_WHEN_IDLE\s*=[\s\S]{0,1200}?define\("hideGunWhenIdle", false\)/.
 check(readme.includes('hideGunWhenIdle'), 'and README documents it');
 check(/Config\.hideGunWhenIdle\(\) && RigSupport\.armPose\(entity\) == ArmPose\.LOWERED/.test(renderer),
   'the renderer skips the held-gun layer only while the state is LOWERED (it comes back when aiming)');
-check(/class HeldGunLayer[\s\S]{0,400}?extends ItemInHandLayer/.test(renderer),
-  'through a subclass of the vanilla ItemInHandLayer, so nothing else about the gun draw changes');
+check(/class HeldGunLayer[\s\S]{0,400}?extends TaczItemInHandLayer/.test(renderer),
+  'through the compatibility layer, which keeps ordinary items on the vanilla path');
 // The idle-ONLY gun offset (README 5j, the 2026 "the gun points up while idle" report). It exists because
 // the idle gun rides the arms block, so it needs its own correction there - and nowhere else.
-check(/DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION = List\.of\("-2", "0", "0"\)/.test(config),
-  'client.gunnerVillagerIdleGunRotation ships as ["-2","0","0"] - the idle muzzle the user calibrated in his '
-  + 'own instance (rest -43 + base 5 + idle -2 - 90 = -130), which is the release baseline');
-check(/triple\(DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION, -2\.0F, 0\.0F, 0\.0F\)/.test(config)
-    && /triple\(Config\.DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION,\s+-2\.0F/.test(clientCommands),
-  'and both parse fallbacks are -2 too, so a broken toml cannot move the muzzle');
+function fallbackMatchesDefault(source, key) {
+  const match = new RegExp('triple\\((?:Config\\.)?' + key
+    + ',\\s*(-?[\\d.]+)F,\\s*(-?[\\d.]+)F,\\s*(-?[\\d.]+)F\\)').exec(source);
+  const expected = defaultList(key).map(Number);
+  return match && expected.every((value, index) => value === Number(match[index + 1]));
+}
+check(fallbackMatchesDefault(config, 'DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION')
+    && fallbackMatchesDefault(clientCommands, 'DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION'),
+  'both idle parse fallbacks agree with the shipped calibration');
 check(/DEFAULT_GUNNER_VILLAGER_HOLD_ARM_PITCH = 0\.0D/.test(config),
-  'the two numbers are one pose: hold offset 0 (the vanilla rest) and idle -2 (moving one without the other '
-  + 'turns the muzzle)');
+  'idle retains the villager crossed-arm rest; the weapon correction controls its lowered muzzle');
 check(/case LOWERED -> Config\.gunnerVillagerIdleGunRotation\(\);/.test(model),
   'the idle delta is still the LOWERED pose\'s own correction');
 check(/rotation = new float\[\]\{rotation\[0\] \+ delta\[0\], rotation\[1\] \+ delta\[1\], rotation\[2\] \+ delta\[2\]\}/
@@ -299,20 +269,20 @@ check(/gunnerVillagerIdleGunRotation/.test(readme)
   'README documents the key AND which of the two gun-rotation keys is for which pose');
 
 // 4c. One gun-rotation DELTA per pose (README 5j, the user's "不同状态下枪的旋转角度"). The base rotation is
-// the RAISED pose itself; the other three states each add their own triple, and the two new ones ship all
-// zeroes - which is what makes this a pure no-op until somebody tunes it.
+// the RAISED pose itself; the other three states each add their own calibrated triple.
 console.log('');
 console.log('4c. one gun-rotation delta per pose (RAISED = the base itself)');
-check(/DEFAULT_GUNNER_VILLAGER_RELOAD_GUN_ROTATION = List\.of\("0", "0", "0"\)/.test(config)
-  && /DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_ROTATION = List\.of\("0", "0", "0"\)/.test(config),
-  'both new deltas ship ["0","0","0"] (default behaviour is byte-for-byte what it was)');
+for (const pose of ['IDLE', 'RELOAD', 'HUNKER']) {
+  const delta = defaultList('DEFAULT_GUNNER_VILLAGER_' + pose + '_GUN_ROTATION').map(Number);
+  check(delta.length === 3 && delta.every(Number.isFinite), `${pose} has a finite calibrated rotation triple`);
+}
 check(/defineListAllowEmpty\(List\.of\("gunnerVillagerReloadGunRotation"\)/.test(config)
   && /defineListAllowEmpty\(List\.of\("gunnerVillagerHunkerGunRotation"\)/.test(config),
   'both are declared as list keys');
 check(/public static float\[\] gunnerVillagerReloadGunRotation\(\)/.test(config)
   && /public static float\[\] gunnerVillagerHunkerGunRotation\(\)/.test(config)
-  && /triple\(DEFAULT_GUNNER_VILLAGER_RELOAD_GUN_ROTATION, 0\.0F, 0\.0F, 0\.0F\)/.test(config)
-  && /triple\(DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_ROTATION, 0\.0F, 0\.0F, 0\.0F\)/.test(config),
+  && fallbackMatchesDefault(config, 'DEFAULT_GUNNER_VILLAGER_RELOAD_GUN_ROTATION')
+  && fallbackMatchesDefault(config, 'DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_ROTATION'),
   'each has its accessor, with the shipped default as the parse fallback');
 check(/float\[\] delta = switch \(this\.currentPose\) \{[\s\S]{0,600}?case LOWERED -> Config\.gunnerVillagerIdleGunRotation\(\);/
   .test(model)
@@ -327,32 +297,16 @@ check(/if \(delta != null && \(delta\[0\] != 0\.0F \|\| delta\[1\] != 0\.0F \|\|
   && /rotation = new float\[\]\{rotation\[0\] \+ delta\[0\], rotation\[1\] \+ delta\[1\], rotation\[2\] \+ delta\[2\]\}/
     .test(model),
   'only ADDITION happens (a zero delta is skipped entirely), so nothing else about the transform moves');
-// The truth table, simulated: RAISED = base; the other three = base + their own delta.
-const gunRotFor = (pose, base, idle, reload, hunker) => {
-  const delta = pose === 'RAISED' ? [0, 0, 0]
-    : pose === 'LOWERED' ? idle : pose === 'RELOADING' ? reload : hunker;
-  return base.map((v, i) => v + delta[i]);
-};
-const BASE = [5, 0, 0];
-const IDLE_D = [-2, 0, 0];
-const ZERO = [0, 0, 0];
-check(JSON.stringify(gunRotFor('RAISED', BASE, IDLE_D, ZERO, ZERO)) === JSON.stringify([5, 0, 0]),
-  'truth table: RAISED -> the base rotation [5,0,0] (no delta)');
-check(JSON.stringify(gunRotFor('LOWERED', BASE, IDLE_D, ZERO, ZERO)) === JSON.stringify([3, 0, 0]),
-  'truth table: LOWERED -> base + idle = [3,0,0]');
-check(JSON.stringify(gunRotFor('RELOADING', BASE, IDLE_D, ZERO, ZERO)) === JSON.stringify([5, 0, 0])
-  && JSON.stringify(gunRotFor('HUNKERED', BASE, IDLE_D, ZERO, ZERO)) === JSON.stringify([5, 0, 0]),
-  'truth table: RELOADING/HUNKERED -> the base while their deltas are 0 (i.e. today\'s behaviour)');
-check(JSON.stringify(gunRotFor('RELOADING', BASE, IDLE_D, [-15, 0, 0], ZERO)) === JSON.stringify([-10, 0, 0])
-  && JSON.stringify(gunRotFor('HUNKERED', BASE, IDLE_D, ZERO, [10, 0, 0])) === JSON.stringify([15, 0, 0]),
-  'and a non-zero delta moves exactly its own pose (reload -15 -> -10, hunker +10 -> +15)');
+// Pose composition and repeated frames are executed by the production model regression above.
 const commandAxes = ['reloadpitch', 'reloadyaw', 'reloadroll', 'hunkerpitch', 'hunkeryaw', 'hunkerroll'];
 for (const axis of commandAxes) {
   check(new RegExp('case "' + axis + '" ->').test(clientCommands),
     `villagerpose accepts ${axis}= for live tuning`);
 }
 check(/reloadRotation = Config\.triple\(Config\.DEFAULT_GUNNER_VILLAGER_RELOAD_GUN_ROTATION/.test(clientCommands)
-  && /hunkerRotation = Config\.triple\(Config\.DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_ROTATION/.test(clientCommands),
+  && /hunkerRotation = Config\.triple\(Config\.DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_ROTATION/.test(clientCommands)
+  && fallbackMatchesDefault(clientCommands, 'DEFAULT_GUNNER_VILLAGER_RELOAD_GUN_ROTATION')
+  && fallbackMatchesDefault(clientCommands, 'DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_ROTATION'),
   'reset restores both new deltas from the DEFAULT_* constants');
 check(/gunnerVillagerReloadGunRotation = /.test(clientCommands)
   && /gunnerVillagerHunkerGunRotation = /.test(clientCommands)
@@ -388,9 +342,6 @@ check(/GUNNER_VILLAGER_IDLE_GUN_OFFSET\.set\(/.test(clientCommands)
 check(/gunnerVillagerReloadGunRotation/.test(readme) && /gunnerVillagerHunkerGunRotation/.test(readme)
   && /不同状态下枪的旋转角度/.test(readme),
   'README documents both new keys and the request they come from');
-check(Math.abs(villagerSilhouette(0, -90) - (ARMS_REST - 180)) < 1e-9,
-  'and -90 on the gun base still swings the muzzle 50 degrees above the user-confirmed -130 offset frame',
-  'which is the "pointing at the sky" the user reported when it shipped that way');
 console.log('');
 console.log('5. spawning, gate and wiring');
 check(/GUNNER_VILLAGER\s*=\s*ENTITY_TYPES\.register\("gunner_villager"/.test(entities), 'the entity type is registered');
@@ -433,19 +384,10 @@ for (const [key, re] of keys) {
   check(re.test(config), `Config defines ${key}`);
   check(readme.includes(key), `README documents ${key}`);
 }
-// The angle defaults: the aim angle is USER-MEASURED, the hold angle is an OFFSET whose zero is the vanilla
-// rest. The gate pins both, and pins the record of where they came from.
-check(config.includes('DEFAULT_GUNNER_VILLAGER_AIM_ARM_PITCH = -57.0D'),
-  'the aim pitch default is -57 = the user-calibrated -100 absolute look (release baseline)');
-check(config.includes('DEFAULT_GUNNER_VILLAGER_HOLD_ARM_PITCH = 0.0D'),
-  'the hold pitch default is 0 = an offset of nothing = the normal villager arm position (2026 third '
-  + 'idle-pose report)');
-check(/OFFSET from the vanilla arm position, not an absolute angle/.test(configRaw)
-  && /-0\.75F/.test(configRaw) && /about <b>-43 degrees<\/b>/.test(configRaw),
-  'and the config comment records the measurement behind it (the baked -0.75 rad, about -43 degrees), why a '
-  + 'bare 0 as an angle was wrong, and that the key is an offset');
-check(/user-measured|USER-MEASURED/.test(config) && /user-measured/i.test(readme),
-  'code and README both record that these are user-measured values');
+check(/DEFAULT_GUNNER_VILLAGER_HOLD_ARM_PITCH = 0\.0D/.test(config),
+  'the hold default means the baked vanilla rest, not an absolute zero arm angle');
+check(/this\.armsRestXRot = this\.arms\.xRot/.test(model),
+  'the model reads the real baked arm rotation rather than replacing it with a guessed constant');
 check(readme.includes('5j.'), 'README has the section that explains the mob');
 
 // The three vanilla facts the design rests on, read out of the real class files when the mapped jar is
@@ -475,9 +417,7 @@ function zipEntry(jar, name) {
   }
   return null;
 }
-const mappedJar = path.join(ROOT, '..', 'GirlsFrontline', '.gradle-home', 'caches', 'forge_gradle',
-  'minecraft_user_repo', 'net', 'minecraftforge', 'forge', '1.20.1-47.3.0_mapped_official_1.20.1',
-  'forge-1.20.1-47.3.0_mapped_official_1.20.1.jar');
+const mappedJar = require('./resolve_minecraft_jar')(ROOT);
 if (fs.existsSync(mappedJar)) {
   const jar = fs.readFileSync(mappedJar);
   const has = (entry, needle) => {

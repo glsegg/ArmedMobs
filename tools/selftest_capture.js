@@ -517,8 +517,9 @@ for (const accessor of ['hide()', 'bars()', 'cityKey()', 'cityName()']) {
 }
 check(/message\.bars\(\)\.size\(\) < 2/.test(acceptBody),
   'a one-faction state clears the bars at once (the "only one faction left" rule)');
-check(/Config\.CAPTURE_HUD_ENABLED\.get\(\)/.test(acceptBody)
-  && /Config\.CAPTURE_HUD_ENABLED\.get\(\)/.test(bodyOf(hud, 'render')),
+check(/clearIfDisabled\(\)/.test(acceptBody)
+  && /clearIfDisabled\(\)/.test(bodyOf(hud, 'render'))
+  && /Config\.CAPTURE_HUD_ENABLED\.get\(\)/.test(bodyOf(hud, 'clearIfDisabled')),
   'capture.hudEnabled is checked both when a message arrives and when the frame is drawn');
 const labelBody = bodyOf(hud, 'label');
 check(/bar\.strength\(\) \+ "\/" \+ bar\.max\(\)/.test(labelBody),
@@ -529,14 +530,15 @@ check(/bar\.captured\(\) \? CAPTURED_COLOUR/.test(bodyOf(hud, 'render')),
   'and drawn in the grey captured colour');
 check(/bar\.strength\(\)/.test(bodyOf(hud, 'render')) && /bar\.max\(\)/.test(bodyOf(hud, 'render')),
   'the bar length is the ratio the server sent');
-const tickBody = bodyOf(hud, 'onClientTick');
+const tickBody = bodyOf(hud, 'tick');
 check(/Config\.CAPTURE_HUD_HIDE_DELAY_SECONDS\.get\(\)/.test(tickBody),
   'the hide delay comes from capture.hudHideDelaySeconds');
 check(/\* 20/.test(tickBody), 'and is counted in ticks, client-side');
 check(/state\.age/.test(tickBody), 'a player who walks away stops receiving and the last state ages out');
 check(/event\.registerAboveAll\("capture", CaptureHud\.INSTANCE\)/.test(clientSetup),
   'the overlay is registered above everything, like the kill feed');
-check(/@net\.minecraftforge\.fml\.common\.Mod\.EventBusSubscriber[\s\S]{0,200}?Dist\.CLIENT/.test(hud),
+check(/@Mod\.EventBusSubscriber[^\n]*Dist\.CLIENT/.test(read('client/ClientHudEvents.java'))
+  && /CaptureHud\.tick\(\)/.test(read('client/ClientHudEvents.java')),
   'and its client tick is a CLIENT-only subscriber, so a dedicated server never loads it');
 
 // ------------------------------------------------------------------ 8. the command

@@ -154,7 +154,7 @@ public final class CityCapture {
                                                 @Nullable GarrisonData.CityRow row) {
         List<Faction> out = new ArrayList<>(2);
         for (GarrisonData.BuildingRow building : data.buildingsOf(dimension, cityKey)) {
-            Faction faction = building.effectiveRoll();
+            Faction faction = data.factionOf(dimension, cityKey, building.buildingId());
             if (isPoolFaction(faction) && !out.contains(faction)) {
                 out.add(faction);
             }

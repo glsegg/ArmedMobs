@@ -213,18 +213,18 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
         SpawnGroupData data = super.finalizeSpawn(level, difficulty, reason, spawnData, dataTag);
 
         this.tier = ScavTier.pickWeighted(this.getRandom());
-        applyTierAttributes();
+        applyTierAttributes(true);
         this.gunBrain().equip(this.getRandom());
         return data;
     }
 
     /** Per-tier health and armour, applied the moment the tier is known. */
-    private void applyTierAttributes() {
+    private void applyTierAttributes(boolean heal) {
         Config.TierSettings settings = Config.tier(this.tier);
         if (this.getAttribute(Attributes.MAX_HEALTH) != null) {
             this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(settings.health.get());
         }
-        this.setHealth(settings.health.get().floatValue());
+        this.setHealth(heal ? this.getMaxHealth() : this.getHealth());
         if (this.getAttribute(Attributes.ARMOR) != null) {
             this.getAttribute(Attributes.ARMOR).setBaseValue(settings.armor.get());
         }
@@ -325,16 +325,24 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
         super.readAdditionalSaveData(tag);
         ScavTier saved = ScavTier.byId(tag.getString(TAG_TIER));
         this.tier = saved == null ? ScavTier.RIFLE : saved;
-        applyTierAttributes();
+        // Preserve saved wounds; a /summon tag without Health still needs the tier's full spawn health.
+        applyTierAttributes(!tag.contains("Health", 99));
         if (this.level().isClientSide) {
             return;
+        }
+
+        if (com.gfl.tarkovscav.block.WeaponRackTaker.hasRackWeapon(this)) {
+            com.gfl.tarkovscav.block.WeaponRackTaker.restoreArmament(this, tag.contains("HandItems"));
+            if (com.gfl.tarkovscav.block.WeaponRackTaker.hasRackWeapon(this)) {
+                return;
+            }
         }
 
         if (tag.contains(TAG_GUN)) {
             ResourceLocation gunId = ResourceLocation.tryParse(tag.getString(TAG_GUN));
             GunLoadout loadout = gunId == null ? null : GunPool.loadoutFor(this.tier, gunId);
             if (loadout != null) {
-                this.gunBrain().equipLoadout(loadout);
+                this.gunBrain().restoreLoadout(loadout);
                 return;
             }
         }
@@ -384,7 +392,7 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         if (Config.SPEC.isLoaded() && Config.singleControllerMode()) {
-            // ONE controller for the whole rig (client.modelLayering = single, the default). GeckoLib
+            // Optional whole-rig controller (client.modelLayering = single; upperLower is the default). GeckoLib
             // submits the geometry once either way - the layered scheme below is NOT a second draw -
             // so the only thing that changes is which clip drives which bones:
             //   * a gun is held -> the gun clip for the current action, whose tracks are upper-body
@@ -414,7 +422,7 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
     private PlayState singleController(AnimationState<ScavEntity> state) {
         if (isArmed()) {
             String family = usesPistolClips() ? GunClips.FAMILY_PISTOL : GunClips.FAMILY_RIFLE;
-            String action = GunClips.actionFor(isGunReloading(), isGunFiring(), isGunAiming(), gunAiState());
+            String action = GunClips.actionFor(isGunAiming(), isGunFiring(), isGunReloading(), gunAiState());
             return state.setAndContinue(RawAnimation.begin().thenLoop(GunClips.gun(family, action)));
         }
         boolean moving = this.walk.isMoving();
@@ -445,16 +453,7 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
             return PlayState.STOP;
         }
         String family = usesPistolClips() ? GunClips.FAMILY_PISTOL : GunClips.FAMILY_RIFLE;
-        String action;
-        if (isGunReloading()) {
-            action = "reload";
-        } else if (isGunFiring()) {
-            action = "aim:fire";
-        } else if (isGunAiming()) {
-            action = "aim";
-        } else {
-            action = "hold";
-        }
+        String action = GunClips.actionFor(isGunAiming(), isGunFiring(), isGunReloading(), gunAiState());
         return state.setAndContinue(RawAnimation.begin().thenLoop(GunClips.gun(family, action)));
     }
 

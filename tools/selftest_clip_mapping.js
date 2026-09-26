@@ -15,7 +15,9 @@
 // family is selected by the gun's TaCZ *type* (pistol/smg by default) rather than by the tier name, so a
 // custom pack is classified automatically.
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const cp = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const JAVA = path.join(ROOT, 'src', 'main', 'java', 'com', 'gfl', 'tarkovscav');
@@ -30,59 +32,180 @@ const check = (ok, label, detail) => {
 const clips = read('gun/GunClips.java');
 const config = read('Config.java');
 const brain = read('gun/GunBrain.java');
-const scav = read('entity/ScavEntity.java');
 const tier = read('entity/ScavTier.java');
 const anims = JSON.parse(fs.readFileSync(path.join(ROOT, 'src', 'main', 'resources', 'assets', 'tarkovscav', 'animations', 'scav.animation.json'), 'utf8')).animations;
 
 // ---- 1. the state -> clip table, from the code ------------------------------------------------
-const STATES = ['IDLE', 'ALERT', 'ADVANCE', 'AIM', 'FIRE', 'SUPPRESS', 'RELOAD', 'BOLT', 'REPOSITION', 'RETREAT'];
-const FOR_STATE = {
-  IDLE: 'hold', ALERT: 'aim', ADVANCE: 'aim', AIM: 'aim', FIRE: 'aim:fire',
-  SUPPRESS: 'aim:fire', RELOAD: 'reload', BOLT: 'aim', REPOSITION: 'aim', RETREAT: 'hold',
-};
-// GunBrain#transition: setGunPose(next != IDLE, next == FIRE || next == SUPPRESS, next == RELOAD)
-const flags = (state) => ({
-  aiming: state !== 'IDLE',
-  firing: state === 'FIRE' || state === 'SUPPRESS',
-  reloading: state === 'RELOAD',
-});
-// The client-side selection is now GunClips#actionFor(aiming, firing, reloading, state) - one helper
-// shared by both entities, which is why RETREAT can be resolved (its aiming flag is true, but the brain
-// lowers the weapon and forState gives it "hold").
-const actionFromFlags = ({ aiming, firing, reloading }, state) => {
-  if (reloading) return 'reload';
-  if (firing) return 'aim:fire';
-  if (state === 'RETREAT') return 'hold';
-  return aiming ? 'aim' : 'hold';
-};
-
-console.log('server state -> clip family -> clip (the table the user asked for):');
-console.log('  state        aiming/firing/reloading   client action   server forState   agree');
-let allAgree = true;
-for (const state of STATES) {
-  const f = flags(state);
-  const client = actionFromFlags(f, state);
-  const server = FOR_STATE[state];
-  const agree = client === server;
-  allAgree = allAgree && agree;
-  console.log(`  ${state.padEnd(12)} ${String(f.aiming).padEnd(6)} ${String(f.firing).padEnd(6)} ${String(f.reloading).padEnd(10)}`
-    + ` ${client.padEnd(15)} ${server.padEnd(17)} ${agree ? 'yes' : 'NO'}`);
+// Compile real helper sources and both entities' actual selection method bodies. A regex which
+// merely recognises a helper call cannot detect swapped same-typed boolean arguments.
+function method(source, name) {
+  const clean = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const start = new RegExp(`private\\s+[\\w<>]+\\s+${name}\\s*\\([^)]*\\)\\s*\\{`).exec(clean);
+  if (!start) throw new Error(`Missing production method ${name}`);
+  let end = start.index + start[0].length, depth = 1;
+  for (; end < clean.length && depth; end++) {
+    if (clean[end] === '{') depth++;
+    if (clean[end] === '}') depth--;
+  }
+  if (depth) throw new Error(`Unbalanced production method ${name}`);
+  return clean.slice(start.index, end);
 }
-check(allAgree, 'the server state table and the client flag table name the same clip for every state');
-check(/case FIRE, SUPPRESS -> gun\(family, "aim:fire"\)/.test(clips)
-    && /case AIM, ADVANCE -> gun\(family, "aim"\)/.test(clips)
-    && /case RETREAT -> gun\(family, "hold"\)/.test(clips)
-    && /case IDLE -> gun\(family, "hold"\)/.test(clips)
-    && /case RELOAD -> gun\(family, "reload"\)/.test(clips),
-  'GunClips#forState is the server-side table (and matches the printed table)');
+
+function controllerFixture(name) {
+  const source = fs.readFileSync(path.join(JAVA, 'entity', name + '.java'), 'utf8');
+  return `static class ${name} extends Fixture {
+    ${['singleController', 'gunController', 'movementController', 'isArmed'].map(n => method(source, n)).join('\n')}
+    @SuppressWarnings("unchecked")
+    PlayState select(boolean single, AnimationState state) {
+      return single ? singleController(state) : gunController(state);
+    }
+    @SuppressWarnings("unchecked")
+    PlayState movement(AnimationState state) { return movementController(state); }
+  }`;
+}
+
+function productionSelectionTest() {
+  const source = `
+import com.gfl.tarkovscav.gun.GunAiState;
+import com.gfl.tarkovscav.gun.GunClips;
+public class ClipSelectionTest {
+  static int checks, armedSelections, unarmedSelections;
+  static void check(boolean ok, String message) {
+    checks++; if (!ok) throw new AssertionError(message);
+  }
+  enum PlayState { CONTINUE, STOP }
+  static class RawAnimation {
+    String clip;
+    static RawAnimation begin() { return new RawAnimation(); }
+    RawAnimation thenLoop(String value) { clip = value; return this; }
+  }
+  static class AnimationState<T> {
+    String clip; int writes;
+    PlayState setAndContinue(RawAnimation animation) { clip = animation.clip; writes++; return PlayState.CONTINUE; }
+  }
+  static class ItemStack {
+    final int kind; ItemStack(int kind) { this.kind = kind; }
+    boolean isEmpty() { return kind == 0; }
+  }
+  static class IGun {
+    static IGun getIGunOrNull(ItemStack held) { return held.kind == 2 ? new IGun() : null; }
+  }
+  static class Walk {
+    boolean moving, running;
+    boolean isMoving() { return moving; } boolean isRunning() { return running; }
+  }
+  abstract static class Fixture {
+    boolean aiming, firing, reloading, pistol; GunAiState aiState;
+    final Walk walk = new Walk(); ItemStack held = new ItemStack(2);
+    boolean isGunAiming() { return aiming; } boolean isGunFiring() { return firing; }
+    boolean isGunReloading() { return reloading; } boolean usesPistolClips() { return pistol; }
+    GunAiState gunAiState() { return aiState; } ItemStack getMainHandItem() { return held; }
+    abstract PlayState select(boolean single, AnimationState state);
+    abstract PlayState movement(AnimationState state);
+  }
+  ${controllerFixture('ScavEntity')}
+  ${controllerFixture('GunnerPillagerEntity')}
+  public static void main(String[] args) {
+    check(GunAiState.values().length == 10, "all ten real AI states are exercised");
+    // Bit 0 = aiming, bit 1 = firing, bit 2 = reloading. An independent expected table
+    // specifies priority for inconsistent transient network flags as well as normal states.
+    String[] normalActions = {"hold", "aim", "aim:fire", "aim:fire", "reload", "reload", "reload", "reload"};
+    String[] retreatActions = {"hold", "hold", "aim:fire", "aim:fire", "reload", "reload", "reload", "reload"};
+    String[] serverActions = {"hold", "aim", "aim", "aim", "aim:fire", "aim:fire", "reload", "aim", "aim", "hold"};
+    String[] movementClips = {"idle", "walk", "idle", "run"};
+    for (GunAiState aiState : GunAiState.values()) {
+      for (boolean pistol : new boolean[]{false, true}) {
+        String family = pistol ? "pistol" : "rifle";
+        String expectedServer = "tac:" + serverActions[aiState.ordinal()] + ":" + family;
+        check(expectedServer.equals(GunClips.forState(aiState, family)), "server action " + aiState + " " + family);
+        String synced = GunClips.actionFor(aiState != GunAiState.IDLE,
+            aiState == GunAiState.FIRE || aiState == GunAiState.SUPPRESS,
+            aiState == GunAiState.RELOAD, aiState);
+        check(expectedServer.equals(GunClips.gun(family, synced)), "normal server flags agree " + aiState + " " + family);
+        for (int mask = 0; mask < 8; mask++) {
+          boolean aiming = (mask & 1) != 0, firing = (mask & 2) != 0, reloading = (mask & 4) != 0;
+          String action = (aiState == GunAiState.RETREAT ? retreatActions : normalActions)[mask];
+          String expected = "tac:" + action + ":" + family;
+          check(action.equals(GunClips.actionFor(aiming, firing, reloading, aiState)), "helper " + aiState + " flags " + mask);
+          for (Fixture entity : new Fixture[]{new ScavEntity(), new GunnerPillagerEntity()}) {
+            entity.aiState = aiState; entity.aiming = aiming; entity.firing = firing;
+            entity.reloading = reloading; entity.pistol = pistol;
+            String label = entity.getClass().getSimpleName() + " " + aiState + " flags " + mask + " " + family;
+            for (boolean single : new boolean[]{false, true}) {
+              AnimationState state = new AnimationState();
+              check(entity.select(single, state) == PlayState.CONTINUE, label + " continue single=" + single);
+              check(state.writes == 1 && expected.equals(state.clip),
+                  label + " single=" + single + " expected=" + expected + " actual=" + state.clip);
+              armedSelections++;
+            }
+            // Movement still uses the synced visible main-hand gun, independent of action flags.
+            for (int motion = 0; motion < 4; motion++) {
+              entity.walk.moving = (motion & 1) != 0; entity.walk.running = (motion & 2) != 0;
+              AnimationState movement = new AnimationState();
+              check(entity.movement(movement) == PlayState.CONTINUE
+                  && ("tac:" + movementClips[motion]).equals(movement.clip), label + " armed movement " + motion);
+            }
+            // Empty hands and non-gun items must stop the layered gun controller and retain the
+            // whole-body movement fallback in single mode, even with stale synced action flags.
+            for (int heldKind : new int[]{0, 1}) {
+              entity.held = new ItemStack(heldKind);
+              for (int motion = 0; motion < 4; motion++) {
+                entity.walk.moving = (motion & 1) != 0; entity.walk.running = (motion & 2) != 0;
+                AnimationState upper = new AnimationState();
+                check(entity.select(false, upper) == PlayState.STOP && upper.writes == 0,
+                    label + " unarmed layered stop kind=" + heldKind);
+                AnimationState single = new AnimationState();
+                check(entity.select(true, single) == PlayState.CONTINUE && single.writes == 1
+                    && movementClips[motion].equals(single.clip), label + " unarmed single movement " + motion);
+                AnimationState movement = new AnimationState();
+                check(entity.movement(movement) == PlayState.CONTINUE
+                    && movementClips[motion].equals(movement.clip), label + " unarmed lower movement " + motion);
+                unarmedSelections += 2;
+              }
+            }
+          }
+        }
+      }
+    }
+    check(armedSelections == 640, "10 states x 8 flag combinations x 2 families x 2 entities x 2 paths");
+    System.out.println("ClipSelectionTest: " + checks + " checks passed; " + armedSelections
+        + " armed controller selections; " + unarmedSelections + " unarmed selections");
+  }
+}`;
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'armedmobs-clips-'));
+  const java = name => process.env.JAVA_HOME
+    ? path.join(process.env.JAVA_HOME, 'bin', name + (process.platform === 'win32' ? '.exe' : '')) : name;
+  try {
+    const sources = {
+      'ClipSelectionTest.java': source,
+      'GunClips.java': fs.readFileSync(path.join(JAVA, 'gun/GunClips.java'), 'utf8'),
+      'GunAiState.java': fs.readFileSync(path.join(JAVA, 'gun/GunAiState.java'), 'utf8'),
+      'Config.java': 'package com.gfl.tarkovscav; public class Config { public static boolean usesPistolClips(String type) { return "pistol".equals(type); } }',
+      'GunLoadout.java': 'package com.gfl.tarkovscav.gun; public record GunLoadout(String gunType) {}',
+    };
+    for (const [name, text] of Object.entries(sources)) fs.writeFileSync(path.join(temporary, name), text, 'utf8');
+    const compile = cp.spawnSync(java('javac'), ['-encoding', 'UTF-8', '--release', '17', '-d', temporary,
+      ...Object.keys(sources).map(name => path.join(temporary, name))], { encoding: 'utf8' });
+    if (compile.error) throw compile.error;
+    if (compile.status !== 0) throw new Error(compile.stdout + compile.stderr);
+    const run = cp.spawnSync(java('java'), ['-cp', temporary, 'ClipSelectionTest'], { encoding: 'utf8' });
+    if (run.error) throw run.error;
+    if (run.status !== 0) throw new Error(run.stdout + run.stderr);
+    process.stdout.write(run.stdout);
+    return true;
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+}
+try {
+  check(productionSelectionTest(), 'production helper and both real entity controller bodies select the expected clips');
+} catch (error) {
+  check(false, 'production controller selection regression', error.message);
+}
 check(/this\.user\.setGunPose\(next != GunAiState\.IDLE,/.test(brain)
     && /next == GunAiState\.FIRE \|\| next == GunAiState\.SUPPRESS/.test(brain)
     && /next == GunAiState\.RELOAD\);/.test(brain),
   'GunBrain#transition publishes exactly those flags (one source for both sides)');
-check(/String action = GunClips\.actionFor\(isGunReloading\(\), isGunFiring\(\), isGunAiming\(\), gunAiState\(\)\);/.test(scav),
-  'the client controller calls the shared GunClips#actionFor (no second copy of the table)');
-check(/public static String actionFor\(/.test(clips) && /state == GunAiState\.RETREAT/.test(clips),
-  'that helper resolves RETREAT to the lowered hold pose, matching forState');
 
 // ---- 2. every clip in the table exists ---------------------------------------------------------
 console.log('\nclips named by the table (2 families x 4 actions + the movement set):');

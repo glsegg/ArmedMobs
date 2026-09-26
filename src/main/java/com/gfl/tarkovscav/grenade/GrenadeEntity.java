@@ -61,6 +61,7 @@ public class GrenadeEntity extends ThrowableItemProjectile {
         super(ModEntities.GRENADE.get(), thrower, level);
         this.kind = kind;
         this.fuse = fuse;
+        syncItem();
     }
 
     public GrenadeKind kind() {
@@ -73,7 +74,13 @@ public class GrenadeEntity extends ThrowableItemProjectile {
 
     @Override
     protected Item getDefaultItem() {
-        return com.gfl.tarkovscav.registry.ModItems.grenadeItem(this.kind);
+        // The default must agree on both sides: only the server knows the fuse/kind fields.
+        return com.gfl.tarkovscav.registry.ModItems.grenadeItem(GrenadeKind.FRAG);
+    }
+
+    private void syncItem() {
+        // ThrowableItemProjectile synchronizes non-default items through DATA_ITEM_STACK.
+        this.setItem(new ItemStack(com.gfl.tarkovscav.registry.ModItems.grenadeItem(this.kind)));
     }
 
     @Override
@@ -176,6 +183,7 @@ public class GrenadeEntity extends ThrowableItemProjectile {
         GrenadeKind saved = GrenadeKind.byId(tag.getString(TAG_KIND));
         this.kind = saved == null ? GrenadeKind.FRAG : saved;
         this.fuse = tag.contains(TAG_FUSE) ? tag.getInt(TAG_FUSE) : this.kind.fuseTicks();
+        syncItem();
     }
 
     // ------------------------------------------------------------------ the shared arithmetic

@@ -155,6 +155,7 @@ public final class Config {
 
     // ------------------------------------------------------------------ client / model
     public static final ForgeConfigSpec.BooleanValue USE_GECKO_MODEL;
+    public static final ForgeConfigSpec.IntValue GUN_MOUNT_REVISION;
     public static final ForgeConfigSpec.DoubleValue RENDER_SCALE;
     public static final ForgeConfigSpec.DoubleValue VILLAGER_RENDER_SCALE;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> HIDDEN_BONES;
@@ -176,17 +177,6 @@ public final class Config {
     public static final ForgeConfigSpec.ConfigValue<String> POSE_SOURCE;
     public static final ForgeConfigSpec.ConfigValue<String> MOLANG_VARIABLES;
     public static final ForgeConfigSpec.BooleanValue LOG_POSE_WRITERS;
-    // ------------------------------------------------------------------ player lean (README 5s)
-    public static final ForgeConfigSpec.BooleanValue LEAN_ENABLED;
-    public static final ForgeConfigSpec.DoubleValue LEAN_MAX_OFFSET;
-    public static final ForgeConfigSpec.DoubleValue LEAN_ROLL_DEGREES;
-    public static final ForgeConfigSpec.BooleanValue LEAN_INVERT_OFFSET;
-    public static final ForgeConfigSpec.BooleanValue LEAN_INVERT_ROLL;
-    public static final ForgeConfigSpec.IntValue LEAN_SPEED_TICKS;
-    public static final ForgeConfigSpec.BooleanValue LEAN_SUPPRESS_VANILLA_KEYS;
-    public static final ForgeConfigSpec.IntValue LEAN_TAP_THRESHOLD_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<String> LEAN_START_MODE;
-    public static final ForgeConfigSpec.BooleanValue LEAN_REPLAY_VANILLA_ON_TAP;
     // ------------------------------------------------------------------ kill feed (README 5u)
     public static final ForgeConfigSpec.BooleanValue KILLFEED_ENABLED;
     public static final ForgeConfigSpec.ConfigValue<String> KILLFEED_MODE;
@@ -429,15 +419,9 @@ public final class Config {
     // ONE source of truth for the defaults: the spec below builds its keys from these, and
     // /tarkovscav client gunpose reset restores exactly them. They can never drift apart.
     //
-    // The offset is the USER'S MEASURED VALUE, not a simulation guess: in game, with
-    // gunAnchorMode = normalisedHand (the default), "/tarkovscav client gunpose z=-0.7" put the rifle
-    // where it belongs. In that hand frame the fore/aft axis is Z (negative = towards the muzzle), which
-    // is the empirical answer to "which axis is forward" - the frame's axes are the item model's own,
-    // and the gun mesh is rotated inside them by TaCZ's positioning groups, so the only reliable
-    // mapping is the one that was measured in game.
+    // Per-gun third-person positioning belongs to the gun pack. Our locator is already at the palm.
     public static final List<String> DEFAULT_MOUNT_ROTATION = List.of("0", "0", "0");
-    /** 0.7 blocks towards the muzzle, along the hand frame's -Z (user-measured). */
-    public static final List<String> DEFAULT_MOUNT_OFFSET = List.of("0", "0", "-0.7");
+    public static final List<String> DEFAULT_MOUNT_OFFSET = List.of("0", "0", "0");
     public static final double DEFAULT_MOUNT_SCALE = 1.0D;
     /**
      * The shipped model size. <b>0.7 is the baseline the rig is authored at, and it does not move</b>:
@@ -526,9 +510,7 @@ public final class Config {
      * because vanilla's pose is not zero. The model now restores the captured baked value and adds this offset
      * to it, so 0 really is the normal villager and -20 really is "20 degrees above it".</p>
      *
-     * <p>The arms are also the gun's anchor, so this angle moves the gun as well - which is why
-     * {@link #DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION} takes the same 43 degrees back in the other
-     * direction. See that key.</p>
+     * <p>The held gun follows the animated hand socket in each pose.</p>
      */
     public static final double DEFAULT_GUNNER_VILLAGER_HOLD_ARM_PITCH = 0.0D;
     /**
@@ -543,77 +525,31 @@ public final class Config {
      * them down into the body.
      */
     public static final double DEFAULT_GUNNER_VILLAGER_HUNKER_ARM_PITCH = 0.0D;
+    /** Extra offset from the crossed-arms hand socket; zero keeps the grip inside the hand. */
+    public static final List<String> DEFAULT_GUNNER_VILLAGER_GUN_OFFSET = List.of("0", "0", "0");
     /**
-     * Where the held gun sits relative to the villager's arm block, in blocks. The -0.12 forward slide is
-     * the <b>user's pick between two offered values</b> (option B: keep the 0.06 lift, move 0.03 further
-     * forward) after the arm pitch went to -90.
+     * Rotation in the animated arm frame, around the hand socket. With the baked -0.75-radian
+     * arm pose, aim offset -57 degrees and the item frame's -90 degrees, +10 makes the gun
+     * horizontal (within 0.03 degrees). TaCZ applies each gun's own thirdperson_hand locator.
      */
-    public static final List<String> DEFAULT_GUNNER_VILLAGER_GUN_OFFSET = List.of("0", "0.06", "-0.09");
-    /**
-     * Rotation for the villager's held gun, degrees, applied X then Y then Z inside the arm frame.
-     *
-     * <p><b>Why a non-zero default.</b> The gun is placed with
-     * {@code ArmedModel#translateToHand}, whose body is the same line {@code HumanoidModel} uses - so the
-     * vanilla {@code ItemInHandLayer} then adds the <em>humanoid</em> hand frame
-     * ({@code mulPose XP -90}, {@code mulPose YP 180}, {@code translate +/-1/16, 0.125, -0.625}). That frame
-     * is authored for an arm hanging <b>down</b>; the villager's arm is the vanilla {@code arms} block, a
-     * horizontal forearm bar across the chest whose baked orientation is about 90 degrees away from that,
-     * so a large negative X is needed to turn the frame back.</p>
-     *
-     * <p><b>The shipped value is the user's own in-game calibration.</b> History: the factory value was
-     * {@code -90}, the muzzle pointed at the sky ("现在这个朝天上看了") and the user asked for 50 degrees
-     * back - {@code -90 + 50 = -40}, judged on the <b>aiming</b> silhouette. He then tuned it further in his
-     * own instance and settled on {@code 5}, which is the release baseline; the four silhouettes it produces
-     * are tabulated in README 5j. This triple is USER-MEASURED, not derived.</p>
-     *
-     * <p><b>The arm angle adds to this number.</b> The arm pitch and this rotation are both X rotations
-     * applied to the same pose stack (the arm's own {@code translateAndRotate}, then this, then the
-     * layer's constant {@code -90}), so the gun's tilt is {@code ARMS_REST + armOffset + gunPitch +
-     * poseGunPitch - 90}: changing the arm pose moves the gun by exactly as much, in the same direction.
-     * README 5j's table is the authoritative list of the four silhouettes (aiming -185, idle -130,
-     * reloading -128, hunkered -128). If a pose reads as aiming at the ground, do NOT rotate this shared
-     * base back: change that pose's own arm offset or gun delta instead, or split the difference with
-     * {@code /tarkovscav client villagerpose pitch=-62}. See README 5j.</p>
-     *
-     * <p>Tune it live with {@code /tarkovscav client villagerpose pitch=...}; the command writes the
-     * config, so the value survives a restart, and {@code client state} prints what is in force.</p>
-     */
-    public static final List<String> DEFAULT_GUNNER_VILLAGER_GUN_ROTATION = List.of("5", "0", "0");
+    public static final List<String> DEFAULT_GUNNER_VILLAGER_GUN_ROTATION = List.of("10", "0", "0");
+    /** Additional idle tilt; the gun follows the lowered arms while remaining in their hand socket. */
+    public static final List<String> DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION = List.of("-12", "0", "0");
 
-    /**
-     * Extra gun rotation that applies <b>only while the villager is idle</b> (the LOWERED pose), on top of
-     * {@link #DEFAULT_GUNNER_VILLAGER_GUN_ROTATION}.
-     *
-     * <p>Why it is needed: when the idle pose was changed to the vanilla crossed arms (README 5j, 2026), the
-     * gun - which hangs off that arms block - inherited the rest orientation and ended up pointing UP. The
-     * arm angle is already per-pose, so the gun's offset is per-pose too.</p>
-     *
-     * <p><b>How the shipped value was arrived at:</b> the gun is anchored on {@code arms} and placed with
-     * {@code ArmedModel#translateToHand}, which walks the anchor's {@code translateAndRotate}. So the arm
-     * angle and this rotation are X rotations on the same stack and <b>add up</b>: restoring the vanilla arm
-     * position (-0.75 rad, about -43 degrees) from a flat 0 tilts the gun by another 43 degrees with it.
-     * With the base at {@code 5} the shipped delta is {@code -2}, i.e. the idle tilt is
-     * {@code ARMS_REST + 0 + 5 - 2 - 90 = -130} - the muzzle level, with the arms in the normal villager
-     * position instead of flat. README 5j tabulates all four silhouettes (RAISED -185, IDLE -130,
-     * RELOADING -128, HUNKERED -128).</p>
-     */
-    public static final List<String> DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION = List.of("-2", "0", "0");
     /**
      * Gun rotation ADDED while the villager is RELOADING, on top of
      * {@link #DEFAULT_GUNNER_VILLAGER_GUN_ROTATION} - the same per-pose arrangement as the arm angles.
      *
-     * <p>{@code [0,0,0]} means "the base rotation and nothing else", which is exactly what shipped before this
-     * key existed, so the default is <b>frame-for-frame unchanged</b>. It exists because the user asked for a
-     * rotation per state ("不同状态下枪的旋转角度") and the reload silhouette is the one place where the gun
-     * is being handled rather than held, so it is the most likely to need its own tilt.</p>
+     * <p>The default matches the idle gun tilt: about 45 degrees below horizontal at the crossed-arm
+     * rest. This leaves clearance for long barrels while keeping their grip at the same hand socket.</p>
      */
-    public static final List<String> DEFAULT_GUNNER_VILLAGER_RELOAD_GUN_ROTATION = List.of("0", "0", "0");
+    public static final List<String> DEFAULT_GUNNER_VILLAGER_RELOAD_GUN_ROTATION = List.of("-12", "0", "0");
     /**
      * Gun rotation ADDED while the villager is HUNKERED (retreating), on top of
-     * {@link #DEFAULT_GUNNER_VILLAGER_GUN_ROTATION}. {@code [0,0,0]} by default, so the retreat silhouette is
-     * untouched until somebody tunes it with {@code /tarkovscav client villagerpose hunkerPitch=...}.
+     * {@link #DEFAULT_GUNNER_VILLAGER_GUN_ROTATION}. The default matches the idle/reload tilt for long-barrel
+     * ground clearance, and can be tuned with {@code /tarkovscav client villagerpose hunkerPitch=...}.
      */
-    public static final List<String> DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_ROTATION = List.of("0", "0", "0");
+    public static final List<String> DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_ROTATION = List.of("-12", "0", "0");
     /**
      * Weapon POSITION deltas, one triple per pose, in blocks - the same per-pose arrangement as the rotation
      * deltas above, and all-zero by default (so the shipped look is unchanged).
@@ -1781,6 +1717,7 @@ public final class Config {
                         "knocked OUT of the shaft (no ladder under it any more) always takes normal fall",
                         "damage - this key only affects the shaft itself.")
                 .define("fallDamageInShaft", false);
+        b.pop();
 
         // ================================================================= city capture
         b.comment("City capture, OVERWORLD ONLY (README 7p).",
@@ -1903,6 +1840,9 @@ public final class Config {
 
         // ================================================================= client / model
         b.comment("Client-side presentation and the Bedrock rig.").push("client");
+        GUN_MOUNT_REVISION = b
+                .comment("Internal hand-anchor migration revision. Preserve this value when editing settings.")
+                .defineInRange("gunMountRevision", 1, 1, Integer.MAX_VALUE);
         USE_GECKO_MODEL = b
                 .comment("Draw the gun-armed pillager with the GeckoLib Bedrock rig instead of the",
                         "vanilla illager model.")
@@ -1990,22 +1930,9 @@ public final class Config {
                 .defineListAllowEmpty(List.of("gunMountRifleRotation"), () -> DEFAULT_MOUNT_ROTATION,
                         element -> element instanceof String);
         GUN_MOUNT_RIFLE_OFFSET = b
-                .comment("Offset from the anchor pivot, in blocks, as [x, y, z] - in the anchor frame the",
-                        "mode transform produces (see gunAnchorMode).",
-                        "",
-                        "Default [0, 0, -0.7] is the USER'S IN-GAME MEASUREMENT, not a simulation: with",
-                        "gunAnchorMode = normalisedHand they ran /tarkovscav client gunpose z=-0.7 and the",
-                        "rifle landed where it belongs. That also settles the axis question empirically:",
-                        "in this hand frame -Z is towards the muzzle, so z is the fore/aft slide. (The",
-                        "frame's axes are the item model's own and TaCZ's positioning groups rotate the gun",
-                        "inside them, which is why a simulation of the bare frame cannot predict which axis",
-                        "looks 'forward' - the in-game value can.)",
-                        "",
-                        "Simulation only explains the value now: a pure translation cannot change the",
-                        "orientation, and z = -0.7 moves the anchor by (dx, dy, dz) = (0.44, -0.07, -0.54)",
-                        "blocks in model space - 0.54 blocks forward and 0.44 to the character's left - which",
-                        "is exactly the 'forward, a fair distance' the user reported. Tune it with",
-                        "/tarkovscav client gunpose forward=0.05 (adds 0.05 along -Z) or set z= directly.")
+                .comment("Additional translation from the calibrated hand grip, in item-local blocks.",
+                        "Default [0,0,0] uses the gun pack's own thirdperson_hand positioning.",
+                        "Legacy [0,0,-0.7] displaced the gun behind the hand and is migrated once.")
                 .defineListAllowEmpty(List.of("gunMountRifleOffset"), () -> DEFAULT_MOUNT_OFFSET,
                         element -> element instanceof String);
         GUN_MOUNT_RIFLE_SCALE = b
@@ -2017,13 +1944,9 @@ public final class Config {
                 .defineListAllowEmpty(List.of("gunMountPistolRotation"), () -> DEFAULT_MOUNT_ROTATION,
                         element -> element instanceof String);
         GUN_MOUNT_PISTOL_OFFSET = b
-                .comment("Offset for pistol-class weapons, in blocks. The same user-measured forward slide as",
-                        "the rifle default ([0, 0, -0.7]) because a pistol is drawn in exactly the same",
-                        "normalisedHand frame on the same kind of anchor - one-handed or not, the frame",
-                        "axes and their meaning do not change. This REPLACES YSM's old y = -0.125 default",
-                        "rather than adding to it: the triple is the whole offset. Add the -0.125 back",
-                        "yourself if a pistol looks too high, e.g. [0, -0.125, -0.7]. To be re-checked on a",
-                        "pistol-tier scav.")
+                .comment("Additional translation from the calibrated hand grip, in item-local blocks.",
+                        "Default [0,0,0] uses the gun pack's own thirdperson_hand positioning.",
+                        "Legacy [0,0,-0.7] displaced the gun behind the hand and is migrated once.")
                 .defineListAllowEmpty(List.of("gunMountPistolOffset"), () -> DEFAULT_MOUNT_OFFSET,
                         element -> element instanceof String);
         GUN_MOUNT_PISTOL_SCALE = b
@@ -2049,27 +1972,11 @@ public final class Config {
                         "Accepts any ItemDisplayContext name, upper case.")
                 .define("gunMountDisplayContext", DEFAULT_MOUNT_DISPLAY_CONTEXT);
         GUN_ANCHOR_MODE = b
-                .comment("How the anchor bone's frame is turned into a held-item frame.",
-                        "Values: locatorAnimated | normalisedHand (default).",
-                        "",
-                        "  locatorAnimated  - draw the item straight in the anchor bone's own frame.",
-                        "      GeckoLib's item layer applies the bone's rotation a SECOND time on top of",
-                        "      the transform renderRecursively already left (BlockAndItemGeoLayer calls",
-                        "      translateAndRotateMatrixForBone again), so an anchor bone that a clip",
-                        "      animates - and RightHandLocator is animated by every tac:* clip - ends up",
-                        "      rotated by its own keyframe twice. Measured on this rig: the barrel",
-                        "      direction differs by 31.9 degrees in tac:hold:rifle and 27.3 in",
-                        "      tac:aim:rifle from the single application, which is why the gun reads as",
-                        "      a flat slab lying across the chest instead of a held rifle.",
-                        "",
-                        "  normalisedHand   - cancel that duplicate rotation and then use the frame",
-                        "      vanilla's ItemInHandLayer gives a held item, i.e. the frame a TaCZ gun's",
-                        "      own positioning groups are authored for:",
-                        "          mulPose(X, -90) * mulPose(Y, 180) * translate(+/-1/16, +0.125, -0.625)",
-                        "      This is 'treat the locator as a real hand', and it is the default.",
-                        "",
-                        "Both modes leave the extra gunMount* rotation/offset/scale in place, so the",
-                        "tuner still works; /tarkovscav client gunpose mode=... switches live.")
+                .comment("How the animated palm locator is converted to the item frame.",
+                        "normalisedHand (default): uses the locator once and rotates TaCZ guns X -90 degrees.",
+                        "No humanoid shoulder translation or Y 180 turn is added at this palm locator.",
+                        "locatorAnimated: uses the locator once with no automatic item-frame conversion.",
+                        "The gun pack supplies each weapon's thirdperson_hand grip and thirdperson scale.")
                 .define("gunAnchorMode", DEFAULT_ANCHOR_MODE);
         GUN_OFFHAND_ANCHOR_BONE = b
                 .comment("The bone the OFFHAND item is mounted on - the left-hand counterpart of",
@@ -2152,53 +2059,20 @@ public final class Config {
                 .defineInRange("gunnerVillagerHunkerArmPitch", DEFAULT_GUNNER_VILLAGER_HUNKER_ARM_PITCH,
                         -180.0D, 180.0D);
         GUNNER_VILLAGER_GUN_OFFSET = b
-                .comment("Where the held gun sits on the villager, in blocks, as [x, y, z] - applied in the",
-                        "arm frame right before the vanilla ItemInHandLayer adds the standard hand frame",
-                        "(mulPose XP -90, mulPose YP 180, translate +-1/16, 0.125, -0.625), i.e. the same",
-                        "frame TaCZ's third-person gun positioning groups are authored for.",
-                        "",
-                        "Default [0, 0.06, 0]: a small lift and NO fore/aft slide. In this frame -Z is",
-                        "forward (the same convention as the rig's gunMountRifleOffset and as",
-                        "/tarkovscav client villagerpose forward=/back=), so 0 means 'sits where the arm",
-                        "block puts it'. This is a USER-CONFIRMED value: the gun sat too far forward, the",
-                        "user asked for it 'a bit further back', and the shipped default lost the -0.12",
-                        "forward slide. A pure translation cannot change orientation, so this is safe to",
-                        "nudge; use /tarkovscav client villagerpose back=0.05 for another small step.")
+                .comment("Extra [x,y,z] offset from the animated crossed-arms hand socket, in blocks.",
+                        "Default [0,0,0] keeps TaCZ's own per-gun thirdperson_hand locator at the hand.",
+                        "The correction is applied after the configured arm-space gun rotation.")
                 .defineListAllowEmpty(List.of("gunnerVillagerGunOffset"),
                         () -> DEFAULT_GUNNER_VILLAGER_GUN_OFFSET, element -> element instanceof String);
         GUNNER_VILLAGER_GUN_ROTATION = b
-                .comment("Rotation of the gun on the villager, degrees, as [pitch, yaw, roll], applied about X",
-                        "then Y then Z inside the arm frame - the knob that turns the weapon from 'lying",
-                        "across the chest' into 'held'.",
-                        "",
-                        "Default [5, 0, 0]: USER-CONFIRMED in game - the value the user calibrated on the",
-                        "aiming silhouette. History: the factory value was -90 (the muzzle pointed at the",
-                        "sky, so he asked for 50 degrees back: -90 + 50 = -40); he later settled on 5 in his",
-                        "own instance and 5 is the release baseline. README 5j has the whole history.",
-                        "",
-                        "The ARM angle adds to this one - both are X rotations on the same pose stack, so the",
-                        "gun's tilt is ARMS_REST + armOffset + gunPitch + poseGunPitch - 90 (ARMS_REST is the",
-                        "vanilla crossed-arms bake, about -43). With the shipped defaults the four silhouettes",
-                        "are -185 aiming, -130 idle, -128 reloading and -128 hunkered; README 5j's table is the",
-                        "authoritative list. If one pose needs the gun lower, change that pose's OWN arm offset",
-                        "or gun delta rather than this shared base, or split the difference live with",
-                        "/tarkovscav client villagerpose pitch=-62. See README 5j.")
+                .comment("Gun rotation [pitch,yaw,roll], degrees, X then Y then Z in the arm frame.",
+                        "Rotates about the grip. Default [10,0,0] makes the default aiming pose level.",
+                        "Per-pose deltas are added to this base; they do not move the zero-offset grip.")
                 .defineListAllowEmpty(List.of("gunnerVillagerGunRotation"),
                         () -> DEFAULT_GUNNER_VILLAGER_GUN_ROTATION, element -> element instanceof String);
         GUNNER_VILLAGER_IDLE_GUN_ROTATION = b
-                .comment("Extra rotation of the held gun while the villager is IDLE (the LOWERED pose), in",
-                        "degrees, as [pitch, yaw, roll], ADDED to gunnerVillagerGunRotation - it does NOT",
-                        "apply while aiming, reloading or retreating.",
-                        "",
-                        "Default [-2, 0, 0]: the idle pose carries the gun on the arms and the gun follows",
-                        "them, so the muzzle angle is ARMS_REST + armOffset + base + idle - 90. The idle arms",
-                        "sit at the vanilla crossed-arms rest (offset 0), so with the shipped base 5 this -2",
-                        "puts the idle muzzle at -43 + 0 + 5 - 2 - 90 = -130 - level, with the arm in the",
-                        "normal villager position.",
-                        "",
-                        "If it is the AIMING pose that looks too high, this is NOT the key to change - that is",
-                        "gunnerVillagerGunRotation (which moves every pose). Tune live with",
-                        "/tarkovscav client villagerpose idlePitch=-2 idleYaw=0 idleRoll=0.")
+                .comment("Extra [pitch,yaw,roll] gun rotation during IDLE only, added to the base rotation.",
+                        "Default [-12,0,0] keeps long barrels above the ground in the lowered pose.")
                 .defineListAllowEmpty(List.of("gunnerVillagerIdleGunRotation"),
                         () -> DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION, element -> element instanceof String);
         GUNNER_VILLAGER_RELOAD_GUN_ROTATION = b
@@ -2206,8 +2080,8 @@ public final class Config {
                         "[pitch, yaw, roll], ADDED to gunnerVillagerGunRotation - it applies to that one pose",
                         "and to nothing else.",
                         "",
-                        "Default [0, 0, 0] = the base rotation, i.e. exactly the behaviour of every jar",
-                        "shipped before this key existed. It is here because the user asked for a gun rotation",
+                        "Default [-12, 0, 0] gives long barrels ground clearance. Previous versions",
+                        "used the base rotation alone. This adds a gun rotation",
                         "PER STATE (a separate angle for each pose): the four silhouettes are now four",
                         "independent deltas (RAISED = the base itself, LOWERED, RELOADING, HUNKERED).",
                         "",
@@ -2219,7 +2093,7 @@ public final class Config {
                 .comment("The same, for RETREAT (the HUNKERED pose): [pitch, yaw, roll] in degrees ADDED to",
                         "gunnerVillagerGunRotation while the villager is breaking contact.",
                         "",
-                        "Default [0, 0, 0] - the retreat silhouette is untouched until it is tuned. See",
+                        "Default [-12, 0, 0] keeps long barrels clear of the ground. See",
                         "gunnerVillagerReloadGunRotation for why the rotation is per pose at all.",
                         "",
                         "Tune live with /tarkovscav client villagerpose hunkerPitch=... hunkerYaw=...",
@@ -2311,7 +2185,7 @@ public final class Config {
                         "Set 0 to go back to vanilla behaviour.")
                 .defineInRange("cullingBoxPadding", DEFAULT_CULLING_BOX_PADDING, 0.0D, 8.0D);
         MODEL_LAYERING = b
-                .comment("How the rig is animated: single | upperLower (default single).",
+                .comment("How the rig is animated: single | upperLower (default upperLower).",
                         "",
                         "IMPORTANT: BOTH values are ONE geometry submission per frame - this mod never",
                         "draws the model twice, and there is no 'hide a bone set, draw, hide another set,",
@@ -2323,12 +2197,11 @@ public final class Config {
                         "                (measured: tac:hold/aim/aim:fire/reload have 0 of the 8 leg bones;",
                         "                only tac:idle/walk/run animate legs), so an armed mob's legs hold",
                         "                their rest pose while it walks. Unarmed movement is unaffected.",
-                        "  upperLower  - the layered scheme this mod shipped before: a movement controller",
+                        "  upperLower  - a movement controller",
                         "                for the legs and a gun controller for the upper body, so an armed",
                         "                mob walks and shoots at once. Same single submission.",
                         "",
-                        "Default is single because that is what was asked for; switch to upperLower to get",
-                        "armed walking back. Both are one draw, so this is purely a presentation choice.")
+                        "Default upperLower preserves walking while armed. Both choices draw the model once.")
                 .define("modelLayering", DEFAULT_MODEL_LAYERING);
         LOG_RENDER_STATS = b
                 .comment("Log, every 5 seconds, how many times this mod submitted the rig geometry for",
@@ -2472,72 +2345,6 @@ public final class Config {
                         "makes that impossible, so the WARN is a real defect signal, and",
                         "/tarkovscav client state prints the count. Off by default (one line per frame).")
                 .define("logPoseWriters", false);
-        // ---------------------------------------------------------------- player lean (FPS peek, README 5s)
-        // Flat keys under [client], not a [client.lean] section, so the names are exactly the documented
-        // client.leanEnabled / leanMaxOffset / leanRollDegrees / leanSpeedTicks / leanSuppressVanillaKeys.
-        b.comment("Player leaning / peeking (README 5s): hold Q or E to lean the camera out to one side, like",
-                "a first-person shooter. The camera moves (and rolls) on the CLIENT only; the player entity,",
-                "its hitbox and its eye position are never changed, so leaning can never be used to see over a",
-                "wall you are not actually behind, nor to dodge a hit by having moved a hitbox. What does move",
-                "is the muzzle of your own shots, so you can shoot from the lean.");
-        LEAN_ENABLED = b
-                .comment("Master switch for the whole feature. false = the lean keys do nothing at all: no",
-                        "camera change, no key suppression and no shot-origin offset.")
-                .define("leanEnabled", true);
-        LEAN_MAX_OFFSET = b
-                .comment("How far the camera moves sideways at full lean, in blocks. This is also how far the",
-                        "muzzle of your own shots moves, so the two can never disagree. 0.6 is a little over",
-                        "half a block: enough to clear a corner and to read as a real step to the side.")
-                .defineInRange("leanMaxOffset", 0.6D, 0.0D, 1.5D);
-        LEAN_ROLL_DEGREES = b
-                .comment("How far the view rolls at full lean, in degrees. This is the 'camera tilt' of a",
-                        "peek: 12 degrees reads as a head tilt without making aiming hard. 0 = translate only.")
-                .defineInRange("leanRollDegrees", 12.0D, 0.0D, 45.0D);
-        LEAN_INVERT_OFFSET = b
-                .comment("Flip ONLY the sideways movement (the camera and the muzzle). Set this if leaning right",
-                        "visually moves you left. The roll is a separate switch on purpose: the two are",
-                        "different axes, and 'the lean feels backwards' can come from either one.")
-                .define("leanInvertOffset", false);
-        LEAN_INVERT_ROLL = b
-                .comment("Flip ONLY the view roll. Set this if the horizon tilts the wrong way while the",
-                        "movement itself looks right.")
-                .define("leanInvertRoll", false);
-        LEAN_SPEED_TICKS = b
-                .comment("Ticks to go from centred to fully leaned (and back). 5 ticks = a quarter second, which",
-                        "is fast enough for a firefight and slow enough to look like a movement.")
-                .defineInRange("leanSpeedTicks", 5, 1, 20);
-        LEAN_SUPPRESS_VANILLA_KEYS = b
-                .comment("Q and E are VANILLA keys (drop item, open inventory), and the lean keys USE them, so",
-                        "while this is on those two actions are disabled completely - a short tap included. Not",
-                        "'only while leaning': a tap of Q must not throw your weapon on the floor and a tap of E",
-                        "must not open your backpack, or the keys are unusable.",
-                        "",
-                        "It is key-based, not global: only a vanilla key that one of the lean bindings actually",
-                        "occupies is taken, so rebinding the lean keys away from Q/E gives Q and E back to the",
-                        "game automatically. Nothing else that opens the inventory (a command, another mod) is",
-                        "affected, because only the key's own click is consumed.",
-                        "",
-                        "Set false to leave the vanilla keys completely alone (then a lean will also drop your",
-                        "item or open your backpack, which is why it is true by default).")
-                .define("leanSuppressVanillaKeys", true);
-        LEAN_TAP_THRESHOLD_TICKS = b
-                .comment("How long Q/E has to be HELD before it counts as a peek instead of a tap, in ticks",
-                        "(5 = 250 ms). Below it the press is replayed as the vanilla action on release; at or",
-                        "above it the vanilla action is dropped and the key was a lean.")
-                .defineInRange("tapThresholdTicks", 5, 1, 40);
-        LEAN_START_MODE = b
-                .comment("When the lean starts:",
-                        "  immediate     - on press, so it feels instant (a quick tap shows a very short lean",
-                        "                  flash, which snaps back the moment you let go);",
-                        "  afterThreshold - only once the key has been held for tapThresholdTicks, so a tap",
-                        "                  never leans at all.")
-                .define("startMode", "immediate");
-        LEAN_REPLAY_VANILLA_ON_TAP = b
-                .comment("Whether a TAP (shorter than tapThresholdTicks) still does the vanilla action, done by",
-                        "us on release: E opens the backpack, Q drops one item. false = a tap does nothing at",
-                        "all (the previous behaviour). Either way the vanilla key itself is consumed, so the",
-                        "action can never happen twice or at the wrong time.")
-                .define("replayVanillaOnTap", true);
         b.pop();
 
         // ================================================================= kill feed
@@ -2991,6 +2798,7 @@ public final class Config {
         b.pop();
 
         // ================================================================= client / head accessories
+        b.push("client");
         b.comment("Head accessories of the imported Bedrock rig. These keys are INCREMENTAL to",
                 "hiddenBones: both apply, and a bone is hidden when either mechanism asks for it.",
                 "",
@@ -3096,6 +2904,7 @@ public final class Config {
                         element -> element instanceof String);
         b.pop();
 
+        b.pop();
         SPEC = b.build();
     }
 
@@ -4176,7 +3985,12 @@ public final class Config {
                 continue;
             }
             try {
-                return Mth.clamp(Double.parseDouble(entry.substring(equals + 1).trim()), 0.0D, 4.0D);
+                double value = Double.parseDouble(entry.substring(equals + 1).trim());
+                if (!Double.isFinite(value)) {
+                    warnFamilyVolume(entry, "not a finite number");
+                    return 1.0D;
+                }
+                return Mth.clamp(value, 0.0D, 4.0D);
             } catch (NumberFormatException bad) {
                 warnFamilyVolume(entry, "not a number");
                 return 1.0D;
@@ -4248,7 +4062,7 @@ public final class Config {
 
     /** The held-gun rotation on the gunner villager, as {pitch, yaw, roll} in degrees. */
     public static float[] gunnerVillagerGunRotation() {
-        float[] fallback = triple(DEFAULT_GUNNER_VILLAGER_GUN_ROTATION, 5.0F, 0.0F, 0.0F);
+        float[] fallback = triple(DEFAULT_GUNNER_VILLAGER_GUN_ROTATION, 10.0F, 0.0F, 0.0F);
         return SPEC.isLoaded()
                 ? triple(GUNNER_VILLAGER_GUN_ROTATION.get(), fallback[0], fallback[1], fallback[2])
                 : fallback;
@@ -4262,7 +4076,7 @@ public final class Config {
      * idle correction and put the muzzle back in the air.</p>
      */
     public static float[] gunnerVillagerIdleGunRotation() {
-        float[] fallback = triple(DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION, -2.0F, 0.0F, 0.0F);
+        float[] fallback = triple(DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION, -12.0F, 0.0F, 0.0F);
         return SPEC.isLoaded()
                 ? triple(GUNNER_VILLAGER_IDLE_GUN_ROTATION.get(), fallback[0], fallback[1], fallback[2])
                 : fallback;
@@ -4270,10 +4084,10 @@ public final class Config {
 
     /**
      * The gun rotation ADDED while the pose is RELOADING, on top of {@link #gunnerVillagerGunRotation()}
-     * (README 5j). Empty-ish by default: {@code [0,0,0]} means "the base rotation, exactly as before".
+     * (README 5j). The default {@code [-12,0,0]} matches the idle tilt for long-barrel ground clearance.
      */
     public static float[] gunnerVillagerReloadGunRotation() {
-        float[] fallback = triple(DEFAULT_GUNNER_VILLAGER_RELOAD_GUN_ROTATION, 0.0F, 0.0F, 0.0F);
+        float[] fallback = triple(DEFAULT_GUNNER_VILLAGER_RELOAD_GUN_ROTATION, -12.0F, 0.0F, 0.0F);
         return SPEC.isLoaded()
                 ? triple(GUNNER_VILLAGER_RELOAD_GUN_ROTATION.get(), fallback[0], fallback[1], fallback[2])
                 : fallback;
@@ -4281,10 +4095,10 @@ public final class Config {
 
     /**
      * The gun rotation ADDED while the pose is HUNKERED (retreating), on top of
-     * {@link #gunnerVillagerGunRotation()} (README 5j). {@code [0,0,0]} by default, like the reload delta.
+     * {@link #gunnerVillagerGunRotation()} (README 5j). The default {@code [-12,0,0]} matches idle and reload.
      */
     public static float[] gunnerVillagerHunkerGunRotation() {
-        float[] fallback = triple(DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_ROTATION, 0.0F, 0.0F, 0.0F);
+        float[] fallback = triple(DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_ROTATION, -12.0F, 0.0F, 0.0F);
         return SPEC.isLoaded()
                 ? triple(GUNNER_VILLAGER_HUNKER_GUN_ROTATION.get(), fallback[0], fallback[1], fallback[2])
                 : fallback;
@@ -4342,7 +4156,7 @@ public final class Config {
     }
     /** The held-gun offset on the gunner villager, in the arm frame, in blocks. */
     public static float[] gunnerVillagerGunOffset() {
-        float[] fallback = triple(DEFAULT_GUNNER_VILLAGER_GUN_OFFSET, 0.0F, 0.06F, -0.09F);
+        float[] fallback = triple(DEFAULT_GUNNER_VILLAGER_GUN_OFFSET, 0.0F, 0.0F, 0.0F);
         return SPEC.isLoaded() ? triple(GUNNER_VILLAGER_GUN_OFFSET.get(), fallback[0], fallback[1], fallback[2])
                 : fallback;
     }
@@ -4399,7 +4213,11 @@ public final class Config {
         if (raw.size() >= 3) {
             for (int i = 0; i < 3; i++) {
                 try {
-                    out[i] = Float.parseFloat(String.valueOf(raw.get(i)).trim());
+                    float value = Float.parseFloat(String.valueOf(raw.get(i)).trim());
+                    if (!Float.isFinite(value)) {
+                        throw new NumberFormatException("non-finite transform");
+                    }
+                    out[i] = value;
                 } catch (NumberFormatException badEntry) {
                     TarkovScav.LOGGER.warn("Could not read '{}' as a number; using the default {}", raw.get(i), out[i]);
                 }

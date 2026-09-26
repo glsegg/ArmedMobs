@@ -20,6 +20,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
 
@@ -480,5 +481,12 @@ public final class WastelandTravel {
         if (event.getEntity() instanceof ServerPlayer player) {
             CASTS.remove(player.getUUID());
         }
+    }
+
+    /** The next saved world has its own clock; no cast or cooldown may carry into it. */
+    @SubscribeEvent
+    public static void onServerStopped(ServerStoppedEvent event) {
+        CASTS.clear();
+        COOLDOWN_UNTIL.clear();
     }
 }

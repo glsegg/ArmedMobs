@@ -1,7 +1,6 @@
 package com.gfl.tarkovscav.client;
 
 import com.gfl.tarkovscav.Config;
-import com.gfl.tarkovscav.TarkovScav;
 import com.gfl.tarkovscav.world.CaptureHudNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -9,8 +8,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.List;
 
@@ -40,9 +37,6 @@ import java.util.List;
  * so "never in the wasteland" does not depend on a server behaving. And {@code capture.hudEnabled = false}
  * hides it entirely here and stops the traffic on the server side too.</p>
  */
-@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = TarkovScav.MOD_ID,
-        bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE,
-        value = net.minecraftforge.api.distmarker.Dist.CLIENT)
 public final class CaptureHud implements IGuiOverlay {
     public static final CaptureHud INSTANCE = new CaptureHud();
 
@@ -51,8 +45,6 @@ public final class CaptureHud implements IGuiOverlay {
     private static final int BAR_HEIGHT = 4;
     /** The gap between one faction's row and the next. */
     private static final int ROW_GAP = 5;
-    /** Distance from the top edge of the screen. */
-    private static final int TOP = 4;
 
     private static final int VILLAGE_COLOUR = 0x7BE07B;
     private static final int ILLAGER_COLOUR = 0xFF6B6B;
@@ -84,7 +76,7 @@ public final class CaptureHud implements IGuiOverlay {
 
     /** Server -&gt; client: the current state of one city, or a hide. */
     public static void accept(CaptureHudNetwork.CaptureHudMessage message) {
-        if (!Config.SPEC.isLoaded() || !Config.CAPTURE_HUD_ENABLED.get()) {
+        if (!ClientHudEvents.ensureWorld() || clearIfDisabled()) {
             clear();
             return;
         }
@@ -102,7 +94,7 @@ public final class CaptureHud implements IGuiOverlay {
             clear();
             return;
         }
-        state = new State(message.cityKey(), message.cityName(), message.bars());
+        state = new State(message.cityKey(), message.cityName(), List.copyOf(message.bars()));
     }
 
     /** For the gate and any future test command: what is on screen right now. */
@@ -125,14 +117,19 @@ public final class CaptureHud implements IGuiOverlay {
         state = null;
     }
 
-    /**
-     * Client tick: age the last sync. Registered through this class's own {@code @EventBusSubscriber}, so a
-     * player who walks out of a city sees the bars fade on the configured delay without the server having to
-     * say anything.
-     */
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || state == null) {
+    static boolean clearIfDisabled() {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (!Config.SPEC.isLoaded() || !Config.CAPTURE_HUD_ENABLED.get() || minecraft.level == null
+                || !minecraft.level.dimension().equals(Level.OVERWORLD)) {
+            clear();
+            return true;
+        }
+        return false;
+    }
+
+    /** Ages the latest packet using the same unpaused client clock as the other HUDs. */
+    public static void tick() {
+        if (clearIfDisabled() || state == null) {
             return;
         }
         int delaySeconds = Config.SPEC.isLoaded() ? Math.max(0, Config.CAPTURE_HUD_HIDE_DELAY_SECONDS.get()) : 8;
@@ -150,7 +147,7 @@ public final class CaptureHud implements IGuiOverlay {
         if (current == null || current.bars.size() < 2) {
             return;
         }
-        if (!Config.SPEC.isLoaded() || !Config.CAPTURE_HUD_ENABLED.get()
+        if (clearIfDisabled()
                 || minecraft.options.hideGui || minecraft.player == null || minecraft.level == null) {
             return;
         }
@@ -161,29 +158,36 @@ public final class CaptureHud implements IGuiOverlay {
         }
 
         Font font = minecraft.font;
-        int rows = current.bars.size();
         int rowHeight = font.lineHeight + BAR_HEIGHT + ROW_GAP;
         int plateWidth = 0;
         for (CaptureHudNetwork.Bar bar : current.bars) {
             plateWidth = Math.max(plateWidth, Math.max(font.width(label(bar)), BAR_WIDTH));
         }
-        int left = Math.max(2, (width - plateWidth) / 2);
-        int top = TOP;
-        graphics.fill(left - 3, top - 2, left + plateWidth + 3, top + rows * rowHeight, PLATE_COLOUR);
+        HudLayout.Panel panel = HudLayout.allocate("top_center", plateWidth + 6, rowHeight,
+                current.bars.size(), 2);
+        if (panel == null) return;
+        int left = panel.bounds().left() + 3;
+        int top = panel.bounds().top() + 2;
+        int contentWidth = panel.bounds().width() - 6;
+        int barWidth = Math.min(BAR_WIDTH, contentWidth);
+        if (barWidth <= 0) return;
+        graphics.fill(panel.bounds().left(), panel.bounds().top(), panel.bounds().right(),
+                panel.bounds().bottom(), PLATE_COLOUR);
 
         int y = top;
-        for (CaptureHudNetwork.Bar bar : current.bars) {
+        for (CaptureHudNetwork.Bar bar : current.bars.subList(0, panel.rows())) {
             int colour = bar.captured() ? CAPTURED_COLOUR : colourOf(bar.faction());
-            graphics.drawString(font, label(bar), left, y, colour, true);
+            graphics.drawString(font, KillFeedHud.trimToWidth(font, label(bar), contentWidth), left, y,
+                    colour, true);
             int barY = y + font.lineHeight + 1;
-            graphics.fill(left, barY, left + BAR_WIDTH, barY + BAR_HEIGHT, TRACK_COLOUR);
+            graphics.fill(left, barY, left + barWidth, barY + BAR_HEIGHT, TRACK_COLOUR);
             int filled = 0;
             if (bar.max() > 0 && bar.strength() > 0) {
-                filled = (int) Math.round(BAR_WIDTH * (double) bar.strength() / (double) bar.max());
-                filled = Math.max(1, Math.min(BAR_WIDTH, filled));
+                filled = (int) Math.round(barWidth * (double) bar.strength() / (double) bar.max());
+                filled = Math.max(1, Math.min(barWidth, filled));
             }
             if (filled > 0) {
-                graphics.fill(left, barY, left + filled, barY + BAR_HEIGHT, colour);
+                graphics.fill(left, barY, left + filled, barY + BAR_HEIGHT, 0xFF000000 | colour);
             }
             y += rowHeight;
         }

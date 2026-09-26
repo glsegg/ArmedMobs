@@ -18,11 +18,8 @@ import java.util.Set;
  * covered by this project's access transformer) and would have to re-implement the lightmap/overlay
  * state that entity shaders expect. The trade-offs of each value are documented on the config key.</p>
  *
- * <p><b>No global render state is touched anywhere in this mod.</b> {@code RenderType#setupRenderState}
- * and {@code clearRenderState} are what set and restore the shader, blend, cull and colour-mask state,
- * and vanilla's {@code MultiBufferSource.BufferSource} flushes every batch through exactly that pair -
- * so the item layer drawing a TaCZ gun cannot leave the model's own draw with a changed state. The
- * selftest asserts that this package never calls {@code RenderSystem} directly.</p>
+ * <p>Foreign item draws additionally use {@link RenderStateGuard}: stock render types alone do not
+ * restore every stencil or texture state changed by another renderer.</p>
      * <p><b>Do not use {@code zOffset} to fix "at some angles a part changes material or goes black".</b>
      * {@code entityCutoutNoCullZOffset} applies {@code POLYGON_OFFSET(-1.0, -10.0)}, which is a
      * <em>slope-dependent</em> depth offset: the bias changes with the view angle, and at some angles the

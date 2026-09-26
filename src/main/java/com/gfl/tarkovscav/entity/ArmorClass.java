@@ -52,7 +52,8 @@ public final class ArmorClass {
     /** The damage reduction of a class, 0 for 0 and {@code armor.reductionPerClass * class} otherwise. */
     public static double reductionFor(int armorClass) {
         int clamped = Math.max(0, Math.min(6, armorClass));
-        return clamped * Config.ARMOR_REDUCTION_PER_CLASS.get();
+        double reduction = clamped * Config.ARMOR_REDUCTION_PER_CLASS.get();
+        return Double.isFinite(reduction) ? Math.max(0.0D, Math.min(1.0D, reduction)) : 0.0D;
     }
 
     /** Rolls and stores the class once per entity; true when it rolled something this call. */

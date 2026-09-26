@@ -1,4 +1,4 @@
-# Head-less self-tests for 塔科夫Scav. No Minecraft instance, no client - everything here runs in a second.
+# Head-less self-tests for 塔科夫Scav. No Minecraft instance or visible game client is launched.
 # (One gate opens a HIDDEN GL window: RenderStateGuardLiveTest, the only check that measures the driver.)
 #
 #   .\tools\spike\selftest.ps1
@@ -58,8 +58,17 @@ $sources += Join-Path $projectDir 'src\main\java\com\gfl\tarkovscav\world\Captur
 if ($LASTEXITCODE -ne 0) { throw 'the spikes do not compile' }
 
 Push-Location $projectDir
+$generatedResourcesBefore = @{}
 try {
     $failed = 0
+
+    # Regeneration is a check, not an edit. Preserve fixtures even when the generator or a later gate fails.
+    foreach ($relative in @('src/main/resources/data/tarkovscav/structures',
+                            'src/main/resources/data/tarkovscav/city_buildings')) {
+        Get-ChildItem -LiteralPath (Join-Path $projectDir $relative) -File | ForEach-Object {
+            $generatedResourcesBefore[$_.FullName] = [System.IO.File]::ReadAllBytes($_.FullName)
+        }
+    }
 
     # The suite is a set of CHECKS: it must not rewrite the tracked structure presets. CityStructureGen is
     # allowed to regenerate them (that is how a stale .nbt is caught), but with the style flags gated behind
@@ -197,6 +206,12 @@ try {
             'selftest_entity_registry' = @('tools/selftest_entity_registry.js')
             'selftest_attribute_config' = @('tools/selftest_attribute_config.js')
             'selftest_lean'        = @('tools/selftest_lean.js')
+            'selftest_client_runtime' = @('tools/selftest_client_runtime.js')
+            'selftest_combat_regressions' = @('tools/selftest_combat_regressions.js')
+            'selftest_grenade_item_sync' = @('tools/selftest_grenade_item_sync.js')
+            'selftest_rack_transactions' = @('tools/selftest_rack_transactions.js')
+            'selftest_state_lifecycle' = @('tools/selftest_state_lifecycle.js')
+            'selftest_held_items' = @('tools/selftest_held_items.js')
             'selftest_killfeed'    = @('tools/selftest_killfeed.js')
             'selftest_grenades'    = @('tools/selftest_grenades.js')
             'selftest_voice'       = @('tools/selftest_voice.js')
@@ -235,11 +250,27 @@ try {
         foreach ($name in $nodeGates.Keys) {
             Write-Host "--- $name ---" -ForegroundColor Cyan
             $nodeArgs = $nodeGates[$name]
-            & $node @nodeArgs | Select-Object -Last 3
-            if ($LASTEXITCODE -ne 0) {
+            $gateOutput = & $node @nodeArgs
+            $gateExit = $LASTEXITCODE
+            if ($gateExit -ne 0) {
+                $gateOutput | Write-Output
                 $failed++
-                Write-Host "  [gate] $name FAILED (exit $LASTEXITCODE)" -ForegroundColor Red
+                Write-Host "  [gate] $name FAILED (exit $gateExit)" -ForegroundColor Red
+            } else {
+                $gateOutput | Select-Object -Last 3
             }
+        }
+    }
+
+    # These exercise production classes against the mapped Minecraft jars, including packet codecs,
+    # persisted city bounds and vanilla structure placement. They require a completed Gradle build.
+    foreach ($suite in @('network', 'world', 'config', 'render')) {
+        Write-Host "--- $suite production regression tests ---" -ForegroundColor Cyan
+        try {
+            & (Join-Path $spikeDir "$suite/selftest.ps1")
+        } catch {
+            $failed++
+            Write-Host "  [gate] $suite FAILED: $_" -ForegroundColor Red
         }
     }
 
@@ -284,5 +315,8 @@ try {
     if ($failed -gt 0) { throw "$failed self-test(s) failed" }
     Write-Host 'all self-tests passed' -ForegroundColor Green
 } finally {
+    foreach ($entry in $generatedResourcesBefore.GetEnumerator()) {
+        [System.IO.File]::WriteAllBytes($entry.Key, $entry.Value)
+    }
     Pop-Location
 }

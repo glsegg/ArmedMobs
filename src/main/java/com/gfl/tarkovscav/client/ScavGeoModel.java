@@ -6,8 +6,15 @@ import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.constant.DataTickets;
 import software.bernie.geckolib.core.animation.AnimationState;
+import software.bernie.geckolib.core.animation.Animation;
+import software.bernie.geckolib.cache.GeckoLibCache;
+import software.bernie.geckolib.loading.object.BakedAnimations;
 import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.model.data.EntityModelData;
+import net.minecraftforge.fml.ModList;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The scav's Bedrock rig: the user's own YSM Scav model, imported by
@@ -31,11 +38,43 @@ public class ScavGeoModel extends GeoModel<ScavEntity> {
      */
     private BakedGeoModel hiddenOn;
 
-    /** Missing-clip reports already made, keyed by rig + config generation. */
-    private static final java.util.Set<String> LOGGED_MISSING_CLIPS = new java.util.HashSet<>();
+    /** Recheck animation resources after a rebake without retaining old generations forever. */
+    private BakedGeoModel checkedClipsOn;
+    private int checkedClipGeneration = -1;
 
     /** The config generation the hide pass above last ran for; /tarkovscav client reload bumps it. */
     private int configuredGeneration = -1;
+    private BakedAnimations correctedAnimationsOn;
+    private final Map<String, Animation> correctedAnimations = new HashMap<>();
+    private boolean splineFailureReported;
+
+    @Override
+    public Animation getAnimation(ScavEntity animatable, String name) {
+        Animation original = super.getAnimation(animatable, name);
+        // Scope the workaround to the engine version whose endpoint/control-point mismatch was
+        // reproduced. Future GeckoLib releases may already normalise these values themselves.
+        if (original == null || !ModList.get().getModContainerById("geckolib")
+                .map(mod -> mod.getModInfo().getVersion().toString().equals("4.8.4")).orElse(false)) return original;
+        BakedAnimations baked = GeckoLibCache.getBakedAnimations().get(getAnimationResource(animatable));
+        if (this.correctedAnimationsOn != baked) {
+            this.correctedAnimationsOn = baked;
+            this.correctedAnimations.clear();
+            this.splineFailureReported = false;
+        }
+        if (this.correctedAnimations.containsKey(name)) return this.correctedAnimations.get(name);
+        Animation corrected = original;
+        try {
+            corrected = RotationSplineCompat.correct(original);
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException failed) {
+            if (!this.splineFailureReported) {
+                this.splineFailureReported = true;
+                TarkovScav.LOGGER.error("[animation] Could not correct GeckoLib rotation spline controls;"
+                        + " retaining the original animation", failed);
+            }
+        }
+        this.correctedAnimations.put(name, corrected);
+        return corrected;
+    }
 
     @Override
     public ResourceLocation getModelResource(ScavEntity animatable) {
@@ -106,10 +145,12 @@ public class ScavGeoModel extends GeoModel<ScavEntity> {
      * rig is missing all of the {@code tac:*} names, which is exactly the case this exists for).
      */
     private void warnAboutMissingClips(ScavEntity animatable) {
-        String key = "scav|" + RigSupport.configGeneration();
-        if (!LOGGED_MISSING_CLIPS.add(key)) {
+        if (this.checkedClipsOn == this.hiddenOn
+                && this.checkedClipGeneration == RigSupport.configGeneration()) {
             return;
         }
+        this.checkedClipsOn = this.hiddenOn;
+        this.checkedClipGeneration = RigSupport.configGeneration();
         java.util.List<String> missing = new java.util.ArrayList<>();
         for (String clip : RigSupport.expectedClips()) {
             boolean present;

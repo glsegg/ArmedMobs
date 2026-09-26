@@ -1,0 +1,26 @@
+// Development-only visual audit. This source set is never included in the release jar.
+allprojects { project ->
+    project.afterEvaluate {
+        def audit = project.sourceSets.create('mountPreview') {
+            java.srcDir project.file('tools/mount-preview/java')
+            compileClasspath = project.sourceSets.main.output + project.sourceSets.main.compileClasspath
+            runtimeClasspath = output + compileClasspath
+        }
+        project.minecraft.runs.named('client') {
+            workingDirectory project.file('build/gun-mount-audit/client')
+            property 'armedmobs.mountPreview', project.findProperty('mountPreviewMode') ?: 'baseline'
+            property 'armedmobs.mountPreviewGuns', project.findProperty('mountPreviewGuns') ?: 'tacz:glock_17,tacz:m4a1'
+            property 'armedmobs.mountPreviewTypes', project.findProperty('mountPreviewTypes') ?: 'scav,gunner_pillager,gunner_villager,sniper_pillager,sniper_villager,usec_villager,bear_pillager,elite_pillager,elite_villager'
+            property 'armedmobs.mountPreviewLeft', project.findProperty('mountPreviewLeft') ?: 'false'
+            property 'armedmobs.mountPreviewPoses', project.findProperty('mountPreviewPoses') ?: 'hold,aim'
+            property 'armedmobs.mountPreviewYaw', project.findProperty('mountPreviewYaw') ?: '0'
+            property 'armedmobs.mountPreviewPitch', project.findProperty('mountPreviewPitch') ?: '0'
+            property 'armedmobs.mountPreviewCameraYaw', project.findProperty('mountPreviewCameraYaw') ?: '25'
+            args '--quickPlaySingleplayer' , 'calibration', '--width', '1440', '--height', '1080'
+            mods { tarkovscav { source audit } }
+        }
+        project.tasks.matching { it.name == 'runClient' }.configureEach {
+            dependsOn project.tasks.named('mountPreviewClasses')
+        }
+    }
+}

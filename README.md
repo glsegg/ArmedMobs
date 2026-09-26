@@ -1,5 +1,7 @@
 # Armed Mobs (武装暴徒)
 
+> **2026-09-26 持枪修复：** 握点、左右手、长枪低位姿态及旧配置迁移以 [配置参考表](docs/COMMAND_AND_CONFIG_REFERENCE.md) 为准；下文历史调参段落中的旧偏移不再作为当前默认。
+
 Minecraft **1.20.1 / Forge 47** mod: **Scav** mobs and a **gun-armed pillager** that fight with
 **TaCZ** (*Timeless and Classics Zero*) firearms, use cover, suppress, advance and break contact, and
 only spawn **inside city areas**. The Scav rig is the user's own YSM model, imported and layered.
@@ -1354,79 +1356,9 @@ FAIL  every one of the 4 entity types is complete  tarkovscav:sniper_pillager: r
 FAIL  the sniper pillager (the 2026-09-23 crash) has a renderer
 ```
 
-### 5t. 玩家歪头 / peek-lean（长按 Q/E 从掩体侧身，射击也从歪出去的那一侧出）
+### 5t. Q/E 歪头已移除
 
-用户原话：「给玩家做点小功能，**长按 e 键或者 q 键像 FPS 一样朝着一边歪头**。**视角会倾斜一些**，**TaCZ 武器和箭 攻击会从你歪头一点的方向射出来**。」
-
-**怎么用**：按住 **Q = 向右歪**、**E = 向左歪**（都能在 选项→控制→武装暴徒 里改），松开自动回正。`client.leanEnabled = false` 时整个功能完全惰性。
-
-> **2026-09-23 修正（用户回报）**：Q/E 一开始是**反的**（Q 曾经是向左歪），现在 **Q=右、E=左**；改的是**键位映射**（`LeanClient` 里两个 `KeyMapping` 的 GLFW 键码对调），**lean 数学（偏移沿右向量、roll 与头部同向）一个字没改**。若你觉得"歪头方向/倾斜方向还是反的"，用下面两个独立开关微调，不用改代码：
->
-> | 键 | 默认 | 作用 |
-> | --- | --- | --- |
-> | `client.leanInvertOffset` | `false` | **只翻横移方向**（相机与枪口一起翻） |
-> | `client.leanInvertRoll` | `false` | **只翻视角 roll**（横移感觉对、只有地平线倾斜反了时用这个） |
->
-> **按键 → 偏移方向 → roll 符号对照表**（`lean` 为内部值，正 = 玩家右侧）：
->
-> | 按键 | `lean` | 偏移量（世界方向） | `roll` |
-> | --- | --- | --- | --- |
-> | Q（右歪） | `+1` | 沿**右向量** `(-cos yaw, 0, -sin yaw)` × 0.6 | `-`（12° × −1，地平线随头部倾） |
-> | E（左歪） | `-1` | 沿**左向量** × 0.6 | `+`（12°） |
-> | 两个键同时按 | `0` | 无 | 无 |
-> | `leanInvertOffset=true` | — | 整列取反 | 不变 |
-> | `leanInvertRoll=true` | — | 不变 | 整列取反 |
-
-#### 按键：Q/E 是原版键，所以必须"按住时不触发原版动作"
-Q 是原版的**丢弃物品**、E 是**打开背包**。长按必然误触发，所以：
-
-| 原版动作 | 怎么被压住 | 为什么这样做 |
-| --- | --- | --- |
-| **按下** | `InputEvent.Key` 的 PRESS 里立刻**吃掉 `options.keyDrop` / `options.keyInventory` 的点击**并**记下按下时刻** | 原版是在**按下那一瞬间**执行动作的，而"这是轻点还是长按"要到松开才知道——所以必须先把点击拿走，再由我们决定要不要重放 |
-| **轻点松开（< `tapThresholdTicks`，默认 5 tick = 250ms）** | **我们代为执行原版动作**：E → 打开 `InventoryScreen`（与 `Minecraft#handleKeybinds` 那条一致）；Q → `player.drop(false)` 丢**一个**（旁观者不丢），**只丢一次** | "短按才会开"是用户要的语义；重放在**松开时**发生，所以不会和原版抢 |
-| **长按（≥ 阈值）松开** | **什么都不做**（纯 peek） | "长按不开"；按住期间原版动作也早就被吃掉了 |
-| **歪头起始时机** | `client.leanStartMode = immediate`（默认）按下即开始歪——手感跟手，代价是"轻点一下"会有极短的一次歪头、松手立刻回正；`afterThreshold` 则要按住到阈值才歪，轻点完全不歪 | 两种都可用，配置切换 |
-
-
-`client.leanSuppressVanillaKeys = false` 可以整体关掉这两条压制（完全恢复原版）。**"只禁用被我们占用的那两个键"是按当前键位算的**：只要你把歪头键改绑到别的键，Q/E 立刻恢复原版（这条被闸门断言）。另外服务端还有一道兜底：`LeanServerEvents#onItemToss` 在收到"歪头中"的玩家丢东西时会取消这次投掷——**并且把物品放回背包**（见下）。
-
-> **一个坑，写在这里免得以后有人踩**：Forge 1.20.1 **没有** `PlayerEvent.ItemTossEvent`；真实事件是 `net.minecraftforge.event.entity.item.ItemTossEvent`，它在 `Player#drop(ItemStack, boolean, boolean)` 里触发，此时 **`ItemEntity` 已经建好、物品已经从背包里扣掉了**。所以只 `setCanceled(true)` 会把物品**销毁**——必须自己把 stack 加回背包（背包满则走 `Containers.dropItemStack` 掉在脚下，**绝不能再走 `Player#drop`**，否则事件会再次触发，无限递归）。
-
-#### 视角：只动客户端相机，**绝不动玩家实体**
-- 横向偏移 + roll（默认 **0.6 格 + 12°**，`client.leanMaxOffset` / `leanRollDegrees`），进/出都平滑（`leanSpeedTicks = 5` tick 到位），左右同时按则**互相抵消**（视为 0）。
-- **靠墙不穿视**：从**相机当前位置**沿偏移方向做方块碰撞检测，命中就把偏移**缩短到离墙 0.1 格**；完全没空间时偏移为 0（视角只剩 roll）。
-- **服务端玩家不动**：玩家的坐标、eye height、hitbox 一个字节都不改（闸门里有专门断言：歪头代码里不允许出现 `player.setPos / setDeltaMovement / setBoundingBox / refreshDimensions`）。所以歪头**不能**用来把 hitbox 挪出子弹、也不能挤过缺口或看穿不该看到的墙——它只是**眼睛**移动。
-- 相机位置的横移需要 `Camera#setPosition(Vec3)`，它在原版里是 `protected`。**2026-09-23 改成 access transformer（AT）**（`src/main/resources/META-INF/accesstransformer.cfg`，在 `build.gradle` 里用 `accessTransformer = file(...)` 声明），**彻底删掉了原来那条"按签名反射、失败静默降级"的路**——那次静默降级正是"歪头看起来只是转了一下、没有位移"的嫌疑来源。
-  - AT 那一行是 `public net.minecraft.client.Camera m_90581_(Lnet/minecraft/world/phys/Vec3;)V`：**SRG 成员名**（对着 `srg_to_official_1.20.1.tsrg` 查的：`m_90581_` → `setPosition`），因为运行时用的是 SRG 名；而 **`.cfg` 里不能有 `#` 注释**——Forge 的解析器会直接报 `Invalid access transformer line`（我们第一次就这么被构建拦下来了），所以解释写在 `build.gradle` 的注释里。
-  - **验证顺序（都可复跑）**：① 构建期 ForgeGradle 会把我们的 AT 应用到 dev 类上（日志 `JAR transformation complete`），**编译通过本身就是证明**——没有 AT 的话 `protected` 方法根本编译不过；② 产物里必须有 `META-INF/accesstransformer.cfg` 且内容仍是 SRG 那一行；③ `javap -c` 反查 `LeanClient`：必须是**直接** `invokevirtual net/minecraft/client/Camera.m_90581_(Lnet/minecraft/world/phys/Vec3;)V`，且**不能出现** `java/lang/reflect`/`Method.invoke`。这三条都写进了闸门（第 3 节）并在本次交付里逐条核过。
-  - 万一 AT 在运行时没生效，`camera.setPosition` 会抛 `IllegalAccessError` → **catch 住 + ERROR 一行**，`/tarkovscav client state` 显示 `cameraSlide=unavailable`（**响亮地降级**，不再静默）；正常时应显示 `cameraSlide=at`。
-
-#### 射击：弹道起点跟着歪，方向**故意不修**
-- 钩子：`EntityJoinLevelEvent`，**只在服务端**，只处理 **`owner` 是服务端玩家**的 `Projectile`。TaCZ 的子弹类 `EntityKineticBullet` **就是** `Projectile`（对 `libs/tacz-1.20.1-1.1.8-hotfix.jar` javap 确认：`extends net.minecraft.world.entity.projectile.Projectile`——顺带说明**没打包也没改 TaCZ**），所以同一个钩子覆盖 **TaCZ 枪 + 弓 + 弩**，一行 TaCZ 代码都不用碰。
-- 位移量 = **和相机完全同一个函数** `LeanMath.offsetFor(yaw, lean, leanMaxOffset)`（闸门断言两处调用同源，所以"相机偏多少、弹道起点就偏多少"是**按构造成立**的，不是两个常量碰巧相等）。
-- **方向不动**：相机横移 0.5 格后，准星仍然画在屏幕正中，也就是"从偏移后的眼睛沿原朝向前看"。把弹道起点平移 `o`、速度不变，得到的正是这条射线的**平行副本**，所以**子弹去的正是歪头后准星指的地方**；同时"两束平行射线相距 `o`，打到墙上也相距 `o`"——这就是验收要测的"弹着点横移 ≈ 0.4–0.6 格"（闸门里对 1/2/4/6/8/20/50 格都算出 **0.50**）。**反过来**去"修正速度以命中未偏移视线的落点"会让子弹偏离准星，所以**刻意不做**。
-- 起点位移同样经过**靠墙裁剪**（从子弹出生点算），所以贴墙时不会把子弹生成到墙里。
-- **只在服务端做的代价（必须说清）**：射手自己在客户端还会生成一份本地子弹做曳光（TaCZ 的客户端预测），服务端的权威副本带的是**偏移后**的位置。如果两边都偏移，携带服务端 spawn 数据的那一份会被**偏移两次**；只偏移客户端又会让曳光去的地方和真正结算伤害的地方不一致。所以选择**只偏移服务端**：其他人从第一帧看到的就是歪出去的弹道、**伤害结算也是歪的**，代价是**射手自己**的曳光可能在下一个包到达前的极短时间内还从原来的枪口出发。**真机观感必须由用户确认**（歪头打墙，弹着点应比站直时横移约 0.5 格）。
-
-#### 配置键（都在 `[client]`）
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `leanEnabled` | `true` | 总开关；false = 键位无作用、不压制原版键、不偏移弹道 |
-| `leanMaxOffset` | `0.6` | 满歪时相机（与弹道起点）横移的格数（0–1.5）；**同一个值同时决定两者** |
-| `leanInvertOffset` | `false` | 只翻横移方向（觉得左右反了用它） |
-| `leanInvertRoll` | `false` | 只翻视角 roll（只有倾斜方向反了用它） |
-| `leanRollDegrees` | `12.0` | 满歪时视角 roll（0–45；0 = 只平移不倾斜） |
-| `leanSpeedTicks` | `5` | 从正到满（以及回正）用多少 tick |
-| `leanSuppressVanillaKeys` | `true` | 拦截被歪头键**占用的**原版键（短按由我们重放原版动作、长按不触发）；改绑歪头键后这些键自动恢复；`false` 则完全不干预 |
-| `tapThresholdTicks` | `5` | 按住多少 tick 才算"长按/peek"；**短于它 = 轻点 = 原版动作** |
-| `startMode` | `immediate` | `immediate`（按下即歪）/ `afterThreshold`（到阈值才歪） |
-| `replayVanillaOnTap` | `true` | 轻点是否由我们重放原版动作（false = 轻点也什么都不做，即上一版行为） |
-
-**就地验证**：`/tarkovscav client state` 会多打一行
-`lean=0.00 (left=false right=false) maxOffset=0.60 roll=12.0 speed=5t invertOffset=false invertRoll=false tapThreshold=5t startMode=immediate replayOnTap=true holding=false suppressVanillaKeys=true cameraSlide=at`。
-**肉眼判据（2026-09-23 新增）**：**贴墙歪头**时，枪口/准星应当**真的绕过了墙角**（能看到墙角另一侧的东西），并且 `client state` 的 `cameraSlide=` 必须是 **`at`**（若显示 `unavailable` 就是 AT 没生效，把那一行发我）。**轻点 E 应打开背包、按住 E 应歪头且不开背包、轻点 Q 应丢出一个、按住 Q 应不丢**（2026-09-23 用户改定的语义）。
-
-**闸门**：`tools/selftest_lean.js` —— 键位与默认值、两条压制路径与开关、`leanEnabled=false` 惰性、**服务端不许动玩家**、相机与弹道同源、平行射线在 7 个距离上都相距 0.5、靠墙裁剪的算术（0.3 格墙 → 0.2、0.05 格墙 → 0）、以及配置键 + README（AssetTest 要求）。
+Q/E 恢复原版丢弃物品、背包操作；模组不再注册歪头按键、修改相机或偏移玩家弹道。旧配置中的十个歪头选项在启动时自动清理，修改前会保留原文件备份。
 
 ### 5y. 部队与优质单位（USEC 村民 / BEAR 掠夺者 / 优质村民 / 优质掠夺者）
 

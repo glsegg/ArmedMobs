@@ -5,8 +5,10 @@ import com.gfl.tarkovscav.TarkovScav;
 import com.gfl.tarkovscav.gun.GunAiState;
 import com.gfl.tarkovscav.gun.GunClips;
 import com.gfl.tarkovscav.gun.GunUser;
+import com.tacz.guns.api.item.IGun;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.core.animatable.model.CoreGeoBone;
@@ -172,6 +174,9 @@ public final class RigSupport {
      * rebake that re-hides the props is visible in the log instead of silent.</p>
      */
     public static void hideReferenceProps(GeoModel<?> model, Entity entity) {
+        // Config reload can remove a hidden bone or enable an accessory. Undo our previous pass
+        // first, retaining authored hidden flags and flags on bones we have never touched.
+        RigVisibility.restore(model.getAnimationProcessor().getRegisteredBones());
         List<String> hidden = Config.hiddenBones();
         StringBuilder applied = new StringBuilder();
         StringBuilder reasons = new StringBuilder();
@@ -184,7 +189,7 @@ public final class RigSupport {
         for (String boneName : hidden) {
             Optional<GeoBone> bone = model.getBone(boneName);
             if (bone.isPresent()) {
-                bone.get().setHidden(true);
+                RigVisibility.hide(bone.get());
                 matched++;
                 applied.append(boneName).append(' ');
                 reasons.append("\n    ").append(boneName).append(" <- hiddenBones (reference prop / anchor mesh)");
@@ -203,7 +208,7 @@ public final class RigSupport {
                 if (bone.get().isHidden()) {
                     continue;
                 }
-                bone.get().setHidden(true);
+                RigVisibility.hide(bone.get());
                 accessoryMatched++;
                 applied.append(entry.name()).append(' ');
                 reasons.append("\n    ").append(entry.name()).append(" <- ").append(entry.reason());
@@ -469,6 +474,8 @@ public final class RigSupport {
     private static final float[] GEO_ARM_RAISED = {75.0F, 0.0F, -10.0F, 65.0F, 25.0F, 20.0F};
     private static final float[] GEO_ARM_RELOADING = {35.0F, 0.0F, -20.0F, 55.0F, 35.0F, 15.0F};
     private static final float[] GEO_ARM_HUNKERED = {20.0F, 0.0F, -25.0F, 20.0F, 0.0F, 25.0F};
+    /** Lowered forward carry keeps a long barrel above ground on rigs without authored gun clips. */
+    private static final float[] GEO_ARM_LOW_READY = {65.0F, 0.0F, -10.0F, 65.0F, 25.0F, 20.0F};
 
     /**
      * Poses the arms of a Bedrock rig from {@link #armPose}: the code-side equivalent of an aiming
@@ -476,8 +483,8 @@ public final class RigSupport {
      *
      * <p>Every write is absolute (rest snapshot + angle), which is what makes it idempotent: an
      * additive write here would mark the bone changed, GeckoLib's reset pass would be skipped, and the
-     * angle would grow on every rendered frame (see {@link #applyAimTracking}). The
-     * {@link ArmPose#LOWERED} pose writes nothing at all, so the idle look stays exactly as it was.</p>
+     * angle would grow on every rendered frame (see {@link #applyAimTracking}). Lowered long guns
+     * use a forward carry; pistols and ordinary items keep their existing idle animation.</p>
      *
      * <p>Under {@code client.poseSource = auto} an arm bone a playing clip animates is the clip's and
      * is left alone - this pose is a fallback for a rig with no gun clips, not a second opinion on a rig
@@ -485,12 +492,10 @@ public final class RigSupport {
      * its arms are still written here; a real rig that brings them keeps its own arms.</p>
      */
     public static void applyArmPose(GeoModel<?> model, Entity entity, long instanceId) {
-        float[] angles = switch (armPose(entity)) {
-            case LOWERED -> null;
-            case RAISED -> GEO_ARM_RAISED;
-            case RELOADING -> GEO_ARM_RELOADING;
-            case HUNKERED -> GEO_ARM_HUNKERED;
-        };
+        boolean longGun = entity instanceof LivingEntity living && entity instanceof GunUser user
+                && !living.getMainHandItem().isEmpty() && IGun.getIGunOrNull(living.getMainHandItem()) != null
+                && !user.usesPistolClips();
+        float[] angles = armAngles(armPose(entity), longGun);
         if (angles == null) {
             return;
         }
@@ -512,6 +517,15 @@ public final class RigSupport {
             PoseWriters.note(writers, "LeftArm", PoseWriters.CODE);
             applyArm(left, angles[3], angles[4], angles[5]);
         }
+    }
+
+    private static float[] armAngles(ArmPose pose, boolean longGun) {
+        return switch (pose) {
+            case LOWERED -> longGun ? GEO_ARM_LOW_READY : null;
+            case RAISED -> GEO_ARM_RAISED;
+            case RELOADING -> longGun ? GEO_ARM_LOW_READY : GEO_ARM_RELOADING;
+            case HUNKERED -> longGun ? GEO_ARM_LOW_READY : GEO_ARM_HUNKERED;
+        };
     }
 
     /** Arm ownership: {@code clips} never writes, {@code code} always, {@code auto} only with no track. */

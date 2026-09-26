@@ -8,6 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
@@ -16,6 +17,7 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 /**
  * Puts a city district on the ground <b>right now</b>, out of the very same structure NBT files the
@@ -76,7 +78,7 @@ public final class CityDistrictAssembler {
      */
     static List<Piece> poolPieces(ServerLevel level, String pool, List<Piece> fallback) {
         try {
-            var resource = level.getServer().getResourceManager().getResource(new ResourceLocation(pool));
+            var resource = level.getServer().getResourceManager().getResource(poolResource(pool));
             if (resource.isEmpty()) { return fallback; }
             try (var reader = resource.get().openAsReader()) {
                 var json = com.google.gson.JsonParser.parseReader(reader).getAsJsonObject();
@@ -96,6 +98,22 @@ public final class CityDistrictAssembler {
                     pool, failure.toString());
             return fallback;
         }
+    }
+
+    static ResourceLocation poolResource(String pool) {
+        ResourceLocation id = new ResourceLocation(pool);
+        return new ResourceLocation(id.getNamespace(), "worldgen/template_pool/" + id.getPath() + ".json");
+    }
+
+    static int[] gridCoordinates(int gridSize) {
+        int min = -(gridSize / 2);
+        return IntStream.range(min, min + gridSize).toArray();
+    }
+
+    static BlockPos tileOrigin(BlockPos anchor, int surface, int floorOffset, Vec3i size, Rotation rotation) {
+        BlockPos corner = new BlockPos(anchor.getX(), surface - floorOffset, anchor.getZ());
+        return StructureTemplate.getZeroPositionWithTransform(corner, Mirror.NONE, rotation,
+                size.getX(), size.getZ());
     }
 
     /** The result of one placement, for the command's chat line. */
@@ -129,7 +147,9 @@ public final class CityDistrictAssembler {
                     Config.cityFoundationDepth(), BAKED_BUILDING_DEPTH, Config.cityFoundationDepth());
         }
 
-        int half = gridSize / 2;
+        int[] cells = gridCoordinates(gridSize);
+        int minCell = cells[0];
+        int maxCell = cells[cells.length - 1];
         int placedStreets = 0;
         int placedBuildings = 0;
         int placedDecor = 0;
@@ -137,8 +157,8 @@ public final class CityDistrictAssembler {
         int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
 
         // A road grid first: one tile per cell, rotated deterministically.
-        for (int gx = -half; gx <= half; gx++) {
-            for (int gz = -half; gz <= half; gz++) {
+        for (int gx : cells) {
+            for (int gz : cells) {
                 int x = centre.getX() + gx * 16;
                 int z = centre.getZ() + gz * 16;
                 Piece street = streets.get(random.nextInt(streets.size()));
@@ -165,9 +185,9 @@ public final class CityDistrictAssembler {
         }
 
         // Then the buildings, on the ring of cells just outside the grid, facing it.
-        for (int gx = -half - 1; gx <= half + 1; gx++) {
-            for (int gz = -half - 1; gz <= half + 1; gz++) {
-                boolean inside = gx >= -half && gx <= half && gz >= -half && gz <= half;
+        for (int gx = minCell - 1; gx <= maxCell + 1; gx++) {
+            for (int gz = minCell - 1; gz <= maxCell + 1; gz++) {
+                boolean inside = gx >= minCell && gx <= maxCell && gz >= minCell && gz <= maxCell;
                 if (inside) { continue; }
                 if (random.nextDouble() >= buildingOdds) { continue; }
                 int x = centre.getX() + gx * 16;
@@ -217,13 +237,12 @@ public final class CityDistrictAssembler {
         StructureTemplate template = loaded.get();
         Vec3i size = template.getSize();
         int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE, anchor.getX(), anchor.getZ());
-        BlockPos origin = new BlockPos(anchor.getX(), surface - piece.floorOffset(), anchor.getZ());
+        BlockPos origin = tileOrigin(anchor, surface, piece.floorOffset(), size, rotation);
         StructurePlaceSettings settings = new StructurePlaceSettings()
                 .setRotation(rotation)
                 .setIgnoreEntities(true)
                 .setKeepLiquids(false);
-        template.placeInWorld(level, origin, origin, settings, random, 2);
-        return true;
+        return template.placeInWorld(level, origin, origin, settings, random, 2);
     }
 
     /** The piece paths, for the command's listing and for the gate. */

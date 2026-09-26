@@ -350,6 +350,79 @@ public final class RenderStateGuardLiveTest {
 
     // ------------------------------------------------------------------ runner
 
+    /** A cached ALWAYS value must not hide a raw foreign change, and our pass must not write stencil. */
+    private static void rawStateScenario() {
+        RenderStateGuard.forceAlwaysPassStencil();
+        GL20.glStencilFuncSeparate(GL11.GL_FRONT, GL11.GL_EQUAL, 7, 0x1F);
+        GL20.glStencilFuncSeparate(GL11.GL_BACK, GL11.GL_NEVER, 9, 0x3F);
+        GL11.glStencilOp(GL11.GL_REPLACE, GL11.GL_INCR, GL11.GL_ZERO);
+        RenderStateGuard.forceAlwaysPassStencil();
+        equal("force repairs a raw front-face stencil change", GL11.GL_ALWAYS,
+                GL11.glGetInteger(GL11.GL_STENCIL_FUNC));
+        equal("force repairs a raw back-face stencil change", GL11.GL_ALWAYS,
+                GL11.glGetInteger(GL20.GL_STENCIL_BACK_FUNC));
+        equal("force repairs front stencil ref", 0, GL11.glGetInteger(GL11.GL_STENCIL_REF));
+        equal("force repairs back stencil ref", 0, GL11.glGetInteger(GL20.GL_STENCIL_BACK_REF));
+        equal("force repairs front value mask", 0xFF, GL11.glGetInteger(GL11.GL_STENCIL_VALUE_MASK));
+        equal("force repairs back value mask", 0xFF, GL11.glGetInteger(GL20.GL_STENCIL_BACK_VALUE_MASK));
+        for (int parameter : new int[]{GL11.GL_STENCIL_FAIL, GL11.GL_STENCIL_PASS_DEPTH_FAIL,
+                GL11.GL_STENCIL_PASS_DEPTH_PASS, GL20.GL_STENCIL_BACK_FAIL,
+                GL20.GL_STENCIL_BACK_PASS_DEPTH_FAIL, GL20.GL_STENCIL_BACK_PASS_DEPTH_PASS}) {
+            equal("our draw must preserve existing stencil contents", GL11.GL_KEEP, GL11.glGetInteger(parameter));
+        }
+
+        GlStateManager._enableDepthTest();
+        GlStateManager._depthMask(false);
+        GlStateManager._enableBlend();
+        GlStateManager._disableCull();
+        State before = State.capture();
+        RenderStateGuard guard = RenderStateGuard.snapshot("raw state regression");
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        GL11.glDepthMask(true);
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glEnable(GL11.GL_CULL_FACE);
+        guard.restore();
+        assertSame("raw depth/blend/cull changes are repaired", before, State.capture());
+        equal("GL_NO_ERROR after raw state repair", GL11.GL_NO_ERROR, GL11.glGetError());
+        scenarios++;
+        System.out.println("PASS raw cache-desynchronisation and stencil preservation");
+    }
+
+    private static void resyncUnitScenario() {
+        int[] textures = new int[2];
+        GL11.glGenTextures(textures);
+        try {
+            activate(GL13.GL_TEXTURE0);
+            GlStateManager._bindTexture(textures[0]);
+            RenderSystem.setShaderTexture(0, textures[0]);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, textures[1]);
+            RenderStateGuard.resyncTextureBinding();
+            equal("resync repairs raw-only changes even when the cache matches", textures[0],
+                    GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D));
+            for (int entryUnit : new int[]{2, 15}) {
+                activate(GL13.GL_TEXTURE0);
+                GL11.glBindTexture(GL11.GL_TEXTURE_2D, textures[1]);
+                activate(GL13.GL_TEXTURE0 + entryUnit);
+                GL11.glBindTexture(GL11.GL_TEXTURE_2D, textures[1]);
+                RenderStateGuard.resyncTextureBinding();
+                equal("resync preserves the active unit", GL13.GL_TEXTURE0 + entryUnit,
+                        GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE));
+                equal("resync preserves lightmap/shader-owned binding", textures[1],
+                        GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D));
+                activate(GL13.GL_TEXTURE0);
+                equal("resync updates only base texture unit zero", textures[0],
+                        GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D));
+            }
+            equal("GL_NO_ERROR after unit-aware resync", GL11.GL_NO_ERROR, GL11.glGetError());
+            scenarios++;
+            System.out.println("PASS resync repairs base texture without touching lightmap/shader-owned unit");
+        } finally {
+            for (int texture : textures) {
+                GlStateManager._deleteTexture(texture);
+            }
+        }
+    }
+
     private static void skip(String why) {
         System.out.println("SKIP  RenderStateGuardLiveTest: " + why
                 + " - not a failure, and not a pass either");
@@ -408,6 +481,8 @@ public final class RenderStateGuardLiveTest {
                     }
                 }
             }
+            rawStateScenario();
+            resyncUnitScenario();
         } catch (AssertionError failure) {
             System.out.println("FAIL  RenderStateGuardLiveTest: " + failure.getMessage());
             System.exit(1);
