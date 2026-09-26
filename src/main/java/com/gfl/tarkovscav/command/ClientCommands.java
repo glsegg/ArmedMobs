@@ -335,8 +335,8 @@ public final class ClientCommands {
                 if (part.equalsIgnoreCase("reset")) {
                     // The shipped baseline, read from the single source of truth - a second hard-coded -90
                     // here is exactly how "reset" would have quietly restored the old, sky-pointing value.
-                    rotation = Config.triple(Config.DEFAULT_GUNNER_VILLAGER_GUN_ROTATION, 5.0F, 0.0F, 0.0F);
-                    offset = new float[]{0.0F, 0.06F, -0.09F};
+                    rotation = Config.triple(Config.DEFAULT_GUNNER_VILLAGER_GUN_ROTATION, 10.0F, 0.0F, 0.0F);
+                    offset = Config.triple(Config.DEFAULT_GUNNER_VILLAGER_GUN_OFFSET, 0.0F, 0.0F, 0.0F);
                     scale = 1.0F;
                     onBody = false;
                     hold = (float) Config.DEFAULT_GUNNER_VILLAGER_HOLD_ARM_PITCH;
@@ -345,11 +345,11 @@ public final class ClientCommands {
                     hunker = (float) Config.DEFAULT_GUNNER_VILLAGER_HUNKER_ARM_PITCH;
                     hideGunWhenIdle = false;
                     idleRotation = Config.triple(Config.DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION,
-                            -2.0F, 0.0F, 0.0F);
+                            -12.0F, 0.0F, 0.0F);
                     reloadRotation = Config.triple(Config.DEFAULT_GUNNER_VILLAGER_RELOAD_GUN_ROTATION,
-                            0.0F, 0.0F, 0.0F);
+                            -12.0F, 0.0F, 0.0F);
                     hunkerRotation = Config.triple(Config.DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_ROTATION,
-                            0.0F, 0.0F, 0.0F);
+                            -12.0F, 0.0F, 0.0F);
                     idleOffset = Config.triple(Config.DEFAULT_GUNNER_VILLAGER_IDLE_GUN_OFFSET,
                             0.0F, 0.0F, 0.0F);
                     reloadOffset = Config.triple(Config.DEFAULT_GUNNER_VILLAGER_RELOAD_GUN_OFFSET,
@@ -766,7 +766,7 @@ public final class ClientCommands {
                 .withStyle(ChatFormatting.GRAY), false);
         source.sendSuccess(() -> Component.literal("  rifle  rot=" + Config.GUN_MOUNT_RIFLE_ROTATION.get()
                 + " offset=" + Config.GUN_MOUNT_RIFLE_OFFSET.get() + " scale=" + Config.GUN_MOUNT_RIFLE_SCALE.get()
-                + "   (offset x = the forward nudge, along the barrel in normalisedHand)")
+                + "   (offset -z = forward along the barrel in normalisedHand)")
                 .withStyle(ChatFormatting.GRAY), false);
         source.sendSuccess(() -> Component.literal("  pistol rot=" + Config.GUN_MOUNT_PISTOL_ROTATION.get()
                 + " offset=" + Config.GUN_MOUNT_PISTOL_OFFSET.get() + " scale=" + Config.GUN_MOUNT_PISTOL_SCALE.get())
@@ -831,10 +831,6 @@ public final class ClientCommands {
                 + " calibrated)")
                 .withStyle(ChatFormatting.GRAY), false);
         reportPose(source);
-        // Player lean (README 5s): the live ramp value, which keys are held, and whether the lateral camera
-        // move is actually available (the reflective Camera#setPosition call can degrade to roll-only).
-        source.sendSuccess(() -> Component.literal("  " + com.gfl.tarkovscav.client.LeanClient.describe())
-                .withStyle(ChatFormatting.GRAY), false);
     }
 
     // ------------------------------------------------------------------ client hide / show
@@ -1041,7 +1037,7 @@ public final class ClientCommands {
             rotation = new float[]{0.0F, 0.0F, 0.0F};
             offset = offhandReset
                     ? Config.triple(Config.DEFAULT_OFFHAND_OFFSET, 0.0F, 0.0F, 0.0F)
-                    : Config.triple(Config.DEFAULT_MOUNT_OFFSET, 0.0F, 0.0F, -0.7F);
+                    : Config.triple(Config.DEFAULT_MOUNT_OFFSET, 0.0F, 0.0F, 0.0F);
             scale = offhandReset ? (float) Config.DEFAULT_OFFHAND_SCALE : (float) Config.DEFAULT_MOUNT_SCALE;
             contextName = Config.DEFAULT_MOUNT_DISPLAY_CONTEXT;
             modeName = Config.DEFAULT_ANCHOR_MODE;

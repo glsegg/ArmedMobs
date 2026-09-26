@@ -79,7 +79,7 @@ public final class GunBrain {
     private ItemStack gunStack = ItemStack.EMPTY;
     private ShootResult lastResult;
     /** Back-off so a mob with an empty gun pool does not re-roll (and re-log) every single tick. */
-    private int equipRetryTicks;
+    private long equipRetryAt;
 
     private int reactionTicks;
     private int aimTicks;
@@ -303,7 +303,8 @@ public final class GunBrain {
     }
 
     public boolean hasGun() {
-        return this.loadout != null && !this.gunStack.isEmpty();
+        return !com.gfl.tarkovscav.block.WeaponRackTaker.hasRackWeapon(this.mob)
+                && this.loadout != null && !this.gunStack.isEmpty();
     }
 
     public ItemStack gunStack() {
@@ -312,7 +313,10 @@ public final class GunBrain {
 
     /** Makes sure this mob has a gun. Called by {@code GunAttackGoal#canUse}. */
     public boolean ensureEquipped() {
-        if (!hasGun() && this.equipRetryTicks <= 0) {
+        if (com.gfl.tarkovscav.block.WeaponRackTaker.hasRackWeapon(this.mob)) {
+            return false;
+        }
+        if (!hasGun() && this.mob.level().getGameTime() >= this.equipRetryAt) {
             equip(this.mob.getRandom());
         }
         return hasGun();
@@ -394,7 +398,7 @@ public final class GunBrain {
 
     /** Rolls a gun for this mob's tier, equips it and refills its ammunition. */
     public void equip(RandomSource random) {
-        if (this.equipRetryTicks > 0) {
+        if (this.mob.level().getGameTime() < this.equipRetryAt) {
             return;
         }
         ScavTier tier = this.user.scavTier();
@@ -407,7 +411,8 @@ public final class GunBrain {
             this.loadout = null;
             this.gunStack = ItemStack.EMPTY;
             this.mob.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-            this.equipRetryTicks = 100;
+            // No gun means GunAttackGoal cannot tick, so the retry must use the world's clock.
+            this.equipRetryAt = this.mob.level().getGameTime() + 100;
             return;
         }
         applyLoadout(rolled, "equipped");
@@ -429,6 +434,25 @@ public final class GunBrain {
             return;
         }
         applyLoadout(loadout, "restored");
+    }
+
+    /** Adopts an existing gun without replacing its attachments, magazine, chamber or other item data. */
+    public boolean equipLoadout(GunLoadout loadout, ItemStack stack) {
+        IGun gun = IGun.getIGunOrNull(stack);
+        if (loadout == null || gun == null || !loadout.gunId().equals(gun.getGunId(stack))
+                || ScriptedGuns.isBlocked(loadout.gunId())) {
+            return false;
+        }
+        applyLoadout(loadout, stack, "equipped");
+        return true;
+    }
+
+    /** Vanilla has already restored the hand stack before the entity's additional save data is read. */
+    public void restoreLoadout(GunLoadout loadout) {
+        if (!equipLoadout(loadout, this.mob.getMainHandItem())) {
+            // Older or invalid saves can lack a matching stack. Keep the existing safe replacement path.
+            equipLoadout(loadout);
+        }
     }
 
     /**
@@ -469,11 +493,16 @@ public final class GunBrain {
     }
 
     private void applyLoadout(GunLoadout loadout, String verb) {
-        this.loadout = loadout;
-        this.gunStack = GunPool.buildGun(loadout, this.mob.getRandom(), name());
+        ItemStack stack = GunPool.buildGun(loadout, this.mob.getRandom(), name());
         // README 5p: with attachments on it, the capacity is whatever the ITEM now says - refillAmmo below
         // reads that rather than the loadout's own magazine size.
-        GunAttachments.refillToCapacity(this.gunStack);
+        GunAttachments.refillToCapacity(stack);
+        applyLoadout(loadout, stack, verb);
+    }
+
+    private void applyLoadout(GunLoadout loadout, ItemStack stack, String verb) {
+        this.loadout = loadout;
+        this.gunStack = stack;
         this.mob.setItemInHand(InteractionHand.MAIN_HAND, this.gunStack);
         // TaCZ caches `currentGunItem = () -> shooter.getMainHandItem()` here; without it the very
         // first shoot() answers NOT_DRAW for ever.
@@ -663,9 +692,6 @@ public final class GunBrain {
         this.stateTicks++;
         if (this.watchdogTicks > 0) {
             this.watchdogTicks--;
-        }
-        if (this.equipRetryTicks > 0) {
-            this.equipRetryTicks--;
         }
         if (this.burstPause > 0) {
             this.burstPause--;

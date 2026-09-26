@@ -163,10 +163,10 @@ console.log('');
 console.log('5. the transform mapping (the weapon decides how it fights)');
 check(/TACZ_GUN\("tacz_gun"\)/.test(arm) && /BOW\("bow"\)/.test(arm) && /CROSSBOW\("crossbow"\)/.test(arm)
   && /MELEE\("melee"\)/.test(arm), 'the five armaments are named');
-check(/case TACZ_GUN ->[\s\S]{0,1600}?GunPool\.loadoutFor\(tier, gunId\)[\s\S]{0,600}?equipLoadout\(loadout\)/
-  .test(taker), 'a TaCZ gun goes through GunPool.loadoutFor + equipLoadout (the GunBrain path)');
-check(/loadout == null[\s\S]{0,400}?converting unarmed \(melee only\)[\s\S]{0,200}?return false/.test(taker),
-  'a gun the pool cannot feed means NO gun, a WARN, and no invented weapon');
+check(/case TACZ_GUN ->[\s\S]{0,1600}?GunPool\.loadoutFor\(tier, gunId\)[\s\S]{0,600}?equipLoadout\(loadout, taken\)/
+  .test(taker), 'a TaCZ gun goes through GunPool.loadoutFor + exact-stack equipLoadout (the GunBrain path)');
+check(/loadout == null[\s\S]{0,400}?refusing conversion and returning the gun[\s\S]{0,200}?return false/.test(taker),
+  'a gun the pool cannot feed refuses conversion, WARNs, and returns the original weapon');
 check(/case BOW, CROSSBOW, MELEE ->[\s\S]{0,200}?setItemInHand\(InteractionHand\.MAIN_HAND, taken\)/
   .test(taker), 'bow/crossbow/melee are held, so the goal set can see them');
 check(/ModEntities\.GUNNER_VILLAGER\.get\(\)/.test(taker) && /ModEntities\.GUNNER_PILLAGER\.get\(\)/.test(taker),
@@ -183,7 +183,8 @@ check(/ArmedRangedGoal\.isRangedWeapon\(this\.user\.asMob\(\)\.getMainHandItem\(
 check(/implements GunUser, RangedAttackMob/.test(villager) && /performRangedAttack/.test(villager),
   'the villager implements RangedAttackMob (the vanilla bow goal is Monster-bound and cannot be used)');
 check(/getMobArrow|ProjectileUtil/.test(villager), 'its shot follows the vanilla skeleton pattern');
-check(/restoreArmament\(this\)/.test(villager) && /restoreArmament\(this\)/.test(pillager),
+check(/restoreArmament\(this, tag\.contains\("HandItems"\)\)/.test(villager)
+  && /restoreArmament\(this, tag\.contains\("HandItems"\)\)/.test(pillager),
   'a reload re-applies the rack weapon (otherwise an archer silently becomes a gunner again)');
 check(/unsupported item \{\}/.test(arm) && /WARNED\.add\(id\)/.test(arm) && /TarkovScav\.LOGGER\.warn/.test(arm),
   'an unsupported item is WARNed once per item id, by name');
@@ -198,8 +199,8 @@ check(!/rack\.take\(\)/.test(taker),
 check(/public ItemStack claim\(\)/.test(be) && /if \(this\.infinite\) \{\s*return this\.held\.copy\(\);/.test(be)
   && /return take\(\);/.test(be),
   'claim() copies on a creative rack and consumes on a normal one, in one place');
-check(/server\.addFreshEntity\(armed\)[\s\S]{0,120}?recruit\.discard\(\)/.test(taker),
-  'the old mob is discarded only AFTER the new one exists');
+check(/if \(!armedWithIt \|\| !server\.addFreshEntity\(armed\)\) \{[\s\S]{0,850}?return;\s*\}\s*recruit\.discard\(\)/.test(taker),
+  'the old mob is discarded only AFTER successful armament and entity insertion');
 check(/if \(armed == null\)[\s\S]{0,200}?the item stays on the rack/.test(taker),
   'a failed spawn leaves the item on the rack');
 check(/taken\.isEmpty\(\)\) \{[\s\S]{0,60}?return;/.test(taker),

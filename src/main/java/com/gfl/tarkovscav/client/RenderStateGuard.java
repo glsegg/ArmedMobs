@@ -183,6 +183,12 @@ public final class RenderStateGuard {
         // desync; the func, which IS cached, is set through GlStateManager below.
         GL11.glEnable(GL_STENCIL_TEST);
         GlStateManager._stencilFunc(GL_ALWAYS, 0, 0xFF);
+        // Also repair raw driver changes on both faces, independent of the cached implementation.
+        GL11.glStencilFunc(GL_ALWAYS, 0, 0xFF);
+        // An inherited REPLACE/INCR operation would otherwise modify the shared stencil buffer on
+        // every fragment of our always-pass draw. Preserve its contents, including after raw GL calls.
+        GlStateManager._stencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_KEEP);
+        GL11.glStencilOp(GL11.GL_KEEP, GL11.GL_KEEP, GL11.GL_KEEP);
     }
 
     /** Puts everything back the way we found it, and reports a mismatch when asked to. */
@@ -243,6 +249,12 @@ public final class RenderStateGuard {
         } else {
             GlStateManager._disableCull();
         }
+        // Foreign renderers can bypass these caches too. Synchronise the driver even when the cached
+        // calls above were skipped because Minecraft still believed the entry state was active.
+        GL11.glDepthMask(this.depthWrite);
+        restoreToggle(GL_DEPTH_TEST, this.depthTest);
+        restoreToggle(GL_BLEND, this.blend);
+        restoreToggle(GL_CULL_FACE, this.cull);
         // ---------------------------------------------------------------------------------------------
         // THE SHADER SAMPLERS, THE ENTITY UNITS AND THE ENTRY UNIT (ported from the older
         // EdDYON/tarkovscav snapshot - restore items 3 and 4). Order is the contract: the samplers are
@@ -293,6 +305,14 @@ public final class RenderStateGuard {
         GL13.glActiveTexture(unit);
     }
 
+    private static void restoreToggle(int capability, boolean enabled) {
+        if (enabled) {
+            GL11.glEnable(capability);
+        } else {
+            GL11.glDisable(capability);
+        }
+    }
+
     /** True when GlStateManager has a cache slot for this unit; its array is {@code TEXTURE_COUNT} long. */
     private static boolean cacheHasSlot(int unit) {
         int index = unit - GL13.GL_TEXTURE0;
@@ -315,29 +335,24 @@ public final class RenderStateGuard {
     }
 
     /**
-     * Makes the raw GL texture binding and Minecraft's cached one the same value again.
-     *
-     * <p>Call it after any foreign draw that touches textures outside {@code RenderSystem} (TaCZ does). It
-     * binds the id Minecraft <em>thinks</em> is current, so that a later
-     * {@code RenderType#setupRenderState} which compares against its cache cannot conclude "already bound"
-     * while the GPU is actually sampling something else - the mismatch that shows up as untextured black
-     * geometry (README 5w).</p>
+     * Rebinds shader sampler 0 on the base texture unit through both the cache and the driver. The
+     * entry unit is preserved: a foreign renderer may have left an overlay, lightmap or shader unit
+     * active, and binding the base texture there would overwrite an unrelated texture.
      */
     public static void resyncTextureBinding() {
         int cached = RenderSystem.getShaderTexture(0);
-        int bound = GlStateManager._getInteger(GL_TEXTURE_BINDING_2D);
-        if (cached != 0 && cached != bound) {
-            GlStateManager._bindTexture(cached);
-            if (Config.logGlState()) {
-                TarkovScav.LOGGER.info("[gldebug] texture cache resync: raw {} -> cached {}", bound, cached);
-            }
+        int entryUnit = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+        try {
+            restoreUnitBinding(GL13.GL_TEXTURE0, cached);
+        } finally {
+            activateTexture(entryUnit);
         }
     }
 
     /**
      * Puts the model's texture back on the shader after a foreign draw (README 5w). This is the explicit
-     * rebind the per-bone item layer needs: {@code RenderSystem} is cache-aware, so this is a no-op when
-     * nothing changed and a real bind when the foreign renderer desynced the cache. Kept in the guard so
+     * rebind the per-bone item layer needs: update the sampler, then repair the base-unit binding even
+     * when a foreign renderer bypassed Minecraft's cache. Kept in the guard so
      * that every GL/texture write in the client package still lives in exactly one file.
      */
     public static void rebindTexture(net.minecraft.resources.ResourceLocation texture) {

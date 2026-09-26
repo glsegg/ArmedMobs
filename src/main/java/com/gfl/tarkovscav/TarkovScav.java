@@ -79,6 +79,8 @@ public class TarkovScav {
         com.gfl.tarkovscav.loot.ModLoadedLootCondition.CONDITIONS.register(modBus);
         modBus.addListener(this::onCommonSetup);
 
+        ConfigMigration.migrate(net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get()
+                .resolve(MOD_ID + "-common.toml"));
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         MinecraftForge.EVENT_BUS.register(this);
@@ -90,9 +92,6 @@ public class TarkovScav {
         // The delayed assertions of /tarkovscav test watch|stall (see FightHarness for why they are
         // not scheduled with a TickTask).
         MinecraftForge.EVENT_BUS.register(com.gfl.tarkovscav.command.FightHarness.class);
-        // Player lean, server half (README 5s): the shot-origin offset for a leaning player's projectiles and
-        // the guard that keeps the vanilla drop key from throwing items while leaning.
-        MinecraftForge.EVENT_BUS.register(com.gfl.tarkovscav.lean.LeanServerEvents.class);
         // The kill feed (README 5u): one line per death, for the players allowed to see it.
         MinecraftForge.EVENT_BUS.register(com.gfl.tarkovscav.killfeed.KillFeed.class);
         // Grenades (README 5v): the smoke clouds are ticked by hand; the blast itself is called from the entity.
@@ -124,8 +123,6 @@ public class TarkovScav {
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(ModEntities::registerSpawnPlacements);
-        // The lean's one packet (README 5s). Registered on both sides; only a client ever sends it.
-        com.gfl.tarkovscav.lean.LeanNetwork.register();
         // The kill feed's one packet (README 5u): server -> client only.
         com.gfl.tarkovscav.killfeed.KillFeedNetwork.register();
         // The capture HUD's one packet (README 7p): server -> client only, names and numbers.

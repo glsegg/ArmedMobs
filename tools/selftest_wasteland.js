@@ -275,8 +275,9 @@ check(/extends RandomSpreadStructurePlacement/.test(placementSource),
 check(/instanceof FixedBiomeSource/.test(placementSource)
   && /urban_wasteland/.test(placementSource),
   'its discriminator is a fixed biome source holding the wasteland biome');
-check(/isStructureChunk\(ChunkGeneratorStructureState/.test(placementSource),
-  'it overrides isStructureChunk(ChunkGeneratorStructureState, ...)');
+check(/isPlacementChunk\(ChunkGeneratorStructureState/.test(placementSource)
+    && !/public boolean isStructureChunk\(/.test(placementSource),
+  'it overrides the placement predicate and retains vanilla frequency/exclusion checks');
 check(/normalSpacing, this\.normalSeparation/.test(placementSource)
   && /denseSpacing, this\.denseSeparation/.test(placementSource),
   'both branches run the same vanilla formula, one with the shipped pair and one with the dense pair');
@@ -288,19 +289,12 @@ check(/Registries\.STRUCTURE_PLACEMENT\b/.test(worldgenSource)
   'ModWorldgen registers tarkovscav:wasteland_spread on the structure-placement registry');
 check(/ModWorldgen\.register\(modBus\)/.test(read('TarkovScav.java')),
   'TarkovScav registers it');
-// The dimension discriminator. An access transformer was tried first and did not publish the field in the
-// ForgeGradle dev workspace, so the class reads it reflectively through a cached Field - and the AT file
-// must stay exactly as it was (the camera line only).
+// The dimension discriminator reads the private field through a cached reflective lookup.
+// It does not depend on the camera access transformer removed with player lean.
 check(/"biomeSource"/.test(placementSource) && /"f_254681_"/.test(placementSource)
   && /getDeclaredField/.test(placementSource),
   'the placement resolves ChunkGeneratorStructureState#biomeSource once, under both its official and SRG'
   + ' names (vanilla keeps it private, and it is the only reachable dimension discriminator)');
-const accessTransformer = fs.readFileSync(
-  path.join(RES, 'META-INF', 'accesstransformer.cfg'), 'utf8');
-check(accessTransformer.trim().split(/\r?\n/).length === 1
-  && /Camera m_90581_/.test(accessTransformer),
-  'the access transformer still contains only the camera line',
-  `${accessTransformer.trim().split(/\r?\n/).length} line(s)`);
 
 // ------------------------------------------------------------------ 4. the beacon item
 console.log('');

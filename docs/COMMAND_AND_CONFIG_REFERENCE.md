@@ -399,7 +399,7 @@
 | `sniper.spawnWeight` | `1` | 狙击掠夺者的自然刷新权重 | 0..1000；0 = 禁用自然刷新而不禁用该怪 |
 | `sniper.villagerWeight` | `1` | 狙击村民的自然刷新权重（不高于掠夺者 1） | 0..1000 |
 
-### 5.15 `[client]`（模型 / 挂枪 / 姿势 / 歪头）
+### 5.15 `[client]`（模型 / 挂枪 / 姿势）
 
 | 键名 | 默认值 | 作用 | 备注/推荐范围 |
 | --- | --- | --- | --- |
@@ -409,11 +409,12 @@
 | `client.hiddenBones` | `[]` | 要隐藏的骨骼列表（出厂为空：2026 重导出已删除占位道具；被保护的骨骼会被忽略并 WARN） | 用 `/armedmobs client hide <bone>` 一分法排查 |
 | `client.logHiddenBones` | `true` | 记录每根隐藏骨骼及其原因（每只怪一次） |  |
 | `client.gunAnchorBone` | `"RightHandLocator"` | 主手枪挂载的骨骼名 | 回退链：本名 → `RightHandLocator` → `RightHand` |
+| `client.gunMountRevision` | `1` | 持枪配置的一次性迁移版本；缺失或小于 1 时，仅修正确定的历史默认偏移及完整村民预设，并保存原始备份 | 自动维护；迁移后保留用户再次修改的值，无需手动调低 |
 | `client.gunMountRifleRotation` | `[0, 0, 0]` | 步枪类挂枪的额外旋转（度，`[x, y, z]`，按 X→Y→Z 应用） | 默认中性：显示上下文已修正姿态 |
-| `client.gunMountRifleOffset` | `[0, 0, -0.7]` | 步枪类挂枪的偏移（方块，锚点帧 `[x, y, z]`）；−0.7 是用户实测的向前滑移 |  |
+| `client.gunMountRifleOffset` | `[0, 0, 0]` | 步枪类相对手掌握点的额外偏移（方块，锚点帧 `[x, y, z]`）；各枪自身的定位由 TaCZ 枪包提供 | 旧默认 `[0, 0, -0.7]` 仅在首次迁移时归零，其它自定义值保留 |
 | `client.gunMountRifleScale` | `1.0` | 步枪类额外统一缩放（TaCZ 自身已乘 0.6） | 0.05..4.0 |
 | `client.gunMountPistolRotation` | `[0, 0, 0]` | 手枪类挂枪旋转（规则同步枪） |  |
-| `client.gunMountPistolOffset` | `[0, 0, -0.7]` | 手枪类挂枪偏移（与步枪同一 normalisedHand 帧，故同值） | 觉得手枪偏高可自己加回 `-0.125`：`[0, -0.125, -0.7]` |
+| `client.gunMountPistolOffset` | `[0, 0, 0]` | 手枪类相对手掌握点的额外偏移；零值直接使用枪包定位 | 与步枪偏移独立配置；无需为每把枪重复添加定位偏移 |
 | `client.gunMountPistolScale` | `1.0` | 手枪类额外统一缩放 | 0.05..4.0 |
 | `client.gunMountDisplayContext` | `"THIRD_PERSON_RIGHT_HAND"` | 持枪渲染用的 `ItemDisplayContext`（TaCZ 渲染器按此分支） | 接受任意 `ItemDisplayContext` 名，大写。`FIXED` 会镜像翻转并放大（物品展示框布局），`FIRST_PERSON_*` 与 `THIRD_PERSON_LEFT_HAND` 什么都不画 |
 | `client.gunAnchorMode` | `"normalisedHand"` | 锚点帧模式：`normalisedHand`（转成原版手持帧）或 `locatorAnimated` | 未识别的值会 WARN 并回到 `normalisedHand` |
@@ -428,11 +429,11 @@
 | `client.gunnerVillagerHoldArmPitch` | `0.0` | 持枪但未瞄准（LOWERED/IDLE）时的同一偏移；0 = 原版抱臂 | −180..180 |
 | `client.gunnerVillagerReloadArmPitch` | `0.0` | 换弹姿势的手臂偏移 | −180..180 |
 | `client.gunnerVillagerHunkerArmPitch` | `0.0` | 撤退（HUNKERED）姿势的手臂偏移；正值把手臂压向身体 | −180..180 |
-| `client.gunnerVillagerGunOffset` | `[0, 0.06, -0.09]` | 枪相对村民手臂块的偏移（方块，`[x, y, z]`；−Z 向前，+Y 向上，+X 为村民右侧） |  |
-| `client.gunnerVillagerGunRotation` | `[5, 0, 0]` | 枪在手臂帧内的旋转（度，`[pitch, yaw, roll]`，按 X→Y→Z）；出厂 `5,0,0`（源码常量；README §5j 历史提到 −40） | 枪的倾角 = 手臂俯仰 + 本键 X + 该姿势增量 − 90 |
-| `client.gunnerVillagerIdleGunRotation` | `[-2, 0, 0]` | **仅闲置**时叠加到上键的旋转增量 |  |
-| `client.gunnerVillagerReloadGunRotation` | `[0, 0, 0]` | **仅换弹**时叠加的旋转增量 |  |
-| `client.gunnerVillagerHunkerGunRotation` | `[0, 0, 0]` | **仅撤退**时叠加的旋转增量 |  |
+| `client.gunnerVillagerGunOffset` | `[0, 0, 0]` | 枪相对村民抱臂动画握点的额外偏移（方块，`[x, y, z]`）；零值使 TaCZ 枪包握点落在手上 | 额外偏移在配置的持枪旋转之后应用 |
+| `client.gunnerVillagerGunRotation` | `[10, 0, 0]` | 围绕握点、在手臂帧内的旋转（度，`[pitch, yaw, roll]`，按 X→Y→Z） | 默认配合瞄准手臂姿势使枪口水平；叠加姿势旋转不会移动零偏移握点 |
+| `client.gunnerVillagerIdleGunRotation` | `[-12, 0, 0]` | **仅闲置**时叠加到上键的旋转增量 | 默认抬高长枪枪口，避免垂到脚底 |
+| `client.gunnerVillagerReloadGunRotation` | `[-12, 0, 0]` | **仅换弹**时叠加的旋转增量 | 围绕握点旋转，不改变瞄准姿势 |
+| `client.gunnerVillagerHunkerGunRotation` | `[-12, 0, 0]` | **仅撤退**时叠加的旋转增量 | 围绕握点旋转，不改变瞄准姿势 |
 | `client.gunnerVillagerIdleGunOffset` | `[0, 0, 0]` | **仅闲置**时叠加到 `gunnerVillagerGunOffset` 的位置增量 |  |
 | `client.gunnerVillagerReloadGunOffset` | `[0, 0, 0]` | **仅换弹**时的位置增量 |  |
 | `client.gunnerVillagerHunkerGunOffset` | `[0, 0, 0]` | **仅撤退**时的位置增量 |  |
@@ -448,16 +449,6 @@
 | `client.molangVariables` | `"pitch"` | 喂给 rig 自身 `ysm.*`/`query.*` 瞄准变量的范围：`off`/`pitch`/`all`（`all` 含 yaw） | 未识别值回退 `pitch` |
 | `client.torsoYawShare` | `0.25` | 代码把多少看向偏航放在胸腔上（其余给头，瞄准落点不变） | 0.0..1.0 |
 | `client.logPoseWriters` | `false` | 每帧输出一行 `[pose]`，写明每根姿势骨骼的写入者 |  |
-| `client.leanEnabled` | `true` | 玩家歪头总开关。false = 歪头键完全无效（不改相机、不屏蔽按键、不偏移弹道起点） |  |
-| `client.leanMaxOffset` | `0.6` | 满歪时相机侧移距离（方块），也是自己弹道的枪口侧移距离 | 0.0..1.5 |
-| `client.leanRollDegrees` | `12.0` | 满歪时视角滚转（度）；0 = 只平移 | 0.0..45.0 |
-| `client.leanInvertOffset` | `false` | 只反转侧移方向 |  |
-| `client.leanInvertRoll` | `false` | 只反转视角滚转（移动看起来对、地平线歪错方向时用） |  |
-| `client.leanSpeedTicks` | `5` | 歪头过渡所需 tick | 1..20 |
-| `client.leanSuppressVanillaKeys` | `true` | 歪头键占用 Q/E 时屏蔽这两个原版键（含短按），按「绑定的键」而非全局屏蔽 | false = 完全不动原版键（歪头同时会丢物品/开背包） |
-| `client.tapThresholdTicks` | `5` | 短于多少 tick 视为「点按」 | 1..40 |
-| `client.startMode` | `"immediate"` | 歪头起始模式 |  |
-| `client.replayVanillaOnTap` | `true` | 点按（短于 `tapThresholdTicks`）时是否在松手时由本模组补做原版动作（E 开背包、Q 丢一个） | false = 点按什么都不做 |
 
 ### 5.16 `[client.headAccessories]`
 
@@ -1004,7 +995,7 @@ assets/tarkovscav/lang/en_us.json / zh_cn.json
 1. `killFeed.mode` 除出厂值 `"involved"` 之外的**全部合法取值**——本次只读了 `Config` 中的默认串与 `ClientCommands` 对该键的读取，未逐个核对解析函数的取值集合。请以 README §5u 为准。
 2. TaCZ 枪包 / 配件包**自身的文件布局与 id 命名规则**（本模组只通过 TaCZ 公开 API 读取索引）。本文只确证了本模组读取的部分。
 3. 语音池 `tools/voice_pools.json` 中的中文分类名（该文件在仓库里以非 UTF-8 形式保存，读取呈乱码），因此本文**不引用**其中的分类名，只引用代码真正接受的 `<family>_<category>` 六类。
-4. `client.startMode` 的合法取值集合（源码中默认串为 `"immediate"`，本次未追进解析函数）。
+Q/E 歪头功能已于本轮维护移除，对应十个客户端配置项不再注册。启动时会在备份原文件后清理旧键，其余自定义配置保留。
 
 ### 9.2 撰写本文时发现并已修复的文档漂移（2026-09-25）
 

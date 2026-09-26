@@ -380,7 +380,7 @@ public class LadderClimbGoal extends Goal {
             finish(LadderSearch.Exit.GEOMETRY_LOST);
             return;
         }
-        if (combatWhileClimbing && this.user != null) {
+        if (combatWhileClimbing && this.user != null && this.user.gunBrain().hasGun()) {
             // The opt-in half of ladder.combatWhileClimbing: the brain is not ticked by GunAttackGoal while
             // this goal holds MOVE+LOOK, so it is ticked here - the same GunBrain#tick, once. The climb
             // re-asserts the delta afterwards, so the brain's own navigation cannot win the tick.

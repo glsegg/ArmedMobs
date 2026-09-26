@@ -37,12 +37,10 @@ import net.minecraft.world.item.ItemStack;
  *   <li><b>the arms rotation</b>, driven by the synced {@code GunAiState} through {@link ArmPose} -
  *       the same single source of truth the Bedrock rig uses, so the villager cannot end up "aiming"
  *       while the brain is idle;</li>
- *   <li><b>{@code translateToHand}</b>, whose body is the same single line {@code HumanoidModel} uses
- *       ({@code getArm(arm).translateAndRotate(poseStack)}). With that in place the vanilla
- *       {@code ItemInHandLayer} applies its own standard hand frame
- *       ({@code mulPose(XP,-90)} / {@code mulPose(YP,180)} / {@code translate(+/-1/16, 0.125, -0.625)}),
- *       which is exactly the frame TaCZ's third-person gun locator groups are authored for - the same
- *       frame {@code GunInHandGeoLayer#applyVanillaHandFrame} reproduces for the rig.</li>
+ *   <li><b>a grip socket</b> on each half of the crossed forearm bar. {@link GunGripModel} lets the
+ *       held-gun layer use that socket directly, without vanilla's extra humanoid arm-length offset.
+ *       The gun pack's {@code thirdperson_hand} locator therefore meets the rendered hand, and gun
+ *       scale/rotation act around that grip instead of moving it towards the face.</li>
  * </ol>
  *
  * <p>The two arm angles are config keys ({@code client.gunnerVillagerAimArmPitch} /
@@ -50,7 +48,7 @@ import net.minecraft.world.item.ItemStack;
  * looks right on a vanilla villager body is an eye question, and a config flip is a better answer to
  * that than a rebuild.</p>
  */
-public class GunnerVillagerModel extends VillagerModel<GunnerVillagerEntity> implements ArmedModel {
+public class GunnerVillagerModel extends VillagerModel<GunnerVillagerEntity> implements ArmedModel, GunGripModel {
     /**
      * The vanilla mesh's crossed-arms block. {@code VillagerModel} keeps no field for it and never poses it,
      * so it is looked up from the baked root exactly as the vanilla mesh names it - and its baked pose is
@@ -134,34 +132,54 @@ public class GunnerVillagerModel extends VillagerModel<GunnerVillagerEntity> imp
             // LOWERED returned above (and the no-weapon path returned before that).
             case LOWERED -> 0.0F;
         };
-        this.arms.xRot = this.armsRestXRot + pitch * Mth.DEG_TO_RAD;
-        this.arms.yRot = 0.0F;
+        float aimPitch = pose == ArmPose.RAISED ? headPitch : 0.0F;
+        this.arms.xRot = this.armsRestXRot + (pitch + aimPitch) * Mth.DEG_TO_RAD;
+        this.arms.yRot = pose == ArmPose.RAISED ? netHeadYaw * Mth.DEG_TO_RAD : 0.0F;
     }
 
     /**
-     * The held-item transform. One line, the same one {@code HumanoidModel#translateToHand} uses - the
-     * vanilla {@code ItemInHandLayer} adds the rest of the hand frame itself, which is what makes the
-     * TaCZ gun land in the right orientation.
-     *
-     * <p>Three extra transforms sit on top, all read live from the config so
-     * {@code /tarkovscav client villagerpose} takes effect on the next frame:</p>
-     * <ol>
-     *   <li><b>anchor</b> - {@code arms} (default) uses the animated crossed-arms block, so the gun rises
-     *       and falls with the aiming/reload/retreat pose; {@code body} pins it to the torso instead;</li>
-     *   <li><b>rotation</b> ({@code gunnerVillagerGunRotation}, degrees about X then Y then Z) - needed
-     *       because the hand frame the vanilla layer adds is authored for an arm hanging <em>down</em>,
-     *       while the villager's arm is a horizontal bar across the chest - <b>plus</b> the delta of the
-     *       <em>current</em> pose (README 5j: one delta per pose, so all four silhouettes are independently
-     *       tunable; RAISED - aiming and firing - is the base value itself, with no delta);</li>
-     *   <li><b>offset</b> and <b>scale</b> - where the gun sits in that frame, and an extra uniform size
-     *       on top of TaCZ's own 0.6.</li>
-     * </ol>
+     * Legacy vanilla item path, retained for ordinary non-TaCZ equipment. Guns use the explicit
+     * socket below, through {@link TaczItemInHandLayer}, so they do not inherit a second hand offset.
      */
     @Override
     public void translateToHand(HumanoidArm arm, PoseStack poseStack) {
         ModelPart anchor = Config.gunnerVillagerGunOnBody() ? this.root() : this.arms;
         anchor.translateAndRotate(poseStack);
+        applyGunRotation(poseStack);
+        float[] offset = gunOffset();
+        poseStack.translate(offset[0], offset[1], offset[2]);
+        applyGunScale(poseStack);
+    }
 
+    /**
+     * The crossed forearm bar occupies x=-4..4, y=2..6, z=-2..2 in the vanilla mesh. A socket in
+     * the centre of each half of its front face stays on the rendered hands in every arm pose.
+     * TaCZ maps its thirdperson_hand locator to the item origin, so no humanoid arm-length
+     * translation is needed. With zero correction offset, rotation and scale cannot move the grip.
+     * Explicit offsets retain the existing rotated arm-frame convention.
+     */
+    @Override
+    public void translateToGunGrip(HumanoidArm arm, PoseStack poseStack) {
+        if (Config.gunnerVillagerGunOnBody()) {
+            this.torso.translateAndRotate(poseStack);
+            poseStack.translate(this.arms.x / 16.0F, this.arms.y / 16.0F, this.arms.z / 16.0F);
+            poseStack.mulPose(com.mojang.math.Axis.XP.rotation(this.armsRestXRot));
+        } else {
+            this.arms.translateAndRotate(poseStack);
+        }
+        poseStack.translate(arm == HumanoidArm.RIGHT ? -2.0F / 16.0F : 2.0F / 16.0F,
+                4.0F / 16.0F, -2.0F / 16.0F);
+        applyGunRotation(poseStack);
+        float[] offset = gunOffset();
+        poseStack.translate(offset[0], offset[1], offset[2]);
+    }
+
+    @Override
+    public void applyGunGripTransform(PoseStack poseStack) {
+        applyGunScale(poseStack);
+    }
+
+    private void applyGunRotation(PoseStack poseStack) {
         float[] rotation = Config.gunnerVillagerGunRotation();
         // One delta per pose, ADDED to the base - and only addition, so aiming/firing (RAISED) is exactly the
         // base rotation the user calibrated, and the other three states can be tuned without touching it.
@@ -184,6 +202,9 @@ public class GunnerVillagerModel extends VillagerModel<GunnerVillagerEntity> imp
         if (rotation[2] != 0.0F) {
             poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(rotation[2]));
         }
+    }
+
+    private float[] gunOffset() {
         float[] offset = Config.gunnerVillagerGunOffset();
         // ... plus this pose's own POSITION delta, the same arrangement as the rotation above: RAISED (aiming
         // and firing) is the base position the user calibrated, and the other three can move the gun without
@@ -199,7 +220,10 @@ public class GunnerVillagerModel extends VillagerModel<GunnerVillagerEntity> imp
             offset = new float[]{offset[0] + offsetDelta[0], offset[1] + offsetDelta[1],
                     offset[2] + offsetDelta[2]};
         }
-        poseStack.translate(offset[0], offset[1], offset[2]);
+        return offset;
+    }
+
+    private static void applyGunScale(PoseStack poseStack) {
         float scale = Config.gunnerVillagerGunScale();
         if (scale != 1.0F) {
             poseStack.scale(scale, scale, scale);

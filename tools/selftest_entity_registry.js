@@ -66,7 +66,7 @@ const registerAllEnd = clientSrc.indexOf('private static <T extends Entity> void
 check(registerAllStart > 0 && registerAllEnd > registerAllStart,
   'ClientSetup has a single registerAll body (the one place that decides renderers)');
 const registerAllBody = clientSrc.slice(registerAllStart, registerAllEnd);
-check(/@SubscribeEvent[\s\S]{0,200}?onRegisterRenderers[\s\S]{0,200}?registerAll\(event, useGecko\)/.test(clientSrc),
+check(/@SubscribeEvent[\s\S]{0,200}?onRegisterRenderers[\s\S]{0,200}?registerAll\(event\)/.test(clientSrc),
   'and the renderer event handler calls it');
 const registerCalls = (clientSrc.match(/\.registerEntityRenderer\(/g) || []).length;
 check(registerCalls === 3,
@@ -84,7 +84,7 @@ const illagerBody = clientSrc.slice(clientSrc.indexOf('private static void illag
   clientSrc.indexOf('public static void onLoadComplete'));
 check(/for \(RegistryObject[\s\S]{0,400}?event\.registerEntityRenderer\(entityType,/.test(illagerBody),
   'and the illager family helper loops over every member passed to it');
-check(/illagerRenderers\(event, useGecko, new RegistryObject\[\] \{[^}]*GUNNER_PILLAGER[^}]*SNIPER_PILLAGER[^}]*BEAR_PILLAGER[^}]*ELITE_PILLAGER/.test(registerAllBody),
+check(/\billagerRenderers\(event, new RegistryObject\[\] \{[^}]*GUNNER_PILLAGER[^}]*SNIPER_PILLAGER[^}]*BEAR_PILLAGER[^}]*ELITE_PILLAGER/.test(registerAllBody),
   'with the illager members listed at the one call site');
 check(/RENDERED\.add\(type\.getId\(\)\);/.test(clientSrc)
   && (clientSrc.match(/RENDERED\.add\(/g) || []).length === 3,
@@ -305,7 +305,7 @@ for (const troop of TROOPS) {
 for (const [listRe, parent, renderer] of [
   [/villagerRenderers\(event,\s*new RegistryObject\[\] \{([^}]*)\}/, 'GunnerVillagerEntity',
     'GunnerVillagerRenderer'],
-  [/illagerRenderers\(event, useGecko,\s*new RegistryObject\[\] \{([^}]*)\}/, 'GunnerPillagerEntity',
+  [/\billagerRenderers\(event,\s*new RegistryObject\[\] \{([^}]*)\}/, 'GunnerPillagerEntity',
     'GunnerPillagerRenderer or GunnerPillagerGeoRenderer'],
 ]) {
   const found = listRe.exec(registerAllBody);

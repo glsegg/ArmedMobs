@@ -285,7 +285,7 @@ console.log('');
 console.log('5. smoke is a simplification, and it is labelled as one');
 check(/class GrenadeEvents/.test(events) && /ParticleTypes\.CAMPFIRE_COSY_SMOKE/.test(events),
   'the cloud is particles');
-check(/if \(entity instanceof Player\) \{[\s\S]{0,120}?continue;/.test(events),
+check(/if \(entity instanceof Player\) \{\s*continue;/.test(events.replace(/\/\/[^\r\n]*/g, '')),
   'players are NOT blinded by smoke (their screen is blocked by the particles instead)');
 check(/MobEffects\.BLINDNESS, 20/.test(events), 'mobs inside it are');
 check(/简化/.test(readme),

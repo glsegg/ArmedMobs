@@ -96,7 +96,10 @@ public class GrenadeItem extends Item {
         grenade.setPos(player.getX(), player.getEyeY() - 0.15D, player.getZ());
         Vec3 look = player.getLookAngle();
         grenade.shoot(look.x, look.y + 0.05D, look.z, (float) speed, 1.0F);
-        level.addFreshEntity(grenade);
+        if (!level.addFreshEntity(grenade)) {
+            grenade.discard();
+            return;
+        }
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.SNOWBALL_THROW,
                 SoundSource.PLAYERS, 0.8F, 0.7F);
         if (!player.getAbilities().instabuild) {

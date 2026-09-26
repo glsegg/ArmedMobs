@@ -9,6 +9,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Mirror;
@@ -82,9 +83,6 @@ public final class CityStructures {
 
     /** name (lower case) -&gt; loaded template. Insertion ordered so listings are stable. */
     private static final Map<String, Loaded> POOL = new LinkedHashMap<>();
-
-    /** Instances placed this session, for the spawn gate. */
-    private static final List<Placed> PLACED = new ArrayList<>();
 
     private CityStructures() {
     }
@@ -310,12 +308,7 @@ public final class CityStructures {
         if (!placed) {
             throw new InvalidStructure("vanilla refused to place " + loaded.id() + " at " + pos.toShortString());
         }
-        Vec3i raw = loaded.size();
-        // A quarter turn swaps the two horizontal axes; the vertical one never changes.
-        Vec3i size = rotation == Rotation.CLOCKWISE_90 || rotation == Rotation.COUNTERCLOCKWISE_90
-                ? new Vec3i(raw.getZ(), raw.getY(), raw.getX())
-                : raw;
-        BoundingBox box = BoundingBox.fromCorners(pos, pos.offset(size.getX() - 1, size.getY() - 1, size.getZ() - 1));
+        BoundingBox box = loaded.template().getBoundingBox(settings, pos);
         record(level, loaded.name(), pos, rotation, mirror, box);
         TarkovScav.LOGGER.info("[city] placed {} at {} (rotation {}, mirror {}), box {}",
                 loaded.id(), pos.toShortString(), rotation, mirror, box);
@@ -325,18 +318,15 @@ public final class CityStructures {
     /** Registers an already-placed box (also used when a box is known from somewhere else). */
     public static void record(ServerLevel level, String name, BlockPos origin, Rotation rotation,
                               Mirror mirror, BoundingBox box) {
-        String dimension = level.dimension().location().toString();
-        PLACED.removeIf(existing -> existing.name().equalsIgnoreCase(name)
-                && existing.dimension().toString().equals(dimension)
-                && existing.origin().equals(origin));
-        PLACED.add(new Placed(name, level.dimension().location(), box, origin, rotation, mirror));
+        CityPlacementData.get(level.getServer()).record(
+                new Placed(name, level.dimension().location(), box, origin.immutable(), rotation, mirror));
     }
 
     /** The gate probe: is this position inside a placed runtime city instance? */
     @Nullable
     public static Placed instanceAt(ServerLevel level, BlockPos pos) {
         ResourceLocation dimension = level.dimension().location();
-        for (Placed placed : PLACED) {
+        for (Placed placed : placed(level.getServer())) {
             if (placed.dimension().equals(dimension) && placed.box().isInside(pos)) {
                 return placed;
             }
@@ -344,9 +334,9 @@ public final class CityStructures {
         return null;
     }
 
-    /** Every instance placed this session. */
-    public static List<Placed> placed() {
-        return List.copyOf(PLACED);
+    /** Every instance recorded in this world, including earlier sessions. */
+    public static List<Placed> placed(MinecraftServer server) {
+        return CityPlacementData.get(server).placed();
     }
 
     /** The names currently in the pool, in registration order. */

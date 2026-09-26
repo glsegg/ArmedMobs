@@ -96,13 +96,11 @@ const keyPattern = /\.define(?:InRange|ListAllowEmpty|List|Enum)?\(\s*(?:List\.o
 const keyMatches = [...config.matchAll(keyPattern)].map((m) => m[1]);
 const keys = [...new Set(keyMatches)];
 const missingKeys = keys.filter((key) => !doc.includes(key));
-check(keyMatches.length === 367,
-  `Config.java registers 367 define() call sites (352 before the ladder + capture batches,`
-  + ` + the 7 [ladder] keys + the 8 [capture] keys)`,
+check(keyMatches.length === 358,
+  `Config.java registers 358 define() call sites including the one-time gun mount revision`,
   `found ${keyMatches.length}`);
-check(keys.length === 337,
-  `those call sites carry 337 distinct key names (the 15 new call sites add 13 names, because both new`
-  + ` sections define "enabled" and that name already exists)`,
+check(keys.length === 328,
+  `those call sites carry 328 distinct key names including gunMountRevision`,
   `found ${keys.length}`);
 check(missingKeys.length === 0, `every config key appears in the document`,
   missingKeys.length ? `missing: ${missingKeys.join(', ')}` : `${keys.length} key(s)`);

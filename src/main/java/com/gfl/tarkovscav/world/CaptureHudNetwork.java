@@ -4,12 +4,14 @@ import com.gfl.tarkovscav.TarkovScav;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -35,6 +37,7 @@ public final class CaptureHudNetwork {
     private static final int MAX_KEY = 256;
     private static final int MAX_NAME = 128;
     private static final int MAX_FACTION = 32;
+    private static final int MAX_BARS = 8;
 
     private CaptureHudNetwork() {
     }
@@ -42,7 +45,8 @@ public final class CaptureHudNetwork {
     /** Called from {@code TarkovScav#onCommonSetup} (both sides register; only the server ever sends). */
     public static void register() {
         CHANNEL.registerMessage(0, CaptureHudMessage.class, CaptureHudMessage::encode,
-                CaptureHudMessage::decode, CaptureHudMessage::handle);
+                CaptureHudMessage::decode, CaptureHudMessage::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     /** Server: the current bars of one city, or a hide. */
@@ -68,6 +72,9 @@ public final class CaptureHudNetwork {
     /** The message: which city, what to call it, one bar per faction, and whether to hide now. */
     public record CaptureHudMessage(String cityKey, String cityName, List<Bar> bars, boolean hide) {
         static void encode(CaptureHudMessage message, FriendlyByteBuf buffer) {
+            if (message.bars().size() > MAX_BARS) {
+                throw new IllegalArgumentException("Too many capture HUD bars: " + message.bars().size());
+            }
             buffer.writeUtf(message.cityKey(), MAX_KEY);
             buffer.writeUtf(message.cityName(), MAX_NAME);
             buffer.writeVarInt(message.bars().size());
@@ -81,7 +88,10 @@ public final class CaptureHudNetwork {
             String cityKey = buffer.readUtf(MAX_KEY);
             String cityName = buffer.readUtf(MAX_NAME);
             int count = buffer.readVarInt();
-            List<Bar> bars = new ArrayList<>(Math.min(count, 8));
+            if (count < 0 || count > MAX_BARS) {
+                throw new io.netty.handler.codec.DecoderException("Invalid capture HUD bar count: " + count);
+            }
+            List<Bar> bars = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
                 bars.add(Bar.decode(buffer));
             }

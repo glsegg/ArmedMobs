@@ -271,11 +271,11 @@ public class WeaponRackBlockEntity extends BlockEntity {
         return true;
     }
 
-    /** The nearest non-removed dropped item inside {@link #absorbBox}, ties broken by entity id. */
+    /** The nearest accepted, non-removed dropped item inside {@link #absorbBox}, ties broken by entity id. */
     @Nullable
     public static net.minecraft.world.entity.item.ItemEntity nearestDrop(Level level, BlockPos pos) {
         var candidates = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
-                absorbBox(pos), drop -> !drop.isRemoved() && !drop.getItem().isEmpty());
+                absorbBox(pos), drop -> !drop.isRemoved() && WeaponRackArmament.accepts(drop.getItem()));
         net.minecraft.world.entity.item.ItemEntity best = null;
         double bestDistance = Double.MAX_VALUE;
         for (net.minecraft.world.entity.item.ItemEntity drop : candidates) {

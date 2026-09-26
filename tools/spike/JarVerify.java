@@ -86,6 +86,14 @@ public final class JarVerify {
                     }
 
                     String name = entry.getName();
+                    if (name.startsWith("com/gfl/tarkovscav/client/MountPreview")) {
+                        problems.add(jar.getFileName() + ": development-only preview included: " + name);
+                    }
+                    if (name.startsWith("com/gfl/tarkovscav/lean/")
+                            || name.startsWith("com/gfl/tarkovscav/client/LeanClient")
+                            || name.equals("META-INF/accesstransformer.cfg")) {
+                        problems.add(jar.getFileName() + ": retired player-lean output remains: " + name);
+                    }
                     if (name.equals("META-INF/mods.toml")) {
                         hasModsToml = true;
                     }

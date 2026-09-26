@@ -47,7 +47,7 @@ import java.util.List;
  *   <tr><th>Took</th><th>Becomes</th><th>Fights with</th></tr>
  *   <tr><td>TaCZ gun</td><td>{@code gunner_villager} / {@code gunner_pillager}</td><td>the shared
  *       {@link GunBrain} - and it is given <b>that</b> gun if the pool can arm it ({@code GunPool.loadoutFor}),
- *       otherwise no gun at all plus a WARN (a gun it cannot feed must not become a magic gun)</td></tr>
+ *       otherwise conversion is refused and the weapon stays on the rack</td></tr>
  *   <tr><td>bow</td><td>same two types</td><td>ranged, our {@code ArmedRangedGoal} (arrows)</td></tr>
  *   <tr><td>crossbow</td><td>same two types</td><td>ranged, same goal, drawn longer</td></tr>
  *   <tr><td>sword / axe</td><td>same two types</td><td>melee, the existing {@code NoGunMeleeGoal}</td></tr>
@@ -130,7 +130,7 @@ public final class WeaponRackTaker {
 
     /** True for a mob the rack may arm. */
     public static boolean isRecruit(Mob mob) {
-        if (mob instanceof GunUser || mob.isBaby() || !mob.onGround()) {
+        if (!mob.isAlive() || mob instanceof GunUser || mob.isBaby() || !mob.onGround()) {
             return false;
         }
         if (!(mob instanceof Villager) && !(mob instanceof Pillager)) {
@@ -172,7 +172,18 @@ public final class WeaponRackTaker {
         armed.setPersistenceRequired();
 
         boolean armedWithIt = applyArmament(armed, taken, armament);
-        server.addFreshEntity(armed);
+        if (!armedWithIt || !server.addFreshEntity(armed)) {
+            // A rejected spawn (e.g. another mod's event cancellation) must not consume the original
+            // mob or its weapon. Creative racks retained their template during claim().
+            if (!rack.infinite()) {
+                rack.put(taken);
+            }
+            armed.discard();
+            rack.setTakeCooldown(Math.max(1, Config.RACK_TAKE_COOLDOWN_TICKS.get()));
+            TarkovScav.LOGGER.warn("[rack] conversion failed at {}; original mob and weapon retained",
+                    rack.getBlockPos().toShortString());
+            return;
+        }
         recruit.discard();
 
         rack.setTakeCooldown(Math.max(1, Config.RACK_TAKE_COOLDOWN_TICKS.get()));
@@ -191,7 +202,7 @@ public final class WeaponRackTaker {
             case TACZ_GUN -> {
                 if (!(armed instanceof GunUser user) || user.gunBrain() == null) {
                     // Only the two gunner types can use a gun, and they are the only ones we create.
-                    TarkovScav.LOGGER.warn("[rack] {} is not a gun user; the gun was consumed anyway",
+                    TarkovScav.LOGGER.warn("[rack] {} is not a gun user; refusing conversion",
                             armed.getName().getString());
                     return false;
                 }
@@ -202,12 +213,11 @@ public final class WeaponRackTaker {
                 GunLoadout loadout = gunId == null ? null : GunPool.loadoutFor(tier, gunId);
                 if (loadout == null) {
                     TarkovScav.LOGGER.warn("[rack] {} took a TaCZ gun whose id {} is not in the pool for"
-                                    + " tier {} - converting unarmed (melee only). The gun was consumed.",
+                                    + " tier {} - refusing conversion and returning the gun.",
                             armed.getName().getString(), gunId, tier);
                     return false;
                 }
-                user.gunBrain().equipLoadout(loadout);
-                return true;
+                return user.gunBrain().equipLoadout(loadout, taken);
             }
             case BOW, CROSSBOW, MELEE -> {
                 armed.setItemInHand(InteractionHand.MAIN_HAND, taken);
@@ -222,19 +232,29 @@ public final class WeaponRackTaker {
     }
 
     /**
-     * Re-applies the rack weapon after a load. Called from the two gunner entities'
-     * {@code readAdditionalSaveData} <b>after</b> their own gun restore, so the bow/sword a converted mob
-     * took wins over the random gun the restore would otherwise put in its hand. Without this a converted
-     * archer would silently turn back into a gunner on the next server restart.
+     * Restores a converted mob's rack weapon before gun restoration. Prefer the stack already loaded by
+     * vanilla, including an empty hand after breakage or disarming. The conversion snapshot is only a
+     * fallback for legacy data without a vanilla HandItems field.
      */
-    public static void restoreArmament(Mob mob) {
+    public static void restoreArmament(Mob mob, boolean handItemsPresent) {
         CompoundTag data = mob.getPersistentData();
         if (!data.contains(TAG_RACK_WEAPON)) {
             return;
         }
         ItemStack taken = ItemStack.of(data.getCompound(TAG_RACK_WEAPON));
-        if (taken.isEmpty()) {
+        WeaponRackArmament kind = WeaponRackArmament.armamentOf(taken);
+        if (kind != WeaponRackArmament.BOW && kind != WeaponRackArmament.CROSSBOW
+                && kind != WeaponRackArmament.MELEE) {
             data.remove(TAG_RACK_WEAPON);
+            return;
+        }
+        if (handItemsPresent) {
+            return;
+        }
+        ItemStack current = mob.getMainHandItem();
+        WeaponRackArmament currentKind = WeaponRackArmament.armamentOf(current);
+        if (currentKind == WeaponRackArmament.BOW || currentKind == WeaponRackArmament.CROSSBOW
+                || currentKind == WeaponRackArmament.MELEE) {
             return;
         }
         mob.setItemInHand(InteractionHand.MAIN_HAND, taken);
