@@ -41,7 +41,8 @@ Armed Mobs（武装暴徒）0.1.0  —— 测试版安装说明
         因上限被拒的刷新会写一行日志，标记 `[spawncap]`（受 `spawn.logSpawnGate` 控制）。
       * **4 个新配置键**（都在 `[spawn]`）：`cityFactionCapEnabled = true`、`cityFactionCap = 12`
         （范围 0..128，**0 = 不设上限**）、`cityFactionCapCountTicks = 20`、`cityFactionCapIgnoreManual = false`。
-        ⚠️ Forge 不会重写已存在的 `config/tarkovscav-common.toml`，老配置需要你手加这四个键（或删掉配置文件重建）。
+        新增的键 Forge 会**自动以默认值补进**你现有的 `config/tarkovscav-common.toml`（不用手加）；
+        只有**改了默认值**的键才需要你手改（例如更早那次的 `cityRegionPadding`）。
       * 门槛 `tools/selftest_spawn_cap.js`（45 项，其中 42 项是编译并运行真算法的可执行证据）；测试当场抓到
         一个真 bug：第一版缓存初值 `Long.MIN_VALUE` 相减**溢出**，会让首次计数永不发生、一旦到上限就**永久
         拒绝**该城所有刷新——现在显式处理「从未计数」与「时钟倒退」。
