@@ -943,6 +943,18 @@ someone" and for talking during the fight. `IDLE` is now **its own pool** of the
 used to borrow `CHATTER` while that batch did not exist). `GRENADE` (2), `MARK` (1) and `DEATH` (4) are
 their own pools.
 
+**The scav says nothing now (2026-10).** These "shared" clips are the **pillager's** - they are the original
+27 the mod shipped - and the request was 「scav这种武装暴徒（非掠夺者暴徒），可以把掠夺者的声音去掉」: the armed
+thug that is not a pillager should stop using the pillager's voice lines. So `tarkovscav:scav` got a family
+of its own (`scav`, `ScavEntity#voiceFamily`) which **owns no clips and is the one family that may not fall
+back to the shared pool** - `VoicePools.pool` returns an empty list for it, so the thug is silent (all six
+categories: contact/chatter/idle/grenade/mark/death). `voice.scavClips = "shared"` is the escape hatch that
+puts the old behaviour back; any other value (including a typo) means silence, so a typo cannot quietly
+restore the pillager's voice. **Only the scav is affected**: the gunners, the snipers and the four troop
+types keep exactly the pools they had, and `scav=1.0` was added to `voice.familyVolume` so the volume lookup
+does not report an unknown family. `/armedmobs test sound scav` says all of this instead of "no such pool",
+and the gate asserts both halves (the family is `scav`, and the fallback is skipped).
+
 <!-- voice-inventory:start -->
 
 #### 阵营语音池（⑪：USEC / BEAR / 优质PMC，每池 5 条）

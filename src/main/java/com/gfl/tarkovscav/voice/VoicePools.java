@@ -14,12 +14,22 @@ import java.util.List;
  *
  * <h2>The table</h2>
  * <p>Every mob answers {@code voiceFamily()}: {@code usec} for the USEC villager, {@code bear} for the BEAR
- * pillager, {@code elite} for the elite pair, and {@code shared} for everything that existed before (so the
- * original scavs and gunners keep exactly the pool set they always had). A family's pool is looked up as
- * {@code <family>_<category>} - e.g. {@code usec_contact} - and <b>falls back to the shared pool when that
- * family has no clips for the category yet</b>. That is what lets delivery 10 wire the structure while the
- * audio itself arrives in delivery 11: today every family falls back, and the day the clips exist the same
- * code starts using them with no change here.</p>
+ * pillager, {@code elite} for the elite pair, {@code scav} for the plain armed thug, and {@code shared} for
+ * everything that existed before (the original scavs and gunners keep exactly the pool set they always had).
+ * A family's pool is looked up as {@code <family>_<category>} - e.g. {@code usec_contact} - and <b>falls back
+ * to the shared pool when that family has no clips for the category yet</b>. That is what lets delivery 10
+ * wire the structure while the audio itself arrives in delivery 11: today every family falls back, and the day
+ * the clips exist the same code starts using them with no change here.</p>
+ *
+ * <h2>The scav, and the one family that does not fall back</h2>
+ * <p>The shared pool IS the pillager's clip set - it is the original 27 clips the mod shipped, and the
+ * user's verdict was "scav这种武装暴徒（非掠夺者暴徒），可以把掠夺者的声音去掉": the armed thug that is not a
+ * pillager should not speak pillager lines. So {@code scav} is a family of its own with <b>no clips and no
+ * fallback</b>: {@link #pool} returns an empty list for it, which is what makes the thug silent rather than
+ * borrowing. {@code voice.scavClips = "shared"} puts the old behaviour back for anyone who wants to hear the
+ * difference, and the gate asserts both halves (the family is {@code scav}, and the fallback is skipped
+ * unless that key says so). No clip files are shipped for it, so the manifest is unchanged: silence is the
+ * design, not a missing asset.</p>
  *
  * <h2>Isolation</h2>
  * <p>A category never crosses families: a USEC mob asks for {@code usec_*}, a BEAR mob for {@code bear_*},
@@ -27,8 +37,8 @@ import java.util.List;
  * the USEC line" bug cannot be introduced by editing one call site.</p>
  */
 public final class VoicePools {
-    /** The families that may own their own clips; the gate walks this list. */
-    public static final List<String> FAMILIES = List.of("shared", "usec", "bear", "elite");
+    /** The families that may own their own clips; the gate walks this list. {@code scav} owns none, by design. */
+    public static final List<String> FAMILIES = List.of("shared", "usec", "bear", "elite", "scav");
 
     private VoicePools() {
     }
@@ -41,6 +51,9 @@ public final class VoicePools {
         if (mob instanceof com.gfl.tarkovscav.entity.GunnerVillagerEntity villager) {
             return villager.voiceFamily();
         }
+        if (mob instanceof com.gfl.tarkovscav.entity.ScavEntity scav) {
+            return scav.voiceFamily();
+        }
         return "shared";
     }
 
@@ -48,7 +61,7 @@ public final class VoicePools {
      * The family an entity <b>type id</b> speaks, or {@code shared} when it has none (README 5y).
      *
      * <p>This is the name form of {@link #familyOf(Mob)}, for {@code /tarkovscav test sound <entity>} - the
-     * command has a name, not a mob. The gate asserts this table against the four classes' own
+     * command has a name, not a mob. The gate asserts this table against the five classes' own
      * {@code voiceFamily()} literals, so the two can never disagree: a name that stops being a troop is a
      * failing check, not a wrong pool in game.</p>
      */
@@ -60,6 +73,7 @@ public final class VoicePools {
             case "usec_villager" -> "usec";
             case "bear_pillager" -> "bear";
             case "elite_villager", "elite_pillager" -> "elite";
+            case "scav" -> "scav";
             default -> "shared";
         };
     }
@@ -67,11 +81,18 @@ public final class VoicePools {
     /**
      * The pool for one category: the family's own clips when they exist, the shared pool otherwise.
      *
+     * <p>The scav is the one exception and it is a deliberate one: it has no clips and it may not fall back
+     * (see the class comment), so this returns an empty list and the mob says nothing. That is why the early
+     * return sits BEFORE the fallback rather than after it.</p>
+     *
      * @param shared   the pool a mob without a family uses, and the fallback
      * @param category the category name, e.g. {@code contact}
      */
     public static List<SoundEvent> pool(Mob mob, RegistryObject<SoundEvent>[] shared, String category) {
         String family = familyOf(mob);
+        if (family.equals("scav") && !scavUsesSharedClips()) {
+            return List.of();               // silence by design: the shared clips are the pillager's
+        }
         if (!family.equals("shared")) {
             List<SoundEvent> familyClips = ModSounds.pool(family + "_" + category);
             if (!familyClips.isEmpty()) {
@@ -81,12 +102,22 @@ public final class VoicePools {
         return Arrays.stream(shared).map(RegistryObject::get).toList();
     }
 
+    /** {@code voice.scavClips = "shared"} restores the old behaviour (the thug borrowing the pillager pool). */
+    public static boolean scavUsesSharedClips() {
+        return "shared".equalsIgnoreCase(com.gfl.tarkovscav.Config.VOICE_SCAV_CLIPS.get().trim());
+    }
+
     /** One line for the debug output: the family, and whether it has clips of its own yet. */
     public static String describe(Mob mob) {
         String family = familyOf(mob);
         String volume = String.format(java.util.Locale.ROOT, "%.2f", volumeFor(mob));
         if (family.equals("shared")) {
             return "voice=shared x" + volume;
+        }
+        if (family.equals("scav")) {
+            return "voice=scav " + (scavUsesSharedClips()
+                    ? "(voice.scavClips = \"shared\": speaking the pillager pool again, x"
+                    : "(no clips by design: silent, x") + volume + ")";
         }
         boolean own = !ModSounds.pool(family + "_contact").isEmpty()
                 || !ModSounds.pool(family + "_idle").isEmpty();

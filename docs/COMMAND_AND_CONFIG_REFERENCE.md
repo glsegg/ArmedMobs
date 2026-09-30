@@ -308,7 +308,8 @@
 | `voice.mark` | `true` | 丢失目标时说「你跑哪去了」 |  |
 | `voice.death` | `true` | 用四条死亡 clip 之一替换原版死亡音（开启时原版死亡音不播） |  |
 | `voice.volume` | `1.0` | 所有语音行的音量（1.0 = 原版怪物音量） | 0.0..4.0 |
-| `voice.familyVolume` | `["shared=1.0", "usec=1.0", "bear=1.0", "elite=1.0"]` | 在 `voice.volume` 之上按家族再乘一次，条目格式 `家族=倍率`；家族只能取 `shared`/`usec`/`bear`/`elite` | 倍率夹到 0..4；写到未知家族会警告一次并忽略 |
+| `voice.familyVolume` | `["shared=1.0", "usec=1.0", "bear=1.0", "elite=1.0", "scav=1.0"]` | 在 `voice.volume` 之上按家族再乘一次，条目格式 `家族=倍率`；家族只能取 `shared`/`usec`/`bear`/`elite`/`scav` | 倍率夹到 0..4；写到未知家族会警告一次并忽略 |
+| `voice.scavClips` | `"none"` | **普通的武装暴徒（`tarkovscav:scav`）说什么**。`shared` 这套 clip 本身就是**掠夺者**的，用户要求「scav这种武装暴徒（非掠夺者暴徒），可以把掠夺者的声音去掉」，所以默认：`none` = 暴徒**静音**（它的家族是 `scav`，自己没有 clip，而且**是唯一不允许回落到 shared 的家族**）；`shared` = 回到旧行为（暴徒又借掠夺者那套）。**只影响 scav**：枪手、狙击手与四个兵种家族照旧 | 任何非 `shared`（含大小写）都按 `none` 处理，写错不会静默把掠夺者声音放回来 |
 | `voice.effectVolume` | `1.0` | 非语音效果音（手雷落地/弹跳）的音量乘数 | 0.0..4.0 |
 | `voice.pitchMin` | `0.9` | 音高带下限。每只怪在出生时抽一次自己的音高并存入 NBT，跨存档保持 | 硬边界 0.1..2.0；与 `pitchMax` 一起校验，写反则双双回退出厂值 |
 | `voice.pitchMax` | `1.1` | 音高带上限 | 硬边界 0.1..2.0 |

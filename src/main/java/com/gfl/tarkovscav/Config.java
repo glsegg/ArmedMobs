@@ -128,6 +128,7 @@ public final class Config {
     public static final ForgeConfigSpec.BooleanValue VOICE_DEATH;
     public static final ForgeConfigSpec.DoubleValue VOICE_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> VOICE_FAMILY_VOLUME;
+    public static final ForgeConfigSpec.ConfigValue<String> VOICE_SCAV_CLIPS;
     public static final ForgeConfigSpec.DoubleValue VOICE_EFFECT_VOLUME;
     public static final ForgeConfigSpec.DoubleValue VOICE_PITCH_MIN;
     public static final ForgeConfigSpec.DoubleValue VOICE_PITCH_MAX;
@@ -1313,6 +1314,8 @@ public final class Config {
                         "",
                         "shared is what every mob that has no family of its own speaks (the original",
                         "scavs/gunners), and the other three are the faction families (README 5y/5l).",
+                        "scav is the thug's own family, which owns no clips on purpose (voice.scavClips) - it is",
+                        "listed here so the volume lookup does not report an unknown family.",
                         "This is the escape hatch for the 'the usec/bear/elite voices are quieter than",
                         "the scav's' class of report: the clips themselves are now rendered to the same",
                         "measured loudness as the original 27 (see voice_levels.json), so 1.0 is the",
@@ -1320,8 +1323,19 @@ public final class Config {
                         "",
                         "An unknown family name or an unparseable number is reported once and ignored.")
                 .defineListAllowEmpty(List.of("familyVolume"),
-                        () -> List.of("shared=1.0", "usec=1.0", "bear=1.0", "elite=1.0"),
+                        () -> List.of("shared=1.0", "usec=1.0", "bear=1.0", "elite=1.0", "scav=1.0"),
                         element -> element instanceof String);
+        VOICE_SCAV_CLIPS = b
+                .comment("What the plain armed thug (tarkovscav:scav) says. The shared pool IS the pillager's",
+                        "clip set, and the request (quoted verbatim in README 5l) was that the armed thug which",
+                        "is not a pillager should stop using the pillager's voice lines, so the default is:",
+                        "  none   - the scav is silent. Its family is 'scav', it owns no clips, and it does NOT",
+                        "           fall back to the shared pool (the one family that may not).",
+                        "  shared - the old behaviour: the thug borrows the shared/pillager clips again.",
+                        "Only the scav is affected: the gunners, the snipers and the four troop types keep the",
+                        "pools they had. Anything that is not 'shared' (or 'SHARED') means none, so a typo",
+                        "cannot silently put the pillager's voice back on.")
+                .define("scavClips", "none");
         VOICE_EFFECT_VOLUME = b
                 .comment("Volume multiplier for the non-voice effect clips (the grenade impact/bounce, see",
                         "README 5v). It is separate from the families because the impact clip is a",

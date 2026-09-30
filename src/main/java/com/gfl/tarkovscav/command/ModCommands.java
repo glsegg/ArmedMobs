@@ -1415,6 +1415,15 @@ public final class ModCommands {
             poolName = family;
         }
         List<SoundEvent> sounds = ModSounds.pool(poolName);
+        if (sounds.isEmpty() && family.equals("scav")) {
+            // Not "no such pool": the scav's family exists and owns no clips on purpose (README 5l), so say
+            // that instead of pretending the name was wrong.
+            source.sendSuccess(() -> Component.literal("The scav has no clips of its own by design: its family"
+                    + " is 'scav' and it does not fall back to the shared pool, because those clips are the"
+                    + " pillager's (voice.scavClips = \"shared\" would put them back). Nothing to audition.")
+                    .withStyle(ChatFormatting.YELLOW), false);
+            return 1;
+        }
         if (sounds.isEmpty()) {
             source.sendFailure(Component.literal("No such voice pool, family, entity or clip '" + name
                     + "'; try " + String.join(", ", ModSounds.poolNames())

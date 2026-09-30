@@ -96,12 +96,11 @@ const keyPattern = /\.define(?:InRange|ListAllowEmpty|List|Enum)?\(\s*(?:List\.o
 const keyMatches = [...config.matchAll(keyPattern)].map((m) => m[1]);
 const keys = [...new Set(keyMatches)];
 const missingKeys = keys.filter((key) => !doc.includes(key));
-check(keyMatches.length === 371,
-  `Config.java registers 371 define() call sites (367 before the city spawn cap,`
-  + ` + the 4 spawn.cityFactionCap* keys)`,
+check(keyMatches.length === 372,
+  `Config.java registers 372 define() call sites (371 before voice.scavClips, + that one key)`,
   `found ${keyMatches.length}`);
-check(keys.length === 341,
-  `those call sites carry 341 distinct key names (the 4 new keys are all new names)`,
+check(keys.length === 342,
+  `those call sites carry 342 distinct key names (scavClips is a new name)`,
   `found ${keys.length}`);
 check(missingKeys.length === 0, `every config key appears in the document`,
   missingKeys.length ? `missing: ${missingKeys.join(', ')}` : `${keys.length} key(s)`);

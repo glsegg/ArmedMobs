@@ -251,6 +251,24 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
         return GUN_POSE.state(this);
     }
 
+    /**
+     * The voice family the plain armed thug speaks (README 5y/5l).
+     *
+     * <p>{@code scav} is a family of its own precisely so that it does NOT speak the shared pool: those clips
+     * are the pillager's, and the user's verdict on them for this mob was that the armed thug which is not a
+     * pillager should stop using the pillager's voice lines (README 5l quotes it).
+     * {@link com.gfl.tarkovscav.voice.VoicePools#pool} therefore returns an empty list for this family - the
+     * thug is silent by default - and {@code voice.scavClips = "shared"} is the escape hatch that puts the old
+     * behaviour back.</p>
+     *
+     * <p>Deliberately NOT {@code @Override}: unlike the troop classes, nothing above {@code ScavEntity}
+     * declares this method - it is this class's own answer to
+     * {@link com.gfl.tarkovscav.voice.VoicePools#familyOf}, which finds it by type.</p>
+     */
+    public String voiceFamily() {
+        return "scav";
+    }
+
     @Override
     public void setPistolClips(boolean pistolClips) {
         GUN_POSE.setPistolClips(this, pistolClips);
