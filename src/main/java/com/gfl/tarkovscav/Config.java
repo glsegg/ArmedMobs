@@ -39,6 +39,10 @@ public final class Config {
     public static final ForgeConfigSpec.IntValue CITY_REGION_PADDING;
     public static final ForgeConfigSpec.IntValue CITY_FOUNDATION_DEPTH;
     public static final ForgeConfigSpec.BooleanValue LOG_SPAWN_GATE;
+    public static final ForgeConfigSpec.BooleanValue CITY_FACTION_CAP_ENABLED;
+    public static final ForgeConfigSpec.IntValue CITY_FACTION_CAP;
+    public static final ForgeConfigSpec.IntValue CITY_FACTION_CAP_COUNT_TICKS;
+    public static final ForgeConfigSpec.BooleanValue CITY_FACTION_CAP_IGNORE_MANUAL;
 
     // ------------------------------------------------------------------ guns
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> GUN_BLACKLIST;
@@ -724,6 +728,48 @@ public final class Config {
                 .comment("Log every spawn-gate decision (accept and reject) to the server log.",
                         "Useful while wiring up a city mod; noisy in normal play.")
                 .define("logSpawnGate", true);
+        b.comment("The per-city limit on gun units of one line-up standing at the same time.",
+                "",
+                "The request behind these keys (its Chinese wording is quoted verbatim in README 7q):",
+                "spawners keep spawning endlessly and it causes serious stutter, so - unless a unit was placed",
+                "by hand with a spawn egg - a city should hold at most twelve gun-armed units of one line-up",
+                "at the same time. Spawner blocks keep firing, the natural spawner keeps working, and the",
+                "capture game keeps reinforcing while a pool is above zero - so a city the player walks away",
+                "from turns into a standing army running the full gun AI. The capture pools bound the total",
+                "number of DEATHS in a city; these keys bound how many are ALIVE IN THE STREETS AT ONCE.",
+                "",
+                "The unit counted is one of this mod's nine armed types (any GunUser) - a vanilla villager or",
+                "pillager that the faction tags also cover is not what costs anything here. The count is per",
+                "CITY and per FACTION, over the city's own box, so a contested city can hold up to the cap of",
+                "each side; that is what keeps a tug-of-war readable instead of one wall of units.",
+                "",
+                "Exempt by default: a spawn egg and /summon, i.e. 'a player put it there by hand' - exactly",
+                "the carve-out the request asked for. Both dimensions are capped, because this is a",
+                "performance guard rather than part of the capture game (which stays overworld-only).",
+                "",
+                "Nothing is written into the world: a refused spawn is simply not added, and no spawner block",
+                "is read, rewritten or extinguished. Diagnostics: /armedmobs spawncap (and its reset).");
+        CITY_FACTION_CAP_ENABLED = b
+                .comment("Master switch. false restores the uncapped behaviour exactly.")
+                .define("cityFactionCapEnabled", true);
+        CITY_FACTION_CAP = b
+                .comment("How many gun units of ONE faction may be alive in ONE city at the same time. 12 is",
+                        "the number the report asked for. 0 or less means 'no cap', so a hand-edited toml can",
+                        "never empty the world by accident.")
+                .defineInRange("cityFactionCap", 12, 0, 128);
+        CITY_FACTION_CAP_COUNT_TICKS = b
+                .comment("How often a city's live count is taken again, in ticks (20 = once a second). The",
+                        "count is a level query, so it is cached; within one window the cap counts the spawns",
+                        "it has already allowed as well, which over-counts by at most the spawns that were",
+                        "allowed and then failed later - it errs towards FEWER units, and self-corrects at the",
+                        "next recount. Lower it if units still pile up past the cap; raise it if you want the",
+                        "level query to cost less.")
+                .defineInRange("cityFactionCapCountTicks", 20, 1, 200);
+        CITY_FACTION_CAP_IGNORE_MANUAL = b
+                .comment("Also cap spawn eggs and /summon. Default false: a player placing a unit by hand is",
+                        "never refused, which is what the request asked for and what makes the cap safe to",
+                        "leave on while building a city.")
+                .define("cityFactionCapIgnoreManual", false);
         CITY_FOUNDATION_DEPTH = b
                 .comment("How many blocks of footing the city-district assembler guarantees UNDER every",
                         "piece it places (/tarkovscav city district). Default 5.",

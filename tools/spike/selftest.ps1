@@ -54,6 +54,9 @@ $sources += Join-Path $projectDir 'src\main\java\com\gfl\tarkovscav\grenade\Gren
 # arithmetic behind the overworld capture game. All three are JDK-only, so they compile against the stubs.
 $sources += Join-Path $projectDir 'src\main\java\com\gfl\tarkovscav\gun\LadderSearch.java'
 $sources += Join-Path $projectDir 'src\main\java\com\gfl\tarkovscav\world\CapturePools.java'
+# SpawnCapMath is the city faction cap's arithmetic: SpawnCapTest drives it, and it is JDK-only like the two
+# above. Its class comment records the overflow the test caught (now - Long.MIN_VALUE).
+$sources += Join-Path $projectDir 'src\main\java\com\gfl\tarkovscav\world\SpawnCapMath.java'
 & $javac -encoding UTF-8 -d $out @sources
 if ($LASTEXITCODE -ne 0) { throw 'the spikes do not compile' }
 
@@ -90,7 +93,7 @@ try {
     }
 
     foreach ($test in @('StructureNbtTest', 'GunPoolTest', 'AssetTest', 'GrenadeBallisticsTest',
-            'LadderTest', 'CaptureTest')) {
+            'LadderTest', 'CaptureTest', 'SpawnCapTest')) {
         Write-Host "--- $test ---" -ForegroundColor Cyan
         & $java -cp $out $test $projectDir
         if ($LASTEXITCODE -ne 0) {
@@ -225,6 +228,7 @@ try {
             'selftest_command_marks' = @('tools/selftest_command_marks.js')
             'selftest_ladder'      = @('tools/selftest_ladder.js')
             'selftest_capture'     = @('tools/selftest_capture.js')
+            'selftest_spawn_cap'   = @('tools/selftest_spawn_cap.js')
             'selftest_wiki_doc'    = @('tools/selftest_wiki_doc.js')
             'selftest_shield'      = @('tools/selftest_shield.js')
             'selftest_shield_assets' = @('tools/selftest_shield_assets.js')

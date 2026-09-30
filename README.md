@@ -3999,6 +3999,39 @@ pieces_buildings）已用 `CityMap` 重画。生成器是**确定性的**：连�
 
 **门槛**：`node tools/selftest_capture.js`（169 项，其中 **34 项是编译并运行真 `CapturePools`** 的可执行证据，其余逐条标注为结构性断言）；`tools/spike/CaptureTest.java` 也注册进套件的 Java 测试清单。
 
+### 7q. 城市刷怪上限：一座城里同阵容最多 12 个持枪单位（2026-10）
+
+用户原话：「目前刷人会一直刷的问题 会导致卡顿严重，通常不是玩家手动放刷怪蛋的话 可以限制这个地方最多同时存在12个同阵容的持枪单位。」逐键表见 `docs/COMMAND_AND_CONFIG_REFERENCE.md` 的 5.1（四个键）与 5.29（规则说明）。
+
+**它解决的是哪一半问题**：占领战的兵力池限制的是**一座城总共能死多少人**，不限制**街上同时站着多少人**。刷怪笼方块会一直工作、自然刷怪照跑、池还在就还会补员，所以玩家一走开，那座城就变成一支常驻军，而每一个单位都在跑完整的枪械 AI——这就是卡顿的来源。上限是缺的那一半：**同时存活数**。
+
+**规则**（`world/CitySpawnCap.java`，算术在 `world/SpawnCapMath.java`）：
+
+| 项 | 做法 |
+| --- | --- |
+| 数的是谁 | **只数本模组的持枪单位**（实现了 `GunUser` 的那九种）。阵营标签里也包含原版村民/掠夺者，但它们不是这套 AI 的开销，数进去只会限错对象 |
+| 按什么分 | **城 × 阵营**，范围是该城市自己的包围盒。所以割据城市可以各容纳 N 个双方单位——拉锯才看得懂，而不是一面墙 |
+| 边界 | `>= cap` 就拒绝：上限 12 时**第 12 个放行、第 13 个拒绝**（「最多同时存在 12 个」的字面意思）。死掉一个立刻腾出名额 |
+| `0` 的含义 | `cityFactionCap <= 0` = **不设上限**。手改 toml 写 0 不会把世界清空 |
+| 计数与代价 | 一次 `getEntitiesOfClass` 覆盖城市盒，按 `维度\|城\|阵营` 缓存 `cityFactionCapCountTicks`（默认 20 tick = 1 秒）。窗口内还把**本窗口已放行**的数量加进去，所以一串刷怪笼不会各自看着同一个过期数字一起穿过去。热路径上只是一次哈希查找；关掉总开关就完全跳过 |
+| 三条刷怪路径 | 自然刷怪与刷怪笼在 1.20.1 是**同一个** `MobSpawnEvent.PositionCheck`（README 7p 有反汇编证据），所以一条判定覆盖两条；第三条是驻军，它直接放单位，所以在 `CityGarrison.spawn` 里**逐单位**问一次 |
+| 豁免 | 刷怪蛋与 `/summon`（「玩家手动放的」）。`cityFactionCapIgnoreManual = true` 才会连它们一起限 |
+| 维度 | **两个维度都生效**（这是性能护栏，不是占领玩法），所以**故意不判断** `Level.OVERWORLD`——废土正是刷怪笼堆人的地方。占领战本身仍然只在主世界 |
+| 不碰世界 | 被拒绝的刷新只是「不生成」：不删怪、不改写/不熄灭刷怪笼方块。类里没有任何 `setBlock`/`discard`/`kill`/`remove` 调用，门禁按「不存在」断言 |
+
+**诊断**：`/armedmobs spawncap` 打印生效配置 + 每个**已测量过**的「城×阵营」的 `live=` / `acceptedThisWindow=` / 是否已到上限；它**只读缓存不扫世界**（每次敲命令扫一遍世界，本身就是它要修的那种卡顿），`/armedmobs spawncap reset` 只清测量结果、下一次刷怪尝试重数。因上限拒绝刷新的那一行写进日志，标记 `[spawncap]`（受 `spawn.logSpawnGate` 控制）。
+
+**生效配置（`[spawn]` 里新增的四个键，默认值）**
+
+| 键 | 默认 | 说明 |
+| --- | --- | --- |
+| `spawn.cityFactionCapEnabled` | `true` | 总开关；false 完全回到不设上限的旧行为 |
+| `spawn.cityFactionCap` | `12` | 一城一阵营同时存活的持枪单位上限；`0..128`，**0 = 不设上限** |
+| `spawn.cityFactionCapCountTicks` | `20` | 重新计数的间隔；`1..200`。还堵不住就把这个调小 |
+| `spawn.cityFactionCapIgnoreManual` | `false` | true = 连刷怪蛋与 `/summon` 也计入上限 |
+
+**门禁**：`node tools/selftest_spawn_cap.js`（45 项，其中 **42 项是编译并运行真 `SpawnCapMath` 的可执行证据**：`effectiveCount` 的边界、第 N 个放行/第 N+1 个拒绝、0 = 不设上限、死亡腾名额、以及一个 200 次尝试的模拟证明「折叠窗口后存活数永不越过上限」）。**这个测试当场抓到一个真 bug**：第一版 `stale()` 直接做 `now - countedAt`，而缓存初值 `Long.MIN_VALUE` 会**溢出成负数** → 首次计数永不发生、窗口的「已放行」永不归零 → 一旦到上限那座城会**永久拒绝**所有刷新；现在显式判断「从未计数」与「时钟倒退」两种情况，并把这两条钉进测试。
+
 ### TODO (recorded, not done)
 
 **The city does not generate naturally yet.** `/locate structure tarkovscav:city_small` → "Could not

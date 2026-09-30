@@ -98,6 +98,7 @@ public final class ModCommands {
         root.then(garrison());
         root.then(capture());
         root.then(fillWater());
+        root.then(spawnCap());
         root.then(marks());
         root.then(spawn());
         root.then(test());
@@ -589,6 +590,34 @@ public final class ModCommands {
                     + " the block itself).").withStyle(ChatFormatting.GRAY), false);
         }
         return report.replaced();
+    }
+
+    // ------------------------------------------------------------------ /tarkovscav spawncap
+
+    /**
+     * {@code /armedmobs spawncap [reset]} - the per-city faction cap (README 7q): the config in force, then
+     * every city+faction whose count has been measured, with the live count and whether it is at the cap.
+     *
+     * <p>Deliberately reads the cap's own cache instead of scanning: a diagnostic that takes a level query per
+     * city every time it is typed would be the same performance problem the cap exists to fix. So a city shows
+     * up here once something has tried to spawn in it, and {@code reset} only forgets the measurements (the
+     * next spawn attempt retakes them) - it never touches the world.</p>
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> spawnCap() {
+        return Commands.literal("spawncap")
+                .executes(context -> {
+                    for (String line : com.gfl.tarkovscav.world.CitySpawnCap.describe()) {
+                        context.getSource().sendSuccess(() -> Component.literal("  " + line), false);
+                    }
+                    return 1;
+                })
+                .then(Commands.literal("reset").executes(context -> {
+                    int cleared = com.gfl.tarkovscav.world.CitySpawnCap.reset();
+                    context.getSource().sendSuccess(() -> Component.literal("[spawncap] forgot " + cleared
+                            + " measured city/faction count(s); they are retaken on the next spawn attempt")
+                            .withStyle(ChatFormatting.GREEN), true);
+                    return 1;
+                }));
     }
 
     // ------------------------------------------------------------------ /tarkovscav marks

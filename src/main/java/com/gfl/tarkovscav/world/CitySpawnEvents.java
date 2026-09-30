@@ -75,6 +75,21 @@ public final class CitySpawnEvents {
             return;
         }
 
+        // The per-city faction cap (README 7q): a city that is not being cleared must not turn into a standing
+        // army, because every unit of this mod runs the full gun AI. Asked here, so the natural spawner and
+        // the spawner blocks are covered by one rule - in Forge 1.20.1 those are the same event. A hand-placed
+        // unit (a spawn egg, /summon) is exempt unless spawn.cityFactionCapIgnoreManual says otherwise. Placed
+        // after the capture veto so a spent faction is still refused by the decisive rule first, and before the
+        // purity block because it is cheaper (a hash lookup, no ledger read).
+        if ((!manual || Config.CITY_FACTION_CAP_IGNORE_MANUAL.get())
+                && event.getLevel() instanceof ServerLevel capLevel) {
+            if (CitySpawnCap.vetoSpawn(capLevel,
+                    BlockPos.containing(event.getX(), event.getY(), event.getZ()), mob, event.getSpawnType())) {
+                event.setResult(Event.Result.DENY);
+                return;
+            }
+        }
+
         // City faction purity (garrison.factionSpawnFilter): inside a city a mob of one line-up may not
         // appear in a building of the other, so a village building never spawns an illager unit and an
         // illager building never spawns a village one. SCAV is the unaligned third party and is allowed in
