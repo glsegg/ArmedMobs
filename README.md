@@ -2779,7 +2779,7 @@ as the mob had been aiming.
 #### 代码怎么判断的（为什么不会崩）
 
 - `gun/TaczPresence.java`：唯一一处「TaCZ 在不在」的判断，`loaded()` 走 `ModList.get().isLoaded("tacz")` 并缓存；`isGun(ItemStack)` = 非空 且 已装 TaCZ 且 `IGun.getIGunOrNull(stack) != null`。
-- 全仓只有 **10 个文件** import `com.tacz.guns.*`，其中 `GunAttachments` 有 TaCZ 类型的静态字段（`AttachmentType[] SLOTS` 与两个 `Map<AttachmentType,…>`），**一旦被类加载就会在没装 TaCZ 时抛 `NoClassDefFoundError`**。所以它只在「TaCZ 已装」的分支里被碰到，没装 TaCZ 时那个类根本不会被加载。`GunBrain` 没有 TaCZ 类型的字段与静态初始化，可以安全实例化，因此武器/目标代码复用它而不需要拆开。
+- 全仓只有 **7 个文件** `import com.tacz.guns.*`，再加上 `TaczPresence` 里那一处全限定名引用，一共 **8 个文件会碰到 TaCZ 的类**（`RenderStateGuard` 只是注释里提到）；这个清单已经钉在 `tools/selftest_no_tacz.js` 里，新增第 9 个会直接让它红。其中 `GunAttachments` 有 TaCZ 类型的静态字段（`AttachmentType[] SLOTS` 与两个 `Map<AttachmentType,…>`），**一旦被类加载就会在没装 TaCZ 时抛 `NoClassDefFoundError`**，所以它只在「TaCZ 已装」的分支里被碰到，没装 TaCZ 时那个类根本不会被加载（同一条 gate 会验证它是唯一一个有 TaCZ 类型静态字段的类）。`GunBrain` 没有 TaCZ 类型的字段与静态初始化，可以安全实例化，因此武器/目标代码复用它而不需要拆开。
 - 三个武装单位的装备与目标都是三分支：TaCZ 已装 → 原来的枪械分支；没装 → `MeleeAttackGoal`（贴身）+ `ArmedRangedGoal`；`ArmedRangedGoal` 本来就通过 `RangedAttackMob` 接口射弓/弩（村民与掠夺者原生实现，`ScavEntity` 这次补上了 `performRangedAttack`）。
 - 持久化同理：`loadout()` 与 `GunPool.loadoutFor(...)` 在没装 TaCZ 时直接返回空，不会读到枪的 NBT。
 - **「只在 TaCZ 存在时才执行」这件事，是逐条查过调用点的**（Java 的类解析是惰性的，编译通过完全不能证明运行安全）：`GunBrain.tick()` 在门行为之后立刻 `return`（因为它不只被枪战目标调用——`LadderClimbGoal` 爬梯子时也会调它，不拦就是一次爬梯必崩）；`GunBrain.onHurt()`（每次都从实体的 `hurt()` 进来）、`magazine()`、`debugSummary()` 各自有前置判断；`ClientCommands` 的 `/armedmobs reload` 在**第一次调用 `GunAttachments` 之前**判断（那个类的静态字段就是 TaCZ 类型，类初始化本身会抛 `NoClassDefFoundError`，方法内部的判断根本来不及跑）。
