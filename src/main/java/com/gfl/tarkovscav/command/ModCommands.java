@@ -1127,6 +1127,9 @@ public final class ModCommands {
     private static int testSniper(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
         ServerLevel level = source.getLevel();
+        if (!requireTacz(source, "The sniper report")) {
+            return 0;
+        }
         BlockPos centre = BlockPos.containing(source.getPosition());
         List<Mob> snipers = level.getEntitiesOfClass(Mob.class,
                 new net.minecraft.world.phys.AABB(centre).inflate(64.0D),
@@ -1276,6 +1279,9 @@ public final class ModCommands {
     /** {@code /tarkovscav test mods}: what each nearby gun mob is carrying, attachments and all. */    private static int testMods(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
         ServerLevel level = source.getLevel();
+        if (!requireTacz(source, "The attachment report")) {
+            return 0;
+        }
         List<Mob> found = gunMobs(level, BlockPos.containing(source.getPosition()));
         if (found.isEmpty()) {
             source.sendFailure(Component.literal("No TarkovScav gun mob within 32 blocks."));
@@ -1559,6 +1565,11 @@ public final class ModCommands {
     @Nullable
     private static Fight setupFight(CommandSourceStack source, double distance, @Nullable BlockPos pos,
                                     boolean durable) {
+        // README 5ac: the whole fight harness is a gun test - it asserts shots and burst behaviour through
+        // GunBrain and TaCZ's ShootResult - so it refuses instead of half-working in a bow/crossbow pack.
+        if (!requireTacz(source, "The fight harness")) {
+            return null;
+        }
         ServerLevel level = source.getLevel();
         BlockPos origin = pos != null ? pos : BlockPos.containing(source.getPosition());
 
@@ -1663,6 +1674,26 @@ public final class ModCommands {
                 fight.brain().lastResult(), fmt(fight.mob().position()));
     }
 
+    /**
+     * README 5ac: a TaCZ-only report has to refuse cleanly in a pack that has no TaCZ instead of throwing.
+     * {@code NoClassDefFoundError} cannot be caught usefully at the point of use - the class is resolved the
+     * moment the first TaCZ-touching instruction executes, and for {@code GunAttachments} even the class
+     * initialiser throws - so the presence check has to sit in the command body, BEFORE the call, and it has
+     * to say why rather than fail silently.
+     *
+     * @param what the name of the report, used as the first word of the failure message
+     * @return true when TaCZ is present and the caller may proceed; false after it has reported the failure
+     */
+    private static boolean requireTacz(CommandSourceStack source, String what) {
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            return true;
+        }
+        source.sendFailure(Component.literal(what + " needs TaCZ and this pack does not have it: without TaCZ"
+                + " the units fight with bows and crossbows, so there is no gun, magazine, attachment pool or"
+                + " scripted-gun list to report (README 5ac)."));
+        return false;
+    }
+
     private static String fmt(double value) {
         return String.format("%.2f", value);
     }
@@ -1723,6 +1754,9 @@ public final class ModCommands {
 
     private static int gunPool(CommandContext<CommandSourceStack> context, ScavTier tier) {
         CommandSourceStack source = context.getSource();
+        if (!requireTacz(source, "The gun-pool report")) {
+            return 0;
+        }
         List<ResourceLocation> pool = GunPool.forTier(tier);
         source.sendSuccess(() -> Component.translatable("tarkovscav.command.gunpool", tier.id(), pool.size())
                 .withStyle(ChatFormatting.AQUA), false);

@@ -102,21 +102,6 @@ function Move-Aside-OtherJar([string]$Directory) {
         Write-Host ''
     }
 }
-    if (-not (Test-Path $Directory)) { return }
-    foreach ($legacyName in $legacyNames) {
-        $live = Join-Path $Directory $legacyName
-        if (-not (Test-Path $live)) { continue }
-        $legacySha = (Get-FileHash $live -Algorithm SHA256).Hash.ToLower()
-        $aside = "$live.bak-$($legacySha.Substring(0, 8))"
-        Move-Item -LiteralPath $live -Destination $aside -Force
-        Write-Host ''
-        Write-Host "MOVED AN OLD-NAMED JAR ASIDE: $legacyName -> $([IO.Path]::GetFileName($aside))" -ForegroundColor Yellow
-        Write-Host '  the old name declares the SAME modId as the new one (the id must not change), so leaving' -ForegroundColor Yellow
-        Write-Host '  it as a live *.jar would make Forge refuse to start with a duplicate-mod error.' -ForegroundColor Yellow
-        Write-Host "  parked in $Directory as a .bak-<sha8> file that Forge ignores" -ForegroundColor Yellow
-        Write-Host ''
-    }
-}
 
 Write-Host '--- parking every other same-id jar (the other flavor + the pre-rebrand name) ---'
 Move-Aside-OtherJar $Instance

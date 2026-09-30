@@ -229,6 +229,7 @@ try {
             'selftest_ladder'      = @('tools/selftest_ladder.js')
             'selftest_capture'     = @('tools/selftest_capture.js')
             'selftest_spawn_cap'   = @('tools/selftest_spawn_cap.js')
+            'selftest_no_tacz'     = @('tools/selftest_no_tacz.js')
             'selftest_wiki_doc'    = @('tools/selftest_wiki_doc.js')
             'selftest_shield'      = @('tools/selftest_shield.js')
             'selftest_shield_assets' = @('tools/selftest_shield_assets.js')

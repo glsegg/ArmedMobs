@@ -20,7 +20,8 @@ import java.util.regex.Pattern;
  *   <li>every translation key used from Java exists in both {@code en_us.json} and
  *       {@code zh_cn.json} (this mod ships both, and a missing key shows as a raw
  *       {@code tarkovscav.command...} in chat);</li>
- *   <li>{@code mods.toml} declares TaCZ as a mandatory dependency and {@code build.gradle} does
+ *   <li>{@code mods.toml} declares TaCZ as an OPTIONAL dependency (the bow/crossbow fallback, README 5ac) and
+ *       {@code build.gradle} does
  *       <b>not</b> jarJar it - bundling a 57 MB third-party mod is not allowed, so the build script
  *       itself is checked;</li>
  *   <li>every configuration key defined in {@code Config.java} is documented in {@code README.md};
@@ -130,10 +131,13 @@ public final class AssetTest {
             problems.add("mods.toml does not declare the tacz dependency");
         } else {
             int index = modsToml.indexOf("modId=\"tacz\"");
-            String block = modsToml.substring(index, Math.min(modsToml.length(), index + 300));
-            if (!block.contains("mandatory=true")) {
-                problems.add("the tacz dependency in mods.toml is not mandatory - a missing TaCZ would"
-                        + " only show up as broken gun AI at runtime");
+            String block = modsToml.substring(index, Math.min(modsToml.length(), index + 400));
+            // OPTIONAL on purpose since 2026-10 (README 5ac): without TaCZ the mod loads and the units fight
+            // with bows/crossbows, so a mandatory entry would now be the bug - it would refuse a pack that the
+            // code handles. The fallback side of that is asserted by tools/selftest_no_tacz.js.
+            if (!block.contains("mandatory=false")) {
+                problems.add("the tacz dependency in mods.toml is mandatory - a pack without TaCZ would be"
+                        + " refused at launch even though the bow/crossbow fallback exists (README 5ac)");
             }
         }
         String buildGradle = Files.readString(root.resolve("build.gradle"));
@@ -146,7 +150,8 @@ public final class AssetTest {
         if (!buildGradle.contains("compileOnly") || !buildGradle.contains("runtimeOnly")) {
             problems.add("build.gradle should pull TaCZ in as compileOnly + runtimeOnly");
         }
-        System.out.println("mods.toml declares tacz mandatory, build.gradle does not bundle it");
+        System.out.println("mods.toml declares tacz OPTIONAL (bow/crossbow fallback, README 5ac),"
+                + " build.gradle does not bundle it");
 
         // ---------------------------------------------------------------- 5. config keys are documented
         Path readme = root.resolve("README.md");

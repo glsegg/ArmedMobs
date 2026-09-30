@@ -212,7 +212,12 @@ public class GunnerVillagerEntity extends Villager implements GunUser, RangedAtt
     @Override
     public void setScavTier(ScavTier tier) {
         this.tier = tier == null ? ScavTier.RIFLE : tier;
-        this.gunBrain().equip(this.getRandom());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            this.gunBrain().equip(this.getRandom());
+        } else {
+            // No TaCZ (README 5ac): bow or crossbow, and the ranged goal below does the shooting.
+            com.gfl.tarkovscav.gun.FallbackEquipment.equip(this, this.getRandom());
+        }
     }
 
     // ------------------------------------------------------------------ AI
@@ -220,11 +225,18 @@ public class GunnerVillagerEntity extends Villager implements GunUser, RangedAtt
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        // priority 1: the gun fight outranks everything except drowning
-        this.goalSelector.addGoal(1, new com.gfl.tarkovscav.gun.GunAttackGoal(this));
-        // melee fallback for the case where TaCZ's index yields no gun for this tier, exactly as on
-        // the scav and the gunner pillager
-        this.goalSelector.addGoal(2, new com.gfl.tarkovscav.gun.NoGunMeleeGoal(this, 1.1D, false));
+        // The gun fight needs TaCZ (README 5ac); without it this unit shoots the bow/crossbow the fallback
+        // hands it and closes in with a plain melee goal once the quiver is empty.
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            // priority 1: the gun fight outranks everything except drowning
+            this.goalSelector.addGoal(1, new com.gfl.tarkovscav.gun.GunAttackGoal(this));
+            // melee fallback for the case where TaCZ's index yields no gun for this tier, exactly as on
+            // the scav and the gunner pillager
+            this.goalSelector.addGoal(2, new com.gfl.tarkovscav.gun.NoGunMeleeGoal(this, 1.1D, false));
+        } else {
+            this.goalSelector.addGoal(2,
+                    new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(this, 1.1D, false));
+        }
         // Grenades (README 5v), behind shooting and melee: thrown only when the target is out of sight. The
         // ladder gate (README 7o) is required because this goal carries no goal flags of its own.
         this.goalSelector.addGoal(3, new com.gfl.tarkovscav.gun.LadderGatedGoal(this,
@@ -326,7 +338,12 @@ public class GunnerVillagerEntity extends Villager implements GunUser, RangedAtt
         ScavTier forced = forcedSpawnTier();
         this.tier = forced != null ? forced : ScavTier.pickWeighted(this.getRandom());
         applyTierAttributes();
-        this.gunBrain().equip(this.getRandom());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            this.gunBrain().equip(this.getRandom());
+        } else {
+            // No TaCZ (README 5ac): bow or crossbow, and the ranged goal below does the shooting.
+            com.gfl.tarkovscav.gun.FallbackEquipment.equip(this, this.getRandom());
+        }
         return data;
     }
 
@@ -458,9 +475,11 @@ public class GunnerVillagerEntity extends Villager implements GunUser, RangedAtt
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putString(TAG_TIER, this.tier.id());
-        GunLoadout loadout = this.gunBrain().loadout();
-        if (loadout != null) {
-            tag.putString(TAG_GUN, loadout.gunId().toString());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            GunLoadout loadout = this.gunBrain().loadout();
+            if (loadout != null) {
+                tag.putString(TAG_GUN, loadout.gunId().toString());
+            }
         }
     }
 
@@ -477,7 +496,7 @@ public class GunnerVillagerEntity extends Villager implements GunUser, RangedAtt
         }
         if (tag.contains(TAG_GUN)) {
             ResourceLocation gunId = ResourceLocation.tryParse(tag.getString(TAG_GUN));
-            GunLoadout loadout = gunId == null ? null : GunPool.loadoutFor(this.tier, gunId);
+            GunLoadout loadout = gunId == null || !com.gfl.tarkovscav.gun.TaczPresence.loaded() ? null : GunPool.loadoutFor(this.tier, gunId);
             if (loadout != null) {
                 this.gunBrain().equipLoadout(loadout);
                 // The rack weapon still wins: a converted archer must not become a gunner on reload (5n).
@@ -485,7 +504,12 @@ public class GunnerVillagerEntity extends Villager implements GunUser, RangedAtt
                 return;
             }
         }
-        this.gunBrain().equip(this.getRandom());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            this.gunBrain().equip(this.getRandom());
+        } else {
+            // No TaCZ (README 5ac): bow or crossbow, and the ranged goal below does the shooting.
+            com.gfl.tarkovscav.gun.FallbackEquipment.equip(this, this.getRandom());
+        }
         com.gfl.tarkovscav.block.WeaponRackTaker.restoreArmament(this);
     }
 

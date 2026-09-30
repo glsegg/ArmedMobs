@@ -33,13 +33,21 @@ $os = Get-CimInstance Win32_OperatingSystem
 Write-Host ("free memory now: {0} MB" -f [int]($os.FreePhysicalMemory / 1024))
 
 # ---------------------------------------------------------------- 1. build
+# $ErrorActionPreference must NOT be Stop around a native command here: Gradle writes ordinary notes to stderr
+# (e.g. the Chinese "某些输入文件使用或覆盖了已过时的 API" deprecation line), and PowerShell turns a native
+# command's stderr into a NativeCommandError - with Stop that terminates the whole script even though the build
+# succeeded. The exit code is the signal, so it is checked explicitly instead.
+$buildPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 $env:GRADLE_USER_HOME = $GradleHome
 $buildLog = Join-Path $env:TEMP 'on_exit_build.log'
 Write-Host '--- gradle build ---'
 & (Join-Path $Root 'gradlew.bat') -p $Root -g $GradleHome build --console=plain *>&1 |
     Tee-Object -FilePath $buildLog | Select-String -Pattern 'BUILD|error:' | Select-Object -Last 4 | ForEach-Object { $_.Line.Trim() }
-if ($LASTEXITCODE -ne 0) {
-    Write-Host 'BUILD FAILED - nothing installed. Tail of the log:' -ForegroundColor Red
+$buildExit = $LASTEXITCODE
+$ErrorActionPreference = $buildPreference
+if ($buildExit -ne 0) {
+    Write-Host ("BUILD FAILED (exit {0}) - nothing installed. Tail of the log:" -f $buildExit) -ForegroundColor Red
     Get-Content $buildLog -Tail 15
     exit 1
 }
@@ -47,9 +55,11 @@ if ($LASTEXITCODE -ne 0) {
 # ---------------------------------------------------------------- 2. the suite on those jars
 $suiteLog = Join-Path $env:TEMP 'on_exit_suite.log'
 Write-Host '--- full self-test suite ---'
+$ErrorActionPreference = 'Continue'
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root 'tools\spike\selftest.ps1') *>&1 |
     Tee-Object -FilePath $suiteLog | Select-Object -Last 3
 $suiteExit = $LASTEXITCODE
+$ErrorActionPreference = $buildPreference
 $fails = @(Select-String -Path $suiteLog -Pattern 'FAIL' -CaseSensitive)
 if ($suiteExit -ne 0 -or $fails.Count -gt 0) {
     Write-Host ("SUITE FAILED (exit {0}, {1} FAIL line(s)) - nothing installed" -f $suiteExit, $fails.Count) -ForegroundColor Red

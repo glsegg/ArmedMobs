@@ -56,6 +56,8 @@ public final class Config {
     public static final ForgeConfigSpec.DoubleValue GUN_DROP_CHANCE;
     public static final ForgeConfigSpec.DoubleValue AMMO_DROP_CHANCE;
     public static final ForgeConfigSpec.IntValue AMMO_ITEM_STACKS;
+    public static final ForgeConfigSpec.ConfigValue<String> GUNS_FALLBACK_WEAPON;
+    public static final ForgeConfigSpec.IntValue GUNS_FALLBACK_ARROWS;
     public static final ForgeConfigSpec.BooleanValue MANUAL_RELOAD_FALLBACK;
     public static final ForgeConfigSpec.IntValue MANUAL_RELOAD_TICKS;
     public static final ForgeConfigSpec.IntValue RELOAD_STALL_TICKS;
@@ -813,6 +815,37 @@ public final class Config {
                 .comment("When non-empty, ONLY these gun ids may be issued (the blacklist still applies).",
                         "Leave empty to allow every gun TaCZ knows.")
                 .defineListAllowEmpty(List.of("gunWhitelist"), List::of, element -> element instanceof String);
+        b.comment("WHAT THE UNITS FIGHT WITH WHEN TaCZ IS NOT INSTALLED (README 5ac).",
+                "",
+                "TaCZ used to be a HARD dependency: a pack without it was refused at launch. It is optional",
+                "now, so without TaCZ the mod still loads and the nine units still spawn inside cities, path,",
+                "take cover, suppress, bound, retreat, throw grenades, open doors and climb ladders - they",
+                "just fight with a bow or a crossbow instead of a firearm. The shooting code is the same one",
+                "that already handles a bow taken off a weapon rack (ArmedRangedGoal -> the mob's own",
+                "performRangedAttack), so the arrow flight, the difficulty-scaled inaccuracy and the drop are",
+                "vanilla numbers rather than a second set to tune.",
+                "",
+                "The weapon goes in the MAIN HAND because that is where the ranged goal looks for it; the",
+                "arrows are carried in the offhand stack and are cosmetic (the vanilla shot path does not",
+                "consume them - see fallbackArrows). With TaCZ present these two keys do nothing at all.");
+        GUNS_FALLBACK_WEAPON = b
+                .comment("The fallback weapon: \"crossbow\" (the default) or \"bow\". Anything that is not",
+                        "\"bow\" (ignoring case) means the crossbow, so a typo cannot leave every unit empty",
+                        "handed. The crossbow is the default because the pillager-based units already know how",
+                        "to use one.")
+                .define("fallbackWeapon", "crossbow");
+        GUNS_FALLBACK_ARROWS = b
+                .comment("How many arrows the fallback unit carries in its OFFHAND (cosmetic: see the note",
+                        "below). 0 leaves the offhand empty.",
+                        "",
+                        "HONEST NOTE: the shot itself goes through the same vanilla path a skeleton uses",
+                        "(ProjectileUtil.getMobArrow), and vanilla skeletons never run out of arrows - the",
+                        "stack is not decremented by the shot. So this number changes what a unit visibly",
+                        "carries, not how long it can shoot; a TaCZ-free unit effectively has unlimited",
+                        "arrows. Making the shot consume the stack would fight the vanilla bow/crossbow",
+                        "handling, so it is deliberately not done, and the fallback stays the weaker option.",
+                        "Range 0..256.")
+                .defineInRange("fallbackArrows", 32, 0, 256);
         EXCLUDED_GUN_TYPES = b
                 .comment("TaCZ gun 'type' values that are never issued. Defaults to rpg: rocket launchers",
                         "are not a fair mob weapon.")

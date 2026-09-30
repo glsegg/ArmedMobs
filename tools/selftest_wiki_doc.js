@@ -96,11 +96,11 @@ const keyPattern = /\.define(?:InRange|ListAllowEmpty|List|Enum)?\(\s*(?:List\.o
 const keyMatches = [...config.matchAll(keyPattern)].map((m) => m[1]);
 const keys = [...new Set(keyMatches)];
 const missingKeys = keys.filter((key) => !doc.includes(key));
-check(keyMatches.length === 372,
-  `Config.java registers 372 define() call sites (371 before voice.scavClips, + that one key)`,
+check(keyMatches.length === 374,
+  `Config.java registers 374 define() call sites (+ voice.scavClips, + the two guns.fallback* keys)`,
   `found ${keyMatches.length}`);
-check(keys.length === 342,
-  `those call sites carry 342 distinct key names (scavClips is a new name)`,
+check(keys.length === 344,
+  `those call sites carry 344 distinct key names (voice.scavClips + the two guns.fallback* keys)`,
   `found ${keys.length}`);
 check(missingKeys.length === 0, `every config key appears in the document`,
   missingKeys.length ? `missing: ${missingKeys.join(', ')}` : `${keys.length} key(s)`);

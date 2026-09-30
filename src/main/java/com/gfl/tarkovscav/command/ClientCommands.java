@@ -720,8 +720,13 @@ public final class ClientCommands {
         RigSupport.invalidateConfig();
         // And the gun pools: a gun pack (or a config change to the mods keys) is exactly the kind of thing a
         // user reloads the config for, so the attachment pools are dropped here too (README 5p).
-        com.gfl.tarkovscav.gun.GunAttachments.invalidate();
-        com.gfl.tarkovscav.gun.GunPool.invalidate();
+        // README 5ac: GunAttachments must not even be class-LOADED without TaCZ - its static fields are
+        // typed with TaCZ's AttachmentType, so the class initialiser throws NoClassDefFoundError before any
+        // guard inside a method of it could run. The check therefore lives here, at the call site.
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            com.gfl.tarkovscav.gun.GunAttachments.invalidate();
+            com.gfl.tarkovscav.gun.GunPool.invalidate();
+        }
         // The scripted-gun rule is cached per gun id and its "already reported" guards are per id too; a reload
         // is exactly when the trusted-namespace list may have changed, so the answer is recomputed (README 5p).
         com.gfl.tarkovscav.gun.ScriptedGuns.invalidate();

@@ -2757,6 +2757,59 @@ as the mob had been aiming.
 
 ---
 
+### 5ac. 没装 TaCZ 也能用：武装暴徒改用弓/弩（`[guns]` 的 `fallbackWeapon` / `fallbackArrows`）
+
+**需求原文**：「然后改一下如果没有装 tacz，也可以启用，这些生物会用弓或者弩。」
+
+以前 `mods.toml` 把 TaCZ 写成 `mandatory=true`：没装 TaCZ 时 Forge 直接在启动阶段拒绝加载本模组，一个实体都不会出现。现在改成 `mandatory=false`（`tools/spike/AssetTest.java` 会断言这一行，改回去就红），模组在任何整合包里都能加载。
+
+#### 有 TaCZ / 没 TaCZ，分别发生什么
+
+| | 装了 TaCZ | 没装 TaCZ |
+| --- | --- | --- |
+| 模组能否加载 | 能 | **能**（这就是这次改的东西） |
+| 刷怪、城市生成、建筑、武器架、语音、击杀播报 | 全部照旧 | 全部照旧 |
+| 单位手上的武器 | TaCZ 枪（按枪池/黑名单/白名单发放） | 弓或弩（`guns.fallbackWeapon`，副手配 `guns.fallbackArrows` 支箭） |
+| 远程战斗 AI | 枪械专用目标（点射、换弹、后坐、压制、精度档位……） | 原版远程目标 + 走位：拉近、停下、射箭、再走位 |
+| 击杀播报里写的武器 | 枪 id | `bow` / `crossbow` 的物品名 |
+| `/armedmobs gunpool`、改枪王、配件池、弹药掉落 | 正常 | 无枪可发，这些键等于空转（不报错，不刷屏） |
+
+**关键点：这是一次「降级」，不是「另一套玩法」。** 没有枪的暴徒仍然是同一个实体、同一种刷怪权重、同一套阵营与警戒情报、同一套掩体与走位 AI，只是把「扣扳机」换成「放箭」。所以整合包作者可以放心把本模组和别的枪械模组混装，也不会因为玩家卸掉 TaCZ 而让存档里的暴徒变成紫黑方块。
+
+#### 代码怎么判断的（为什么不会崩）
+
+- `gun/TaczPresence.java`：唯一一处「TaCZ 在不在」的判断，`loaded()` 走 `ModList.get().isLoaded("tacz")` 并缓存；`isGun(ItemStack)` = 非空 且 已装 TaCZ 且 `IGun.getIGunOrNull(stack) != null`。
+- 全仓只有 **10 个文件** import `com.tacz.guns.*`，其中 `GunAttachments` 有 TaCZ 类型的静态字段（`AttachmentType[] SLOTS` 与两个 `Map<AttachmentType,…>`），**一旦被类加载就会在没装 TaCZ 时抛 `NoClassDefFoundError`**。所以它只在「TaCZ 已装」的分支里被碰到，没装 TaCZ 时那个类根本不会被加载。`GunBrain` 没有 TaCZ 类型的字段与静态初始化，可以安全实例化，因此武器/目标代码复用它而不需要拆开。
+- 三个武装单位的装备与目标都是三分支：TaCZ 已装 → 原来的枪械分支；没装 → `MeleeAttackGoal`（贴身）+ `ArmedRangedGoal`；`ArmedRangedGoal` 本来就通过 `RangedAttackMob` 接口射弓/弩（村民与掠夺者原生实现，`ScavEntity` 这次补上了 `performRangedAttack`）。
+- 持久化同理：`loadout()` 与 `GunPool.loadoutFor(...)` 在没装 TaCZ 时直接返回空，不会读到枪的 NBT。
+- **「只在 TaCZ 存在时才执行」这件事，是逐条查过调用点的**（Java 的类解析是惰性的，编译通过完全不能证明运行安全）：`GunBrain.tick()` 在门行为之后立刻 `return`（因为它不只被枪战目标调用——`LadderClimbGoal` 爬梯子时也会调它，不拦就是一次爬梯必崩）；`GunBrain.onHurt()`（每次都从实体的 `hurt()` 进来）、`magazine()`、`debugSummary()` 各自有前置判断；`ClientCommands` 的 `/armedmobs reload` 在**第一次调用 `GunAttachments` 之前**判断（那个类的静态字段就是 TaCZ 类型，类初始化本身会抛 `NoClassDefFoundError`，方法内部的判断根本来不及跑）。
+- **只有枪才需要的命令会明确拒绝**，而不是崩：`/armedmobs` 的狙击手报告、配件报告、枪池报告和 `/armedmobs test` 战斗靶场都会先说一句「这个报告需要 TaCZ，本整合包没有装」然后返回（`ModCommands#requireTacz`，README 5ac）。
+- **照旧的**：门（开关门逻辑独立于枪）、爬梯子、手雷、语音、击杀播报、阵营/警戒、城市生成与刷怪上限、武器架（放弓/弩上去照样有人来拿）。
+
+#### 两个新键
+
+```toml
+[guns]
+    # crossbow = 弩（默认）| bow = 弓；别的值（含写错）都按弩处理，没有「空手」选项
+    fallbackWeapon = "crossbow"
+    # 副手放多少支箭（0..256）；纯外观，见下面的说明
+    fallbackArrows = 32
+```
+
+- `fallbackWeapon` 认值**不区分大小写**，只认 `bow`；其它任何值（含写错、含空串）都按 `crossbow` 处理，不会静默变成空手。
+- 两个键**只在没装 TaCZ 时生效**；装了 TaCZ 时它们完全不参与发放，所以你可以在整合包里先配好，之后卸 TaCZ 也不会变空手。
+- 想复现「纯弓」的复古整合包：`fallbackWeapon = "bow"` + `fallbackArrows = 64`。
+
+#### 一个诚实的说明（不打算假装它没问题）
+
+**`fallbackArrows` 是纯外观，没装 TaCZ 时箭实际上是无限的。** 原因在原版：`performRangedAttack` 走 `getProjectile(weapon)` → `ProjectileUtil.getMobArrow`，这条路**不扣箭**——这也是原版骷髅永远射不完的原因。副手那 32 支箭只是「看起来带着一个箭袋」，扣箭发生在玩家用弓时物品自己的 `releaseUsing` 里，生物这边根本没有那一步。
+
+要让它变成真实消耗，得在 `performRangedAttack` 里手动检查并扣除副手物品，那会和原版弓/弩自身的消耗逻辑打架（而且扣除后还要教会 `ArmedRangedGoal` 在没箭时转为贴身，否则单位会原地罚站）。所以这次**没有做**，这是一个刻意的取舍：没装 TaCZ 的暴徒本来就比装了 TaCZ 弱很多（武器、射程、射速都低），箭不消耗反而让它不至于变成活靶子。`FallbackEquipment` 的 javadoc、`Config.GUNS_FALLBACK_ARROWS` 的注释和 `tools/selftest_no_tacz.js` 都写着同一句话，所以这个「已知取舍」不会被后来的改动悄悄变成「以为已经修好了」。
+
+#### 怎么自己验证
+
+启动一个**只有本模组（连 GeckoLib 都可以不装）**的整合包：世界能进、城市照旧生成、`/armedmobs` 能打、暴徒和枪手会拿弓/弩并真的朝你放箭。**这一条只能由你在真客户端上确认**——开发环境里 TaCZ 永远在 classpath 上，`TaczPresence.loaded()` 在开发环境里恒为 true，自动化测试只能验证「没装 TaCZ 的代码路径不去碰 TaCZ 类」这种结构性事实。
+
 ### 5ab. 暴露目标的致命火力 + 被打就退（`[ai.<tier>]` 的六个新键）
 
 用户原话：「现在有个问题：面对**已经走出掩体**的敌人，troop 和 elite 只打**短点射**——一个弹匣都打不完，根本打不死人；而**他们自己被打、被打残的时候又不会缩进掩体**。TTK 本来可以非常短。」

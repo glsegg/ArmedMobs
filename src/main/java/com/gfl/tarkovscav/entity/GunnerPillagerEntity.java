@@ -12,7 +12,6 @@ import com.gfl.tarkovscav.gun.GunPose;
 import com.gfl.tarkovscav.gun.GunUser;
 import com.gfl.tarkovscav.gun.MobAmmoInventory;
 import com.gfl.tarkovscav.gun.NoGunMeleeGoal;
-import com.tacz.guns.api.item.IGun;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
@@ -109,7 +108,12 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
     @Override
     public void setScavTier(ScavTier tier) {
         this.tier = tier == null ? ScavTier.RIFLE : tier;
-        this.gunBrain().equip(this.getRandom());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            this.gunBrain().equip(this.getRandom());
+        } else {
+            // No TaCZ (README 5ac): bow or crossbow, and the ranged goal below does the shooting.
+            com.gfl.tarkovscav.gun.FallbackEquipment.equip(this, this.getRandom());
+        }
     }
 
     // ------------------------------------------------------------------ AI
@@ -117,6 +121,9 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
     @Override
     protected void registerGoals() {
         super.registerGoals();
+        // The gun fight needs TaCZ (README 5ac); without it this unit keeps the crossbow the fallback hands
+        // it and shoots that instead, so the gun goals are only registered when TaCZ is present.
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
         // The pillager's own crossbow goal sits at priority 2; the gun fight has to outrank it.
         this.goalSelector.addGoal(1, new GunAttackGoal(this));
         // Melee fallback, exactly as ScavEntity has it. It is not optional here: a vanilla Pillager
@@ -128,6 +135,12 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
         // it stood next to its target, unarmed, until it was killed. NoGunMeleeGoal keeps this mutually
         // exclusive with the gun goal, so the two never issue competing navigation calls in one tick.
         this.goalSelector.addGoal(2, new NoGunMeleeGoal(this, 1.1D, false));
+        } else {
+            // No TaCZ: the inherited RangedCrossbowAttackGoal shoots the fallback crossbow, and this is the
+            // melee it never had (a vanilla Pillager has no melee goal at all).
+            this.goalSelector.addGoal(2,
+                    new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(this, 1.1D, false));
+        }
         // Grenades (README 5v), behind shooting and melee: thrown only when the target is out of sight. The
         // ladder gate (README 7o) is required because this goal carries no goal flags of its own.
         this.goalSelector.addGoal(3, new com.gfl.tarkovscav.gun.LadderGatedGoal(this,
@@ -174,7 +187,12 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
         ScavTier forced = forcedSpawnTier();
         this.tier = forced != null ? forced : ScavTier.pickWeighted(this.getRandom());
         applyTierAttributes();
-        this.gunBrain().equip(this.getRandom());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            this.gunBrain().equip(this.getRandom());
+        } else {
+            // No TaCZ (README 5ac): bow or crossbow, and the ranged goal below does the shooting.
+            com.gfl.tarkovscav.gun.FallbackEquipment.equip(this, this.getRandom());
+        }
         return data;
     }
 
@@ -331,9 +349,11 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putString(TAG_TIER, this.tier.id());
-        GunLoadout loadout = this.gunBrain().loadout();
-        if (loadout != null) {
-            tag.putString(TAG_GUN, loadout.gunId().toString());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            GunLoadout loadout = this.gunBrain().loadout();
+            if (loadout != null) {
+                tag.putString(TAG_GUN, loadout.gunId().toString());
+            }
         }
     }
 
@@ -352,7 +372,7 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
         }
         if (tag.contains(TAG_GUN)) {
             ResourceLocation gunId = ResourceLocation.tryParse(tag.getString(TAG_GUN));
-            GunLoadout loadout = gunId == null ? null : GunPool.loadoutFor(this.tier, gunId);
+            GunLoadout loadout = gunId == null || !com.gfl.tarkovscav.gun.TaczPresence.loaded() ? null : GunPool.loadoutFor(this.tier, gunId);
             if (loadout != null) {
                 this.gunBrain().equipLoadout(loadout);
                 // The rack weapon still wins: a converted archer must not become a gunner on reload (5n).
@@ -360,7 +380,12 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
                 return;
             }
         }
-        this.gunBrain().equip(this.getRandom());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            this.gunBrain().equip(this.getRandom());
+        } else {
+            // No TaCZ (README 5ac): bow or crossbow, and the ranged goal below does the shooting.
+            com.gfl.tarkovscav.gun.FallbackEquipment.equip(this, this.getRandom());
+        }
         com.gfl.tarkovscav.block.WeaponRackTaker.restoreArmament(this);
     }
 
@@ -449,6 +474,6 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
 
     private boolean isArmed() {
         ItemStack held = this.getMainHandItem();
-        return !held.isEmpty() && IGun.getIGunOrNull(held) != null;
+        return com.gfl.tarkovscav.gun.TaczPresence.isGun(held);
     }
 }

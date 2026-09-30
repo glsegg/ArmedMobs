@@ -11,7 +11,6 @@ import com.gfl.tarkovscav.gun.GunPool;
 import com.gfl.tarkovscav.gun.GunPose;
 import com.gfl.tarkovscav.gun.GunUser;
 import com.gfl.tarkovscav.gun.MobAmmoInventory;
-import com.tacz.guns.api.item.IGun;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
@@ -69,7 +68,8 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  *       mob does not look like it is sliding along the floor.</li>
  * </ol>
  */
-public class ScavEntity extends Monster implements GeoEntity, GunUser {
+public class ScavEntity extends Monster implements GeoEntity, GunUser,
+        net.minecraft.world.entity.monster.RangedAttackMob {
     private static final String TAG_TIER = "TarkovScavTier";
     private static final String TAG_GUN = "TarkovScavGun";
 
@@ -151,7 +151,12 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
     @Override
     public void setScavTier(ScavTier tier) {
         this.tier = tier == null ? ScavTier.RIFLE : tier;
-        this.gunBrain().equip(this.getRandom());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            this.gunBrain().equip(this.getRandom());
+        } else {
+            // No TaCZ (README 5ac): bow or crossbow, and the ranged goal below does the shooting.
+            com.gfl.tarkovscav.gun.FallbackEquipment.equip(this, this.getRandom());
+        }
     }
 
     // ------------------------------------------------------------------ AI
@@ -164,12 +169,23 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        // priority 1: the gun fight outranks everything except drowning
-        this.goalSelector.addGoal(1, new com.gfl.tarkovscav.gun.GunAttackGoal(this));
-        // Plain melee stays as the fallback for a mob with no gun (empty/filtered TaCZ index) - and it
-        // is *mutually exclusive* with the gun goal: NoGunMeleeGoal#canUse is false while a gun is
-        // held, so the two can never issue competing navigation calls in the same tick.
-        this.goalSelector.addGoal(2, new com.gfl.tarkovscav.gun.NoGunMeleeGoal(this, 1.1D, false));
+        // The gun fight needs the gun core, which talks to TaCZ's item API, so it is only registered when
+        // TaCZ is present (README 5ac). Without it the unit shoots the bow/crossbow it was issued and closes
+        // in with a plain melee goal once the quiver is empty.
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            // priority 1: the gun fight outranks everything except drowning
+            this.goalSelector.addGoal(1, new com.gfl.tarkovscav.gun.GunAttackGoal(this));
+            // Plain melee stays as the fallback for a mob with no gun (empty/filtered TaCZ index) - and it
+            // is *mutually exclusive* with the gun goal: NoGunMeleeGoal#canUse is false while a gun is
+            // held, so the two can never issue competing navigation calls in the same tick.
+            this.goalSelector.addGoal(2, new com.gfl.tarkovscav.gun.NoGunMeleeGoal(this, 1.1D, false));
+        } else {
+            this.goalSelector.addGoal(2,
+                    new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(this, 1.1D, false));
+        }
+        // Unconditional, exactly as on the two gunner units: inert unless a bow or crossbow is actually in
+        // hand, and without TaCZ this IS the weapon goal (it hands the shot to performRangedAttack).
+        this.goalSelector.addGoal(1, new com.gfl.tarkovscav.gun.ArmedRangedGoal(this, 1.0D, 15.0F));
         // Grenades (README 5v): priority 3, behind shooting and melee, and only when the target is out of
         // sight. Completely inert for a mob with no grenades, so an ordinary scav is unaffected. Wrapped in
         // the ladder gate (README 7o) because this goal takes no goal flags at all (it never calls
@@ -214,7 +230,12 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
 
         this.tier = ScavTier.pickWeighted(this.getRandom());
         applyTierAttributes();
-        this.gunBrain().equip(this.getRandom());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            this.gunBrain().equip(this.getRandom());
+        } else {
+            // No TaCZ (README 5ac): bow or crossbow, and the ranged goal below does the shooting.
+            com.gfl.tarkovscav.gun.FallbackEquipment.equip(this, this.getRandom());
+        }
         return data;
     }
 
@@ -332,9 +353,11 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putString(TAG_TIER, this.tier.id());
-        GunLoadout loadout = this.gunBrain().loadout();
-        if (loadout != null) {
-            tag.putString(TAG_GUN, loadout.gunId().toString());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            GunLoadout loadout = this.gunBrain().loadout();
+            if (loadout != null) {
+                tag.putString(TAG_GUN, loadout.gunId().toString());
+            }
         }
     }
 
@@ -350,13 +373,18 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
 
         if (tag.contains(TAG_GUN)) {
             ResourceLocation gunId = ResourceLocation.tryParse(tag.getString(TAG_GUN));
-            GunLoadout loadout = gunId == null ? null : GunPool.loadoutFor(this.tier, gunId);
+            GunLoadout loadout = gunId == null || !com.gfl.tarkovscav.gun.TaczPresence.loaded() ? null : GunPool.loadoutFor(this.tier, gunId);
             if (loadout != null) {
                 this.gunBrain().equipLoadout(loadout);
                 return;
             }
         }
-        this.gunBrain().equip(this.getRandom());
+        if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
+            this.gunBrain().equip(this.getRandom());
+        } else {
+            // No TaCZ (README 5ac): bow or crossbow, and the ranged goal below does the shooting.
+            com.gfl.tarkovscav.gun.FallbackEquipment.equip(this, this.getRandom());
+        }
     }
 
     // ------------------------------------------------------------------ loot
@@ -476,10 +504,35 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser {
         return state.setAndContinue(RawAnimation.begin().thenLoop(GunClips.gun(family, action)));
     }
 
+    /**
+     * The bow/crossbow shot (README 5ac), used when the pack has no TaCZ and the unit was handed the fallback
+     * weapon. A {@code Monster} has no ranged attack of its own, so the arrow is spawned here, copied from the
+     * implementation the villager-based gunner already used for a bow taken off a weapon rack: the same launch
+     * angle and the same difficulty-scaled inaccuracy as {@code AbstractSkeleton}. It is also what
+     * {@link com.gfl.tarkovscav.gun.ArmedRangedGoal} calls, so the fallback needs no second goal of its own.
+     */
+    @Override
+    public void performRangedAttack(LivingEntity target, float distanceFactor) {
+        ItemStack weapon = this.getItemInHand(net.minecraft.world.entity.projectile.ProjectileUtil
+                .getWeaponHoldingHand(this, item -> item == net.minecraft.world.item.Items.BOW
+                        || item == net.minecraft.world.item.Items.CROSSBOW));
+        ItemStack ammo = this.getProjectile(weapon);
+        var arrow = net.minecraft.world.entity.projectile.ProjectileUtil.getMobArrow(this, ammo, distanceFactor);
+        double dx = target.getX() - this.getX();
+        double dy = target.getY(0.3333333333333333D) - arrow.getY();
+        double dz = target.getZ() - this.getZ();
+        double horizontal = Math.sqrt(dx * dx + dz * dz);
+        arrow.shoot(dx, dy + horizontal * 0.2D, dz, 1.6F,
+                (float) (14 - this.level().getDifficulty().getId() * 4));
+        this.playSound(net.minecraft.sounds.SoundEvents.SKELETON_SHOOT, 1.0F,
+                1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
+        this.level().addFreshEntity(arrow);
+    }
+
     /** True when the mob visibly holds a TaCZ gun. Read from the main hand, which is synced. */
     private boolean isArmed() {
         ItemStack held = this.getMainHandItem();
-        return !held.isEmpty() && IGun.getIGunOrNull(held) != null;
+        return com.gfl.tarkovscav.gun.TaczPresence.isGun(held);
     }
 
     /**

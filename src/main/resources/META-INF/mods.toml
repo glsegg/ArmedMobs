@@ -34,12 +34,13 @@ description='''${mod_description}'''
     ordering="AFTER"
     side="BOTH"
 
-# TaCZ is a HARD runtime dependency and is deliberately NOT bundled: it is a 57 MB third-party
-# mod that the player installs themselves. Every gun, magazine and bullet this mod fires comes
-# from TaCZ, so without it nothing here can work - fail loudly at load instead of at first shot.
+# TaCZ is OPTIONAL since 2026-10 (README 5ac) and is deliberately NOT bundled: it is a 57 MB third-party
+# mod that the player installs themselves. WITH TaCZ every unit is issued a firearm; WITHOUT it the mod
+# still loads and the same units fight with bows and crossbows (see TaczPresence/FallbackEquipment), so
+# this entry is mandatory=false on purpose - a pack without TaCZ must load rather than be refused.
 [[dependencies.${mod_id}]]
     modId="tacz"
-    mandatory=true
+    mandatory=false
     versionRange="${tacz_version_range}"
     ordering="AFTER"
     side="BOTH"

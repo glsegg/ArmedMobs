@@ -2,7 +2,6 @@ package com.gfl.tarkovscav.client;
 
 import com.gfl.tarkovscav.Config;
 import com.gfl.tarkovscav.entity.GunnerVillagerEntity;
-import com.tacz.guns.api.item.IGun;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.VillagerModel;
 import net.minecraft.client.model.ArmedModel;
@@ -209,6 +208,6 @@ public class GunnerVillagerModel extends VillagerModel<GunnerVillagerEntity> imp
     /** Client-side "is a TaCZ gun in the main hand" - the same test {@code ScavEntity#isArmed} uses. */
     private static boolean holdsGun(GunnerVillagerEntity entity) {
         ItemStack held = entity.getMainHandItem();
-        return !held.isEmpty() && IGun.getIGunOrNull(held) != null;
+        return com.gfl.tarkovscav.gun.TaczPresence.isGun(held);
     }
 }

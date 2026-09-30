@@ -219,6 +219,8 @@
 | `guns.ammoDropChance` | `0.5` | 死亡掉落备用弹药的概率 | 0.0..1.0 |
 | `guns.ammoItemStacks` | `3` | 怪携带的匹配弹药堆数；打完会脱离接触 | 1..27 |
 | `guns.manualReloadFallback` | `true` | 当 TaCZ 自己的 `reload()` 对生物无动作时，由本模组补上换弹（仍走 TaCZ API、仍消耗真实弹药） | 关掉可观察 TaCZ 原始行为 |
+| `guns.fallbackWeapon` | `"crossbow"` | **没装 TaCZ 时**武装单位拿什么：`crossbow`（默认）或 `bow`；**认值不区分大小写，其它任何值都按弩处理**（写错不会静默变空手） | 只影响「手上武器」，不影响刷怪与 AI（详见 README §5ac）。没有「空手」选项 |
+| `guns.fallbackArrows` | `32` | **没装 TaCZ 时**副手放多少支箭（0..256）。**纯外观**：射击走原版 `ProjectileUtil.getMobArrow`（和骷髅同一条路），那条路不扣箭，所以这个数字只决定单位「看起来带了多少」，实际弹药无限（见 README §5ac 的说明） | TaCZ 已装时这两个键完全不生效 |
 | `guns.manualReloadTicks` | `45` | 补位换弹耗时（tick），期间怪躲掩体并播放换弹姿势 | 5..400 |
 | `guns.reloadStallTicks` | `200` | TaCZ 报告「换弹中」多久后不再相信并脱离接触 | 20..2400；这是唯一由 TaCZ 驱动的状态的上界 |
 
