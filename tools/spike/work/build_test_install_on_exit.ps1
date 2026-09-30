@@ -1,6 +1,9 @@
 # Wait for the game to exit, then rebuild, re-run the full suite, and install ONLY if the suite passed.
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -File tools\spike\work\build_test_install_on_exit.ps1 -Pid 7456
+#   powershell -NoProfile -ExecutionPolicy Bypass -File tools\spike\work\build_test_install_on_exit.ps1 -GamePid 7456
+#
+# The parameter is NOT called -Pid on purpose: $Pid is a read-only automatic variable in PowerShell (the current
+# process id), and `param([int]$Pid)` makes the whole script die with "Cannot overwrite variable Pid".
 #
 # Why it is one script and not three steps I run by hand: the machine has ~1.3 GB free while the user's game is
 # up (the client holds ~7 GB), and a Gradle build stalls rather than failing under that pressure - measured: the
@@ -10,7 +13,7 @@
 # The install step is deliberately last and conditional: a jar that has not passed the suite is never installed
 # (that rule exists because swapping a jar under a live game once caused a real ClassNotFoundException crash).
 param(
-    [Parameter(Mandatory = $true)][int]$Pid,
+    [Parameter(Mandatory = $true)][int]$GamePid,
     [string]$Root = 'D:\deepseek\ArmedMobs',
     [string]$GradleHome = 'D:\deepseek\GirlsFrontline\.gradle-home',
     [string]$Flavor = 'plain',
@@ -18,9 +21,9 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $deadline = (Get-Date).AddHours($TimeoutHours)
-Write-Host ("waiting for pid {0} to exit (up to {1} h)... {2}" -f $Pid, $TimeoutHours, (Get-Date -Format 'HH:mm:ss'))
+Write-Host ("waiting for pid {0} to exit (up to {1} h)... {2}" -f $GamePid, $TimeoutHours, (Get-Date -Format 'HH:mm:ss'))
 while ($true) {
-    if (-not (Get-Process -Id $Pid -ErrorAction SilentlyContinue)) { break }
+    if (-not (Get-Process -Id $GamePid -ErrorAction SilentlyContinue)) { break }
     if ((Get-Date) -gt $deadline) { Write-Host 'TIMEOUT: the game is still running, nothing was built or installed.'; exit 0 }
     Start-Sleep -Seconds 5
 }
