@@ -1,4 +1,14 @@
-# Armed Mobs（武装暴徒）
+<div align="center">
+
+<img src="src/main/resources/armedmobs-logo.png" width="180" alt="Armed Mobs Logo">
+
+# Armed Mobs / 武装暴徒
+
+一个为 Minecraft 制作的武装生物与城市战斗模组。
+
+[![Build](https://github.com/EdDYON/Egg-ArmedMobs/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/EdDYON/Egg-ArmedMobs/actions/workflows/build.yml) ![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-62B47A) ![Forge](https://img.shields.io/badge/Forge-47.x-E04E14) ![Java](https://img.shields.io/badge/Java-17-ED8B00)
+
+</div>
 
 Minecraft **1.20.1 / Forge 47.x** 模组，包含武装生物、城市结构、城市废土维度及阵营战斗。
 本仓库维护自 [glsegg/ArmedMobs](https://github.com/glsegg/ArmedMobs) 的 Fork。
