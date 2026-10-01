@@ -24,6 +24,9 @@ const fixtures = {
 public class ItemStack { public boolean gun=true,empty; public boolean isEmpty() { return empty; } }`,
  'com/tacz/guns/api/item/IGun.java': `package com.tacz.guns.api.item;
 public class IGun { public static IGun getIGunOrNull(net.minecraft.world.item.ItemStack stack) { return stack.gun?new IGun():null; } }`,
+ 'net/minecraftforge/fml/ModList.java': `package net.minecraftforge.fml;
+public class ModList { public static ModList get() { return new ModList(); }
+ public boolean isLoaded(String id) { return id.equals("tacz") && !Boolean.getBoolean("test.taczAbsent"); } }`,
  'com/mojang/math/Axis.java': `package com.mojang.math;
 public record Axis(char axis) { public static final Axis XP=new Axis('x'),YP=new Axis('y'),ZP=new Axis('z');
  public record Rotation(char axis,double radians) {} public Rotation rotationDegrees(float value) { return new Rotation(axis,Math.toRadians(value)); }
@@ -186,7 +189,30 @@ public class VanillaPosesTest {
   }
   com.gfl.tarkovscav.Config.body=false; com.gfl.tarkovscav.Config.rotation=new float[]{${triple('GUN_ROTATION')}}; com.gfl.tarkovscav.Config.scale=1;
  }
- public static void main(String[] args) { pillager(); villager(); grip(); System.out.println("PASS "+checks+" production vanilla pose/frame/grip checks"); }
+ static void withoutTacz() {
+  try { Class.forName("com.tacz.guns.api.item.IGun"); throw new AssertionError("TaCZ must actually be absent from this JVM"); }
+  catch(ClassNotFoundException expected) { checks++; }
+  check(!com.gfl.tarkovscav.gun.TaczPresence.loaded(),"production presence helper sees the absent mod");
+  var pillagerRoot=root(); var pillager=new GunnerPillagerArmModel(pillagerRoot); var pillagerMob=new GunnerPillagerEntity();
+  var villagerRoot=root(); var villager=new GunnerVillagerModel(villagerRoot); var villagerMob=new GunnerVillagerEntity();
+  pillagerMob.stack.gun=false; villagerMob.stack.gun=false;
+  check(!pillagerMob.stack.isEmpty() && !villagerMob.stack.isEmpty(),"fallback bows are nonempty");
+  for(var side:HumanoidArm.values()) for(var state:GunAiState.values()) {
+   pillagerMob.arm=side; pillagerMob.state=state; villagerMob.state=state;
+   pillager.setupAnim(pillagerMob,0,0,0,30,-30); villager.setupAnim(villagerMob,0,0,0,30,-30);
+   near(villagerRoot.getChild("arms").xRot,-0.75,"no-TaCZ villager preserves ordinary crossed arms");
+   near(villagerRoot.getChild("arms").yRot,0,"no-TaCZ villager resets gun aiming yaw");
+   if(state==GunAiState.IDLE) {
+    near(pillagerRoot.getChild("right_arm").xRot,0.125,"fallback bow keeps vanilla right-arm idle pose");
+    near(pillagerRoot.getChild("left_arm").xRot,-0.125,"fallback bow keeps vanilla left-arm idle pose");
+   }
+  }
+  System.out.println("PASS "+checks+" no-TaCZ production model checks (IGun.class absent)");
+ }
+ public static void main(String[] args) {
+  if(Boolean.getBoolean("test.taczAbsent")) { withoutTacz(); return; }
+  pillager(); villager(); grip(); System.out.println("PASS "+checks+" production vanilla pose/frame/grip checks");
+ }
 }`
 };
 fs.mkdirSync(output, { recursive: true });
@@ -197,10 +223,16 @@ for (const [name, text] of Object.entries(fixtures)) {
 }
 for (const name of ['GunnerPillagerArmModel', 'GunnerVillagerModel', 'GunGripModel', 'ArmPose']) sources.push(path.join(root, 'src/main/java/com/gfl/tarkovscav/client', `${name}.java`));
 sources.push(path.join(root, 'src/main/java/com/gfl/tarkovscav/gun/GunAiState.java'));
+sources.push(path.join(root, 'src/main/java/com/gfl/tarkovscav/gun/TaczPresence.java'));
 const classes = path.join(output, 'classes'); fs.mkdirSync(classes, { recursive: true });
 const executable = name => process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', name + (process.platform === 'win32' ? '.exe' : '')) : name;
-for (const [command, args] of [['javac', ['-encoding', 'UTF-8', '-d', classes, ...sources]], ['java', ['-cp', classes, 'VanillaPosesTest']]]) {
+const run = (command, args) => {
  const result = spawnSync(executable(command), args, { cwd: root, encoding: 'utf8' });
  if (result.stdout) process.stdout.write(result.stdout); if (result.stderr) process.stderr.write(result.stderr);
  if (result.error) throw result.error; if (result.status !== 0) process.exit(result.status || 1);
-}
+};
+run('javac', ['-encoding', 'UTF-8', '-d', classes, ...sources]);
+run('java', ['-cp', classes, 'VanillaPosesTest']);
+// Remove only our disposable API fixture before a fresh JVM, proving lazy linkage without TaCZ.
+fs.unlinkSync(path.join(classes, 'com/tacz/guns/api/item/IGun.class'));
+run('java', ['-Dtest.taczAbsent=true', '-cp', classes, 'VanillaPosesTest']);

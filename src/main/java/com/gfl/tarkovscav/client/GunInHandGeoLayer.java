@@ -82,7 +82,7 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
 
     /** True when the item stack is a TaCZ gun. */
     private static boolean isGun(ItemStack stack) {
-        return !stack.isEmpty() && com.tacz.guns.api.item.IGun.getIGunOrNull(stack) != null;
+        return com.gfl.tarkovscav.gun.TaczPresence.isGun(stack);
     }
 
     /**

@@ -2,9 +2,15 @@ Armed Mobs（武装暴徒）0.1.0  —— 测试版安装说明
 ================================================
 
 【文件】
-  armedmobs-0.1.0-all.jar
-  sha256 = ff1973d7622b4b57036874f30de28c9f306402ec99ca99be03070f2ef405d700
-  大小   = 4,476,092 字节
+  两种 jar，**只能放一个**（同一个 modId `tarkovscav`，两个同时放 Forge 会拒绝启动）：
+
+  A) armedmobs-0.1.0.jar       ← **你实例里现在用的就是这个**（普通版，不含内嵌 GeckoLib）
+     需要另外装 GeckoLib（你实例里已有 `geckolib-forge-1.20.1-4.8.2.jar`）
+  B) armedmobs-0.1.0-all.jar   （jarJar 版，**已内嵌 GeckoLib 4.8.4**，不需要另装）
+
+  两者功能完全一样，只有依赖打包方式不同。**每份 jar 的 sha256 见同目录的 `SHA256SUMS`**
+  （安装脚本每次安装都会重写它），别用别处的旧值。
+
   （显示名是 Armed Mobs，但内部 mod id 仍是 tarkovscav —— 老存档/结构/配置照常可用；
     /armedmobs 与 /tarkovscav 是同一个指令树的两个名字。）
 
@@ -22,6 +28,42 @@ Armed Mobs（武装暴徒）0.1.0  —— 测试版安装说明
   来圈出"城市区域"——本模组的武装单位只会在这个区域里生成。
 
 【本次更新（累计）】
+  -16) **scav 不再说掠夺者的话**（2026-10）：
+      * 用户口径：「然后是 scav这种武装暴徒（非掠夺者暴徒），可以把掠夺者的声音去掉。」
+      * **"shared" 那套 clip 本身就是掠夺者的**（就是最早那 27 条）。所以给 `tarkovscav:scav` 单独开了一个
+        语音家族 `scav`：它**自己没有 clip**，而且是**唯一不允许回落到 shared 的那个家族** —— `VoicePools.pool`
+        对它直接返回空列表，于是这个暴徒**静音**（六类都不说：发现敌人/交火喊话/自言自语/手雷/报点/阵亡）。
+      * **只影响 scav**：枪手、狙击手与四个兵种家族（usec/bear/elite）照旧说原来的池。
+      * 新键 `voice.scavClips`（`[voice]`，默认 `"none"`）：写 `"shared"` 就回到旧行为（暴徒又借掠夺者那套）；
+        写任何别的值（包括打错）都按 `none` 处理，所以打错字**不会**悄悄把掠夺者的声音放回来。
+      * 顺带：`voice.familyVolume` 默认值里加了 `scav=1.0`（否则会打一条"未知家族"的日志警告）；
+        `/armedmobs test sound scav` 会明确告诉你"这个家族按设计没有 clip"，而不是说"没有这个池"。
+      * 门禁 `selftest_voice.js` 加了 7 条断言（家族声明、按类型取家族、**空返回在回落之前**、
+        只认字面量 `"shared"`、没有 scav_* 池、默认值是 none、两份文档都写了这个键）。
+  -15) **城市刷怪上限：一座城里同阵容最多 12 个持枪单位**（2026-10）：
+      * 用户口径：「目前刷人会一直刷的问题 会导致卡顿严重，通常不是玩家手动放刷怪蛋的话 可以限制这个地方
+        最多同时存在12个同阵容的持枪单位。」
+      * **它补的是占领战兵力池缺的那一半**：池限制「一座城总共能死多少人」，不限制「街上同时站多少人」；
+        刷怪笼会一直工作、池还在就还会补员，玩家一走开那座城就变成常驻军，而每个单位都在跑完整枪械 AI。
+      * **规则**：一座城 × 一个阵营，最多 N 个**本模组的持枪单位**同时存活（只数实现了 `GunUser` 的那九种；
+        阵营标签里的原版村民/掠夺者不计入）。**只数这个模组自己的单位**是因为它们才是开销来源。
+        上限 12 = **第 12 个放行、第 13 个拒绝**；死一个立刻腾出名额。
+      * **豁免**：刷怪蛋与 `/summon`（也就是「玩家手动放的」）；`spawn.cityFactionCapIgnoreManual = true`
+        才会连它们一起限。
+      * **两个维度都生效**（性能护栏，故意不判断主世界）——废土正是刷怪笼堆人的地方。
+      * **不碰世界**：被拒绝的刷新只是「不生成」，不删怪、不改写/不熄灭刷怪笼方块。
+      * **代价**：每个「城×阵营」每 `cityFactionCapCountTicks`（默认 20 tick = 1 秒）做一次范围查询，
+        热路径上只是一次哈希查找；关掉 `cityFactionCapEnabled` 就完全跳过。
+      * **命令**：`/armedmobs spawncap`（生效配置 + 每个已测量过的城×阵营的 `live=` / 本窗口已放行 / 是否到上限，
+        **只读缓存不扫世界**）、`/armedmobs spawncap reset`（只清测量结果）。
+        因上限被拒的刷新会写一行日志，标记 `[spawncap]`（受 `spawn.logSpawnGate` 控制）。
+      * **4 个新配置键**（都在 `[spawn]`）：`cityFactionCapEnabled = true`、`cityFactionCap = 12`
+        （范围 0..128，**0 = 不设上限**）、`cityFactionCapCountTicks = 20`、`cityFactionCapIgnoreManual = false`。
+        新增的键 Forge 会**自动以默认值补进**你现有的 `config/tarkovscav-common.toml`（不用手加）；
+        只有**改了默认值**的键才需要你手改（例如更早那次的 `cityRegionPadding`）。
+      * 门槛 `tools/selftest_spawn_cap.js`（45 项，其中 42 项是编译并运行真算法的可执行证据）；测试当场抓到
+        一个真 bug：第一版缓存初值 `Long.MIN_VALUE` 相减**溢出**，会让首次计数永不发生、一旦到上限就**永久
+        拒绝**该城所有刷新——现在显式处理「从未计数」与「时钟倒退」。
   -14) **废土收尾：不再生成积水 + 城市间距 384 格 + `/armedmobs fillwater`**（2026-10）：
       * 成因两层：预设开着含水层（`aquifers_enabled`），城市块之间没被结构覆盖的缝隙就积了水。
         `noise_settings/urban_wasteland.json` 现在是 `aquifers_enabled: false` +

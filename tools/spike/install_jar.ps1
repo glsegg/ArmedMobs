@@ -16,8 +16,17 @@
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\spike\install_jar.ps1
 #   ... -Jar <path> -Instance <mods dir> -Force
+#
+# TWO FLAVORS, AND WHY THE SCRIPT KNOWS ABOUT BOTH (2026-09-30):
+#   armedmobs-0.1.0-all.jar  - the jarJar build, GeckoLib 4.8.4 nested inside. Nothing else needed.
+#   armedmobs-0.1.0.jar      - the plain build, no nested GeckoLib. Needs a GeckoLib on the mods folder
+#                              (the user's instance has geckolib-forge-1.20.1-4.8.2.jar).
+# Both declare modId tarkovscav, so having one of each live in mods/ makes Forge refuse to launch. The user
+# switched his instance to the PLAIN jar on 2026-09-26, so this script now detects which flavor is live and
+# installs that one by default, and parks ANY other armedmobs jar (either flavor) as a .bak-<sha8> file.
 param(
-    [string]$Jar = 'D:\deepseek\ArmedMobs\build\libs\armedmobs-0.1.0-all.jar',
+    [string]$Jar = '',
+    [string]$Flavor = '',
     [string]$Instance = 'C:\TESTv3\.minecraft\versions\1.20.1-Forge_47.4.3\mods',
     [string]$GameDir = 'C:\TESTv3\.minecraft\versions\1.20.1-Forge_47.4.3',
     [string]$WorkspaceCopy = 'D:\deepseek\ArmedMobs\mods',
@@ -26,9 +35,29 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 # ---------------------------------------------------------------- 0. the artifact names (ONE place)
-# The name this script installs, plus the pre-rebrand names that must never stay live beside it.
-$name = 'armedmobs-0.1.0-all.jar'
+# The two flavors this mod ships, plus the pre-rebrand name that must never stay live beside either.
+$plainName = 'armedmobs-0.1.0.jar'
+$allName = 'armedmobs-0.1.0-all.jar'
+$flavors = [ordered]@{ 'plain' = $plainName; 'all' = $allName }
 $legacyNames = @('tarkovscav-0.1.0-all.jar')
+
+# ---------------------------------------------------------------- 0b. which flavor, and which jar file
+if (-not $Flavor) {
+    # Whatever is live in the instance wins; with nothing live, the plain one (what the user runs today).
+    $live = Get-ChildItem -LiteralPath $Instance -Filter 'armedmobs-0.1.0*.jar' -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -notlike '*.bak-*' }
+    if ($live) {
+        $Flavor = if ($live[0].Name -eq $allName) { 'all' } else { 'plain' }
+        Write-Host ("flavor from the live jar ({0}): {1}" -f $live[0].Name, $Flavor)
+    } else {
+        $Flavor = 'plain'
+        Write-Host 'no armedmobs jar is live; defaulting to the plain flavor'
+    }
+}
+if (-not $flavors.Contains($Flavor)) { throw "unknown flavor '$Flavor' (use plain or all)" }
+$name = $flavors[$Flavor]
+if (-not $Jar) { $Jar = "D:\deepseek\ArmedMobs\build\libs\$name" }
+Write-Host ("installing flavor: {0} ({1})" -f $Flavor, $name)
 
 # ---------------------------------------------------------------- 1. is a client running?
 $clients = @()
@@ -49,30 +78,34 @@ if ($clients.Count -gt 0 -and -not $Force) {
 }
 Write-Host ("client running at install time: {0}" -f $(if ($clients.Count -gt 0) { "YES (forced, pids $($clients.ProcessId -join ','))" } else { 'no' }))
 
-# ---------------------------------------------------------------- 2. move a pre-rebrand jar aside
+# ---------------------------------------------------------------- 2. park every OTHER armedmobs jar
 # Forge scans every top-level *.jar in a mods folder, and two files declaring the same modId abort the
-# launch. Both the old and the new name declare tarkovscav (the id intentionally did not change), so a
-# live old-named jar has to go - parked as a .bak-<sha8> file that Forge ignores.
-function Move-Aside-LegacyJar([string]$Directory) {
+# launch. That covers the pre-rebrand name AND the other flavor of this one (plain vs -all), which is the trap
+# the user's own switch to the plain jar laid: installing the -all build beside his plain jar would have made
+# the game refuse to start. Everything that is not the file about to be written is parked as .bak-<sha8>.
+function Move-Aside-OtherJar([string]$Directory) {
     if (-not (Test-Path $Directory)) { return }
+    $pattern = if ($name -eq $allName) { 'armedmobs-0.1.0.jar' } else { 'armedmobs-0.1.0-all.jar' }
+    $others = @()
+    $others += Get-ChildItem -LiteralPath $Directory -Filter $pattern -ErrorAction SilentlyContinue
     foreach ($legacyName in $legacyNames) {
-        $live = Join-Path $Directory $legacyName
-        if (-not (Test-Path $live)) { continue }
-        $legacySha = (Get-FileHash $live -Algorithm SHA256).Hash.ToLower()
-        $aside = "$live.bak-$($legacySha.Substring(0, 8))"
-        Move-Item -LiteralPath $live -Destination $aside -Force
+        $others += Get-ChildItem -LiteralPath $Directory -Filter $legacyName -ErrorAction SilentlyContinue
+    }
+    foreach ($other in $others) {
+        $otherSha = (Get-FileHash $other.FullName -Algorithm SHA256).Hash.ToLower()
+        $aside = "$($other.FullName).bak-$($otherSha.Substring(0, 8))"
+        Move-Item -LiteralPath $other.FullName -Destination $aside -Force
         Write-Host ''
-        Write-Host "MOVED AN OLD-NAMED JAR ASIDE: $legacyName -> $([IO.Path]::GetFileName($aside))" -ForegroundColor Yellow
-        Write-Host '  the old name declares the SAME modId as the new one (the id must not change), so leaving' -ForegroundColor Yellow
-        Write-Host '  it as a live *.jar would make Forge refuse to start with a duplicate-mod error.' -ForegroundColor Yellow
-        Write-Host "  parked in $Directory as a .bak-<sha8> file that Forge ignores" -ForegroundColor Yellow
+        Write-Host "PARKED ANOTHER SAME-ID JAR: $($other.Name) -> $([IO.Path]::GetFileName($aside))" -ForegroundColor Yellow
+        Write-Host '  it declares the same modId (tarkovscav), so leaving it live would make Forge refuse to' -ForegroundColor Yellow
+        Write-Host '  start. Parked as a .bak-<sha8> file, which Forge ignores.' -ForegroundColor Yellow
         Write-Host ''
     }
 }
 
-Write-Host '--- clearing any pre-rebrand jar out of the live mods folders ---'
-Move-Aside-LegacyJar $Instance
-Move-Aside-LegacyJar $WorkspaceCopy
+Write-Host '--- parking every other same-id jar (the other flavor + the pre-rebrand name) ---'
+Move-Aside-OtherJar $Instance
+Move-Aside-OtherJar $WorkspaceCopy
 
 # ---------------------------------------------------------------- 3. install
 if (-not (Test-Path $Jar)) { throw "jar not found: $Jar" }
@@ -100,12 +133,13 @@ foreach ($path in @($Jar, $target, (Join-Path $WorkspaceCopy $name))) {
     }
     Write-Host ("  {0,-95} size={1} sha={2}" -f $path, $file.Length, $readSha)
 }
-# No live old-named jar may survive: it would be a second file declaring modId tarkovscav.
+# No other same-id jar may survive - not the pre-rebrand name, and not the other flavor.
 foreach ($directory in @($Instance, $WorkspaceCopy)) {
-    foreach ($legacyName in $legacyNames) {
-        $live = Join-Path $directory $legacyName
+    $otherFlavor = if ($name -eq $allName) { $plainName } else { $allName }
+    foreach ($otherName in @($otherFlavor) + $legacyNames) {
+        $live = Join-Path $directory $otherName
         if (Test-Path $live) {
-            $problems += "an old-named jar is still live: $live (two files with modId tarkovscav = launch failure)"
+            $problems += "another same-id jar is still live: $live (two files with modId tarkovscav = launch failure)"
         }
     }
 }
@@ -123,5 +157,5 @@ if ($problems.Count -gt 0) {
     $problems | ForEach-Object { Write-Host "  $_" }
     exit 1
 }
-Write-Host 'read-back verification: three copies identical, no live old-named jar, 7z t = Everything is Ok, ModCommands.class present'
+Write-Host 'read-back verification: three copies identical, no other same-id jar live, 7z t = Everything is Ok, ModCommands.class present'
 exit 0

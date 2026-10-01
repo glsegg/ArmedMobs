@@ -56,6 +56,8 @@
 | `debug` | 无 | 打印 32 格内每只持枪单位的完整状态机报告（`GunBrain#debugSummary`）＋ 阵营/叛变/警戒网络/精度档/护甲等级/语音池/当前目标（是否 `VILLAGE-HOSTILE`）；写 `[debug]` 日志 | `/armedmobs debug` |
 | `dimension [name]` | `name`：单词，可省略。省略 = `tarkovscav:urban_wasteland`；带命名空间按原样解析，不带则补 `tarkovscav:`。自动补全列出本服务器所有已加载维度 | 把**执行者**（必须是玩家）传送到城市废土维度（或指定维度），落点与部署信标**完全同一套**安全落地代码（`MOTION_BLOCKING` 高度图定 Y、悬空时铺 5×5 石砖平台＋火把），并打印落点坐标；写 `[wasteland]` 日志。非玩家来源、未知维度都会干净拒绝并说明 | `/armedmobs dimension`、`/armedmobs dimension minecraft:the_nether` |
 | `fillwater [radius] [block]` | `radius`：整数 `1..128`，可省略（默认 **48**）。`block`：字符串，可省略（默认 **`minecraft:stone`**），带不带 `minecraft:` 都认；`minecraft:air` = 抽干 | 以执行者为中心扫一个立方体，把 `minecraft:water` 替换成 `block`（1.20.1 没有独立的 `flowing_water` **方块**，流动与静止都是带 0..15 液面属性的 `minecraft:water`，所以一条判定就够）。**含水方块**（楼梯/栅栏/台阶等）只计数、不替换——替换它们等于把方块本身删掉；未加载的区块跳过并在结果里标注；替换位置落在扫描边界上的数量单独报告并提示「外面的水会流回来，再来一次或把半径放大」。打印 `[fillwater]` 行：维度、目标方块、包围盒、扫描数、替换数、含水跳过数、边界水数。未知道方块名干净拒绝返回 0 | `/armedmobs fillwater`、`/armedmobs fillwater 96`、`/armedmobs fillwater 128 minecraft:air` |
+| `spawncap` | 无 | 打印城市刷怪上限的生效配置（开关、上限、计数间隔、是否连手动也限），再逐条列出**已经测量过**的「城×阵营」：`live=` 上次测量的存活持枪单位数、`acceptedThisWindow=` 本窗口已放行数、以及是否 `AT/OVER CAP`。**只读缓存、不扫世界**；还没测量过的城不出现（第一次有刷怪尝试时才测）。返回 1 | `/armedmobs spawncap` |
+| `spawncap reset` | 无 | 只清掉上限的缓存测量结果（不碰世界、不删怪、不改配置），下一次刷怪尝试会重新数一遍 | `/armedmobs spawncap reset` |
 | `marks` | 无 | 列出**当前维度**的全部存活标记：字母、坐标、来源（`tool` / `stick` / `point`）、剩余时间（`permanent` 或秒数），并打印本维度的上限 `command.maxMarks` 与影响半径 `command.radius`；返回 1 | `/armedmobs marks` |
 | `marks remove <letter>` | `letter`：单词（大小写不敏感，会先被 `CommandMark#sanitiseLetter` 归一化） | 删除该字母的标记（不分来源；信号点方块的标记也能这样删）。成功后提示「指向它的命令会被丢弃」；该维度没有这个字母则失败返回 0 | `/armedmobs marks remove B` |
 | `marks clear` | 无 | 清空**当前维度**的全部标记，打印清除数量；本来就没有标记时返回 0 | `/armedmobs marks clear` |
@@ -82,7 +84,7 @@
 | 命令 | 参数语法（真实解析器） | 作用 | 示例 |
 | --- | --- | --- | --- |
 | `client reload` | 无 | 从磁盘重读 `config/tarkovscav-common.toml`（Forge 的 `ConfigTracker#loadConfigs(COMMON)`，注意它会把**所有** mod 的 COMMON 配置一并重读），并使隐藏骨骼、头部配件、头部俯仰、挂枪变换、配件池、枪池、脚本枪缓存、跳弹缓存在下一帧重算 | `/armedmobs client reload` |
-| `client state` | 无 | 打印当前真正生效的值：合并后的隐藏骨骼集合（每根带原因）、头配件清单、`headRestPitchDegrees` 与生效状态、锚点/离手锚点/锚点模式/显示上下文、离手渲染与双手支撑、步枪与手枪的挂枪变换、模型分层与渲染类型、两个模型缩放（rig 与 villager）、武装村民的枪与四姿势、语音音量与家族倍率、姿势写入者统计、玩家歪头状态 | `/armedmobs client state` |
+| `client state` | 无 | 打印当前真正生效的值：合并后的隐藏骨骼集合（每根带原因）、头配件清单、`headRestPitchDegrees` 与生效状态、锚点/离手锚点/锚点模式/显示上下文、离手渲染与双手支撑、步枪与手枪的挂枪变换、模型分层与渲染类型、两个模型缩放（rig 与 villager）、武装村民的枪与四姿势、语音音量与家族倍率、姿势写入者统计 | `/armedmobs client state` |
 | `client hide <bone>` | `bone`：单词（骨骼名） | 把一根骨骼加入 `client.headAccessories.extraHiddenBones`（诊断用二分法：一次藏一根，看问题何时消失）；已存在则失败返回 0 | `/armedmobs client hide Hat2` |
 | `client show <bone>` | `bone`：单词 | 从 `extraHiddenBones` 移除该骨骼；不存在则失败返回 0 | `/armedmobs client show Hat2` |
 | `client gunpose [args...]` | 贪心字符串，空格分隔，任意顺序，全部可省略：<br>`family=`\|`class=` `rifle`\|`pistol`；`hand=` `main`\|`offhand`；`pitch=`\|`rx=`、`yaw=`\|`ry=`、`roll=`\|`rz=`（度，按 X→Y→Z 应用）；`x=`、`y=`、`z=`（**设置**偏移，方块）；`scale=`（缩放）；`forward=`\|`barrel=`、`back=`、`right=`、`left=`、`up=`、`down=`（沿锚点帧同名轴的**增量**微调，可反复点按）；`context=`（任意 `ItemDisplayContext` 名，大写）；`mode=` `normalisedHand`\|`locatorAnimated`；`reset`\|`default` | 实时调枪械变换：应用到下一帧、打印可粘贴的 toml 行并写盘。`x/y/z` 是「设置」，方向名是「增量」。`reset` 回到**出厂基线（非零）**：步枪/手枪 rot `[0,0,0]`、offset `[0,0,-0.7]`、scale `1.0`，离手归零，并恢复 `gunMountDisplayContext=THIRD_PERSON_RIGHT_HAND`、`gunAnchorMode=normalisedHand` | `/armedmobs client gunpose yaw=15 forward=0.05` |
@@ -196,6 +198,10 @@
 | `spawn.cityRegionPadding` | `4` | 结构周围多少格仍算城市（街道与外圈）。**这是城区刷怪率的线性旋钮**：`24 -> 4` 让单城区可刷怪面积约 −52.7%（原 `24`）。注意 Forge 不会重写已存在的 `config/tarkovscav-common.toml`，老存档会继续用 `24` 直到你手改 | 0..256 |
 | `spawn.logSpawnGate` | `true` | 把每次刷怪门的接受/拒绝写进服务端日志 | 接线城市模组时开，正常游玩偏吵 |
 | `spawn.foundationDepth` | `5` | `/armedmobs city district` 放置每块地皮时保证的地基深度（向上补足） | 0..16；与生成器 `--foundation N` 保持一致（内置件烘死为 5，街道 3，瓦砾 0） |
+| `spawn.cityFactionCapEnabled` | `true` | **城市刷怪上限总开关**：false = 完全回到不设上限的旧行为 | 见 5.29 与 README 7q |
+| `spawn.cityFactionCap` | `12` | **一座城里同一阵容最多同时存活多少个持枪单位**（只数本模组的持枪单位，`GunUser`）。0 = 不设上限 | 0..128；第 12 个放行、第 13 个拒绝；手动放置与单位移入不受此生成检查阻止 |
+| `spawn.cityFactionCapCountTicks` | `20` | 重新数一次存活数的间隔（tick）。窗口内还会把「本窗口已放行」的数量算进去，避免同一窗口重复放行超过余量 | 1..200；调小会更快反映死亡或移入移出，但增加世界查询次数 |
+| `spawn.cityFactionCapIgnoreManual` | `false` | true = 连刷怪蛋与 `/summon` 也计入上限。默认 false：玩家手动放的单位永不被拒（需求原文「通常不是玩家手动放刷怪蛋的话」） | 建城/测试时保持 false |
 
 ### 5.2 `[guns]`
 
@@ -213,6 +219,8 @@
 | `guns.ammoDropChance` | `0.5` | 死亡掉落备用弹药的概率 | 0.0..1.0 |
 | `guns.ammoItemStacks` | `3` | 怪携带的匹配弹药堆数；打完会脱离接触 | 1..27 |
 | `guns.manualReloadFallback` | `true` | 当 TaCZ 自己的 `reload()` 对生物无动作时，由本模组补上换弹（仍走 TaCZ API、仍消耗真实弹药） | 关掉可观察 TaCZ 原始行为 |
+| `guns.fallbackWeapon` | `"crossbow"` | **没装 TaCZ 时**武装单位拿什么：`crossbow`（默认）或 `bow`；**认值不区分大小写，其它任何值都按弩处理**（写错不会静默变空手） | 只影响「手上武器」，不影响刷怪与 AI（详见 README §5ac）。没有「空手」选项 |
+| `guns.fallbackArrows` | `32` | **没装 TaCZ 时**副手放多少支箭（0..256）。**纯外观**：射击走原版 `ProjectileUtil.getMobArrow`（和骷髅同一条路），那条路不扣箭，所以这个数字只决定单位「看起来带了多少」，实际弹药无限（见 README §5ac 的说明） | TaCZ 已装时这两个键完全不生效 |
 | `guns.manualReloadTicks` | `45` | 补位换弹耗时（tick），期间怪躲掩体并播放换弹姿势 | 5..400 |
 | `guns.reloadStallTicks` | `200` | TaCZ 报告「换弹中」多久后不再相信并脱离接触 | 20..2400；这是唯一由 TaCZ 驱动的状态的上界 |
 
@@ -302,7 +310,8 @@
 | `voice.mark` | `true` | 丢失目标时说「你跑哪去了」 |  |
 | `voice.death` | `true` | 用四条死亡 clip 之一替换原版死亡音（开启时原版死亡音不播） |  |
 | `voice.volume` | `1.0` | 所有语音行的音量（1.0 = 原版怪物音量） | 0.0..4.0 |
-| `voice.familyVolume` | `["shared=1.0", "usec=1.0", "bear=1.0", "elite=1.0"]` | 在 `voice.volume` 之上按家族再乘一次，条目格式 `家族=倍率`；家族只能取 `shared`/`usec`/`bear`/`elite` | 倍率夹到 0..4；写到未知家族会警告一次并忽略 |
+| `voice.familyVolume` | `["shared=1.0", "usec=1.0", "bear=1.0", "elite=1.0", "scav=1.0"]` | 在 `voice.volume` 之上按家族再乘一次，条目格式 `家族=倍率`；家族只能取 `shared`/`usec`/`bear`/`elite`/`scav` | 倍率夹到 0..4；写到未知家族会警告一次并忽略 |
+| `voice.scavClips` | `"none"` | **普通的武装暴徒（`tarkovscav:scav`）说什么**。`shared` 这套 clip 本身就是**掠夺者**的，用户要求「scav这种武装暴徒（非掠夺者暴徒），可以把掠夺者的声音去掉」，所以默认：`none` = 暴徒**静音**（它的家族是 `scav`，自己没有 clip，而且**是唯一不允许回落到 shared 的家族**）；`shared` = 回到旧行为（暴徒又借掠夺者那套）。**只影响 scav**：枪手、狙击手与四个兵种家族照旧 | 任何非 `shared`（含大小写）都按 `none` 处理，写错不会静默把掠夺者声音放回来 |
 | `voice.effectVolume` | `1.0` | 非语音效果音（手雷落地/弹跳）的音量乘数 | 0.0..4.0 |
 | `voice.pitchMin` | `0.9` | 音高带下限。每只怪在出生时抽一次自己的音高并存入 NBT，跨存档保持 | 硬边界 0.1..2.0；与 `pitchMax` 一起校验，写反则双双回退出厂值 |
 | `voice.pitchMax` | `1.1` | 音高带上限 | 硬边界 0.1..2.0 |
@@ -662,6 +671,23 @@
 | `capture.playerKillsOnly` | `false` | 只算玩家造成的死亡。默认 false = 两方自己也会打出胜负，玩家是加速器 |  |
 | `capture.hudHideDelaySeconds` | `8` | 离开城市后血条再停留几秒；只剩一方时立即隐藏 | 0..60 |
 
+### 5.29 `[spawn]` 的城市刷怪上限（`cityFactionCap*`）
+
+用户原话：「目前刷人会一直刷的问题 会导致卡顿严重，通常不是玩家手动放刷怪蛋的话 可以限制这个地方最多同时存在12个同阵容的持枪单位。」逐键表在 **5.1**（`spawn.cityFactionCapEnabled` / `cityFactionCap` / `cityFactionCapCountTicks` / `cityFactionCapIgnoreManual`），这里说清规则本身。
+
+* **它根据同时存活数限制新的生成**：同一个城市、同一个阵容达到 N 个持枪单位时，拒绝新的受限刷新。死亡或移出释放的名额在缓存过期后的下一次刷新尝试重新计数时生效；手动放置与单位移入仍可能让实际存活数超过 N，不会因此删除已有单位。
+* **只数本模组的持枪单位**（实现了 `GunUser` 的那九种）。阵营标签里还包含原版村民/掠夺者，但它们不是这套 AI 的开销来源，所以不计入——否则会限错对象。
+* **按城 × 按阵营**：数的是「刷怪点所在城市盒」内的、与该单位同阵营的持枪单位。所以一座割据城市可以各容纳 N 个双方单位，拉锯才看得懂，而不是一面墙。
+* **计数方式与代价**：一次 `getEntitiesOfClass` 覆盖城市盒，结果按 `dimension|city|faction` 缓存 `cityFactionCapCountTicks`（默认 20 tick = 1 秒）。窗口内还会把**本窗口已经放行过**的数量加进去，这样一串刷怪笼不会各自看到同一个过期数字而一起穿过上限。代价：每个城×阵营每 20 tick 一次查询，热路径上一次哈希查找；关掉总开关就完全跳过。
+  * 这个「已放行」计数会**略微多算**（放行后又在流水线后面失败的那些），方向是**更少**单位（正是这个键的目的），并在下一次重新计数时自动归零。
+* **豁免**：刷怪蛋与 `/summon`（也就是「玩家手动放的」）。`cityFactionCapIgnoreManual = true` 才会连它们一起限。
+* **两个维度都生效**：这是性能护栏，不是占领玩法的一部分，所以**不**判断 `Level.OVERWORLD`——废土正是刷怪笼堆人的地方。（占领战本身仍然只在主世界。）
+* **不碰世界**：被拒绝的刷新只是「不生成」，既不删怪也不改写/熄灭刷怪笼方块，整个功能可逆。类里没有任何 `setBlock` / `discard` / `kill` / `remove` 调用，门禁按「不存在」断言。
+* **三条刷怪路径**：自然刷怪与刷怪笼在 1.20.1 是**同一个** `MobSpawnEvent.PositionCheck`（见 5.1 与 README 7p 的反汇编证据），所以一条判定覆盖两条；第三条是驻军，它直接放单位，所以 `CityGarrison.spawn` 里逐单位问一次。
+* **诊断**：`/armedmobs spawncap` 打印生效配置 + 每个「已测量过的城×阵营」的 `live` / `acceptedThisWindow` / 是否已到上限。它**只读缓存**（每次敲命令都扫一遍世界本身就是它要修的那种卡顿）；`/armedmobs spawncap reset` 只清掉测量结果，下一次刷怪尝试会重新数，不碰世界。
+* **一个真实踩到的坑（写进代码注释与测试里）**：第一版 `stale()` 直接做 `now - countedAt`，而缓存初值是 `Long.MIN_VALUE` → **溢出成负数** → 永远判「未过期」→ 首次计数永不发生、窗口的「已放行」永不归零 → 一旦到上限，那座城会**永久拒绝**所有刷新。`tools/spike/SpawnCapTest.java` 里「never counted: always stale」那一条直接抓到了它（现在显式判断 `countedAt == Long.MIN_VALUE` 与「时钟倒退」两种情况）。
+
+
 
 ---
 
@@ -979,6 +1005,7 @@ assets/tarkovscav/lang/en_us.json / zh_cn.json
 | `[cityloot]` | `CityChestLootModifier` | 每次城区箱子真的收到 TaCZ 追加物时一行：位置、维度、收到了什么（`<数量>x<物品>`） |
 | `[fillwater]` | `WaterCleanup`、`ModCommands fillwater` | 维度、目标方块、包围盒、扫描方块数、替换数、含水方块跳过数、落在扫描边界上的水数（会流回来的那批） |
 | `[capture]` | `CityCapture`、`ModCommands capture` | 池建立、每次扣减、`captured by <胜者> (<败者> strength exhausted)`（**只写一次**）、驻军被拦截（`refused by the capture veto`）。废土维度永不出现 |
+| `[spawncap]` | `CitySpawnCap` | 每次因上限拒绝刷新一行：单位、阵营、城市、当时的 `live=` / `acceptedThisWindow=` / `cap=`。只在 `spawn.logSpawnGate = true` 时写 |
 | `[pose]` | `PoseWriters`、`RigSupport` | 每帧每根姿势骨骼的写入者、双写 WARN |
 | `[test]` | `FightHarness`、`ModCommands test fight/watch/stall` | `WATCH PASS/FAIL ... moved= shots= dummyDamage= stalls= state=`、`STALL PASS/FAIL ... escapes=`、`target=`/`los=` 上下文 |
 | `[cover]` | `ModCommands cover` | 候选点数、隐蔽数、最佳掩体 |

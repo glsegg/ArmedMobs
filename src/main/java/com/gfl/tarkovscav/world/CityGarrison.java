@@ -343,7 +343,11 @@ public final class CityGarrison {
                 // city, so a city captured before its garrison could be placed does not refill itself. The
                 // veto reads the same ledger row as the natural-spawn and spawner vetoes, so the three can
                 // never disagree about who still has men.
-                if (CityCapture.vetoGarrison(level, city.key(), faction)) {
+                if (CityCapture.vetoGarrison(level, city.key(), faction)
+                        // The third spawn path also respects the per-city faction cap (README 7q): the garrison
+                        // does not go through the spawn event, so it asks once per unit. A city that already
+                        // holds the cap for this line-up gets no top-up.
+                        || CitySpawnCap.vetoGarrison(level, city, faction)) {
                     refusedByCapture++;
                     continue;
                 }
@@ -365,7 +369,8 @@ public final class CityGarrison {
                 // A captured city is a legitimate reason to place nothing, so it is not the WARN above: the
                 // city may be reset later, and the retry is what makes that work without a restart.
                 TarkovScav.LOGGER.info("[capture] {} -> garrison not placed: {} unit(s) refused by the capture"
-                        + " veto (and/or no valid standing spot); will retry", city.name(), refusedByCapture);
+                        + " veto or the per-city faction cap (and/or no valid standing spot); will retry",
+                        city.name(), refusedByCapture);
                 return;
             }
             TarkovScav.LOGGER.warn("[garrison] {} -> no valid standing spot found, will retry",

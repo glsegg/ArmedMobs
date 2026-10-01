@@ -22,6 +22,9 @@ public enum ItemDisplayContext { THIRD_PERSON_LEFT_HAND,THIRD_PERSON_RIGHT_HAND,
 public class ItemStack { public final boolean gun; public boolean empty; public ItemStack(boolean gun) { this.gun=gun; } public boolean isEmpty() { return empty; } }`,
   'com/tacz/guns/api/item/IGun.java': `package com.tacz.guns.api.item;
 public class IGun { public static IGun getIGunOrNull(net.minecraft.world.item.ItemStack stack) { return stack.gun?new IGun():null; } }`,
+  'net/minecraftforge/fml/ModList.java': `package net.minecraftforge.fml;
+public class ModList { public static ModList get() { return new ModList(); }
+ public boolean isLoaded(String id) { return id.equals("tacz") && !Boolean.getBoolean("test.taczAbsent"); } }`,
   'net/minecraft/client/model/EntityModel.java': `package net.minecraft.client.model;
 public abstract class EntityModel<T extends net.minecraft.world.entity.LivingEntity> { }`,
   'net/minecraft/client/model/ArmedModel.java': `package net.minecraft.client.model;
@@ -69,7 +72,26 @@ public class VanillaHeldItemsTest {
    renderArmWithItem(e,s,c,a,p,b,light); }
  }
  static int checks; static void check(boolean ok,String message) { if(!ok) throw new AssertionError(message); checks++; }
+ static void withoutTacz() {
+  try { Class.forName("com.tacz.guns.api.item.IGun"); throw new AssertionError("TaCZ must actually be absent from this JVM"); }
+  catch(ClassNotFoundException expected) { checks++; }
+  check(!com.gfl.tarkovscav.gun.TaczPresence.loaded(),"production presence helper sees the absent mod");
+  LivingEntity mob=new LivingEntity(); MultiBufferSource buffers=new MultiBufferSource(){};
+  for(boolean grip:new boolean[]{false,true}) for(HumanoidArm arm:HumanoidArm.values()) for(ItemDisplayContext context:ItemDisplayContext.values()) {
+   Layer layer=new Layer(grip?new GripModel():new Model()); var bow=new ItemStack(false); var pose=new PoseStack();
+   check(!bow.isEmpty(),"fallback bow is nonempty; empty-stack short-circuit cannot hide a missing-class failure");
+   int calls=ItemInHandLayer.calls,draws=ItemInHandLayer.draws,gunDraws=ItemInHandRenderer.calls;
+   layer.render(mob,bow,context,arm,pose,buffers,15728880);
+   var call=ItemInHandLayer.last;
+   check(ItemInHandLayer.calls==calls+1 && ItemInHandLayer.draws==draws+1,"no-TaCZ fallback delegates to a visible vanilla item");
+   check(ItemInHandRenderer.calls==gunDraws,"no-TaCZ fallback never enters the custom gun draw");
+   check(call.stack()==bow && call.entity()==mob && call.arm()==arm && call.context()==context,"fallback preserves stack, entity, arm and context");
+   check(pose.events.equals(java.util.List.of("vanilla")) && pose.depth==0,"fallback does not apply gun grip transforms");
+  }
+  System.out.println("PASS "+checks+" no-TaCZ production held-item checks (IGun.class absent)");
+ }
  public static void main(String[] args) {
+  if(Boolean.getBoolean("test.taczAbsent")) { withoutTacz(); return; }
   LivingEntity mob=new LivingEntity(); PoseStack pose=new PoseStack(); MultiBufferSource buffers=new MultiBufferSource(){};
   for(boolean grip:new boolean[]{false,true}) for(HumanoidArm arm:HumanoidArm.values()) for(ItemDisplayContext context:ItemDisplayContext.values()) {
    Layer layer=new Layer(grip?new GripModel():new Model()); var stack=new ItemStack(true); mob.mainGun=true;
@@ -119,20 +141,23 @@ for (const [name, text] of Object.entries(fixtures)) {
 }
 sources.push(path.join(root, 'src/main/java/com/gfl/tarkovscav/client/TaczItemInHandLayer.java'));
 sources.push(path.join(root, 'src/main/java/com/gfl/tarkovscav/client/GunGripModel.java'));
+sources.push(path.join(root, 'src/main/java/com/gfl/tarkovscav/gun/TaczPresence.java'));
 const classes = path.join(output, 'classes');
 fs.mkdirSync(classes, { recursive: true });
 const executable = name => process.env.JAVA_HOME
   ? path.join(process.env.JAVA_HOME, 'bin', name + (process.platform === 'win32' ? '.exe' : '')) : name;
-for (const [command, args] of [
-  ['javac', ['-encoding', 'UTF-8', '-d', classes, ...sources]],
-  ['java', ['-cp', classes, 'VanillaHeldItemsTest']]
-]) {
+const run = (command, args) => {
   const result = spawnSync(executable(command), args, { cwd: root, encoding: 'utf8' });
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status || 1);
-}
+};
+run('javac', ['-encoding', 'UTF-8', '-d', classes, ...sources]);
+run('java', ['-cp', classes, 'VanillaHeldItemsTest']);
+// Remove only our disposable API fixture before a fresh JVM, proving lazy linkage without TaCZ.
+fs.unlinkSync(path.join(classes, 'com/tacz/guns/api/item/IGun.class'));
+run('java', ['-Dtest.taczAbsent=true', '-cp', classes, 'VanillaHeldItemsTest']);
 const read = name => fs.readFileSync(path.join(root, 'src/main/java/com/gfl/tarkovscav/client', name), 'utf8');
 if (!read('GunnerPillagerRenderer.java').includes('new TaczItemInHandLayer<>')) throw new Error('Pillager compatibility layer is not wired');
 if (!read('GunnerVillagerRenderer.java').includes('extends TaczItemInHandLayer<')) throw new Error('Villager compatibility layer is not wired');

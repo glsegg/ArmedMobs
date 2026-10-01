@@ -5,7 +5,7 @@ import com.gfl.tarkovscav.TarkovScav;
 import com.gfl.tarkovscav.gun.GunAiState;
 import com.gfl.tarkovscav.gun.GunClips;
 import com.gfl.tarkovscav.gun.GunUser;
-import com.tacz.guns.api.item.IGun;
+import com.gfl.tarkovscav.gun.TaczPresence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -493,7 +493,7 @@ public final class RigSupport {
      */
     public static void applyArmPose(GeoModel<?> model, Entity entity, long instanceId) {
         boolean longGun = entity instanceof LivingEntity living && entity instanceof GunUser user
-                && !living.getMainHandItem().isEmpty() && IGun.getIGunOrNull(living.getMainHandItem()) != null
+                && TaczPresence.isGun(living.getMainHandItem())
                 && !user.usesPistolClips();
         float[] angles = armAngles(armPose(entity), longGun);
         if (angles == null) {

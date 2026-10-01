@@ -1,8 +1,8 @@
 package com.gfl.tarkovscav.client;
 
+import com.gfl.tarkovscav.gun.TaczPresence;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import com.tacz.guns.api.item.IGun;
 import net.minecraft.client.model.ArmedModel;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.ItemInHandRenderer;
@@ -28,7 +28,7 @@ public class TaczItemInHandLayer<T extends LivingEntity, M extends EntityModel<T
     protected void renderArmWithItem(LivingEntity entity, ItemStack stack, ItemDisplayContext context,
                                      HumanoidArm arm, PoseStack poseStack, MultiBufferSource buffers,
                                      int packedLight) {
-        if (stack.isEmpty() || IGun.getIGunOrNull(stack) == null) {
+        if (!TaczPresence.isGun(stack)) {
             super.renderArmWithItem(entity, stack, context, arm, poseStack, buffers, packedLight);
             return;
         }

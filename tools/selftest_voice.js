@@ -178,8 +178,9 @@ check(/familyVolume/.test(readmeText) && /effectVolume/.test(readmeText),
 check(/\.defineListAllowEmpty\(List\.of\("familyVolume"\)/.test(config2)
   && /\.defineInRange\("effectVolume", 1\.0D/.test(config2),
   'Config declares voice.familyVolume (a list) and voice.effectVolume');
-check(/List\.of\("shared=1\.0", "usec=1\.0", "bear=1\.0", "elite=1\.0"\)/.test(config2),
-  'and both ship at 1.0, so the calibrated clips are the default mix');
+check(/List\.of\("shared=1\.0", "usec=1\.0", "bear=1\.0", "elite=1\.0", "scav=1\.0"\)/.test(config2),
+  'and every family ships at 1.0, so the calibrated clips are the default mix',
+  'scav included, even though that family is silent - an absent entry would log an unknown family');
 check(/public static double familyVolume\(String family\)/.test(config2)
   && /public static double effectVolume\(\)/.test(config2)
   && /public static List<String> familyVolumeSummary\(\)/.test(config2),
@@ -359,6 +360,10 @@ const wanted = FAMILIES.flatMap((f) => CATEGORIES.map((c) => `${f}_${c}`)).sort(
 check(JSON.stringify(poolNames) === JSON.stringify(wanted),
   `the manifest declares exactly the ${FAMILIES.length} x ${CATEGORIES.length} family pools`,
   `${poolNames.length} pool(s)`);
+// The scav's family is a family of its own with NO clips: its silence is the design (voice.scavClips), not a
+// missing asset, so a scav_* pool appearing here would mean someone shipped pillager lines under a new name.
+check(!poolNames.some((pool) => pool.startsWith('scav_')),
+  'and no scav pool exists, because that family is silent by design rather than missing clips');
 for (const family of FAMILIES) {
   for (const category of CATEGORIES) {
     const pool = `${family}_${category}`;
@@ -374,7 +379,7 @@ for (const family of FAMILIES) {
 // The name form of the family table must agree with the four classes' own voiceFamily(): two tables that
 // could drift apart is exactly how a mob ends up speaking the wrong pool after a rename.
 const ENTITY_FAMILY = { usec_villager: 'usec', bear_pillager: 'bear', elite_villager: 'elite',
-  elite_pillager: 'elite' };
+  elite_pillager: 'elite', scav: 'scav' };
 // Parse the switch itself (a name form and a multi-label arm like `case "a", "b" -> ...` both work), so the
 // check is about the mapping and not about the shape of one line.
 const familyForEntityId = {};
@@ -413,7 +418,32 @@ check(fs.readFileSync(path.join(ROOT, 'tools', 'voice_emit.js'), 'utf8').include
 check(/voice-inventory:start/.test(readme) && /第三方素材声明/.test(readme),
   'README carries the clip inventory and the third-party/private-use note');
 check(/USEC/.test(readme) && /BEAR/.test(readme) && /优质PMC/.test(readme),
-  'README names the three voice families');
+  'README names the three troop voice families');
+// The scav's own family, and the one rule that makes it different: no clips AND no fallback. Both halves are
+// asserted, because either one alone would leave the pillager's lines playing on the plain armed thug.
+check(/FAMILIES = List\.of\("shared", "usec", "bear", "elite", "scav"\)/.test(voicePoolsSrc),
+  'VoicePools declares the scav as a family of its own');
+check(/instanceof com\.gfl\.tarkovscav\.entity\.ScavEntity scav\)\s*\{\s*return scav\.voiceFamily\(\);/
+  .test(voicePoolsSrc), 'and familyOf asks the scav for it by type');
+const scavEarly = voicePoolsSrc.indexOf('family.equals("scav") && !scavUsesSharedClips()');
+const sharedFallback = voicePoolsSrc.indexOf('Arrays.stream(shared)');
+check(scavEarly > 0 && sharedFallback > scavEarly,
+  'the scav return sits BEFORE the shared fallback, which is what keeps it silent',
+  `scav@${scavEarly} fallback@${sharedFallback}`);
+check(/return List\.of\(\);/.test(voicePoolsSrc.slice(scavEarly, sharedFallback)),
+  'and it returns an empty pool, not a substitution');
+check(/public static boolean scavUsesSharedClips\(\)[\s\S]{0,200}"shared"\.equalsIgnoreCase\(com\.gfl\.tarkovscav\.Config\.VOICE_SCAV_CLIPS\.get\(\)\.trim\(\)\)/
+  .test(voicePoolsSrc), 'only the literal "shared" turns the old behaviour back on');
+const voiceConfig = fs.readFileSync(path.join(JAVA, 'Config.java'), 'utf8');
+check(/VOICE_SCAV_CLIPS = b[\s\S]{0,3000}?\.define\("scavClips", "none"\)/.test(voiceConfig),
+  'voice.scavClips ships as "none" (the request: the thug stops using the pillager lines)');
+check(/"scav=1\.0"/.test(voiceConfig),
+  'the scav family is in the familyVolume defaults, so no unknown-family warning is printed for it');
+check(/scavClips/.test(readme) && /scavClips/.test(fs.readFileSync(
+  path.join(ROOT, 'docs', 'COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8')),
+  'both documents name voice.scavClips');
+check(/scav/.test(readme) && /掠夺者的声音/.test(readme),
+  'and the README quotes the request that asked for it');
 
 console.log('');
 if (failures > 0) {

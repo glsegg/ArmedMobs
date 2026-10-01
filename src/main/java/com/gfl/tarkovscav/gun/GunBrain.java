@@ -339,6 +339,13 @@ public final class GunBrain {
      * is there.</p>
      */
     public void onHurt() {
+        // README 5ac: the entity's hurt() override calls this on every point of damage, in a TaCZ-free pack
+        // too, and the retreat path runs transition() (which reads the magazine). There is no gun fight to
+        // break contact from without TaCZ - the bow/crossbow AI is the vanilla ranged goal - so this is a
+        // no-op rather than a crash.
+        if (!TaczPresence.loaded()) {
+            return;
+        }
         this.tactics.markUnderFire();
         if (this.state == GunAiState.RETREAT) {
             this.retreatHoldUntil = this.mob.tickCount + AiProfile.retreatHoldTicks(this.mob);
@@ -362,6 +369,17 @@ public final class GunBrain {
 
     /** One-line report for the debug command. */
     public String debugSummary() {
+        // README 5ac: this is reachable from the debug commands without TaCZ, and IGun is a TaCZ class, so
+        // the TaCZ-free answer is built before the first TaCZ type is named. The fields it prints are all
+        // ours (state, tier, AI profile, shots), so the line is still useful in a bow/crossbow install.
+        if (!TaczPresence.loaded()) {
+            return "state=" + this.state
+                    + " tier=" + this.user.scavTier().id()
+                    + " ai=" + AiProfile.describe(this.mob)
+                    + " gun=none (TaCZ is NOT installed, the unit fights with a bow/crossbow - README 5ac)"
+                    + " shots=" + this.shotsFired
+                    + " stalls=" + this.stallEscapes;
+        }
         ItemStack held = this.mob.getMainHandItem();
         IGun gun = IGun.getIGunOrNull(held);
         int magazine = gun == null ? -1 : gun.getCurrentAmmoCount(held);
@@ -631,6 +649,15 @@ public final class GunBrain {
         // LivingTickEvent handler covers the rest of the time (an idle villager strolling through a
         // building). Both calls land in the same guarded method, so the mob is ticked once.
         this.doors.tick(level);
+        // README 5ac: without TaCZ there is no gun, no magazine and no TaCZ class to talk to, and everything
+        // below this line reaches into TaCZ (loadout -> GunPool -> TaCZ's gun index, sanitizeScriptedGun ->
+        // the script scanner, then the whole state machine through operator()). This method is NOT only
+        // driven by GunAttackGoal: LadderClimbGoal calls it while a mob climbs a ladder, and that goal exists
+        // in a TaCZ-free pack too, so an unguarded tick would throw NoClassDefFoundError on the first ladder.
+        // The doors above are deliberately OUTSIDE the guard - a TaCZ-free unit still opens and closes doors.
+        if (!TaczPresence.loaded()) {
+            return;
+        }
         // README 5o: a mob that has not fired for accuracy.resetTicks is "cold" again, so the next
         // engagement starts with the wild warm-up shots. The clock it reads is measured in hundreds of
         // ticks, so it is sampled every ACCURACY_DECAY_CHECK_TICKS, staggered per entity, instead of
@@ -891,6 +918,12 @@ public final class GunBrain {
     }
 
     private int magazine() {
+        // README 5ac: this is read by every transition log line, and transition() is reached from onHurt(),
+        // which the entity calls every time a unit takes damage - with or without TaCZ. So the guard has to
+        // be here, not only at the top of tick(): "no magazine" is the honest answer without a gun.
+        if (!TaczPresence.loaded()) {
+            return -1;
+        }
         ItemStack held = this.mob.getMainHandItem();
         IGun gun = IGun.getIGunOrNull(held);
         return gun == null ? -1 : gun.getCurrentAmmoCount(held);

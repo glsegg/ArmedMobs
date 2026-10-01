@@ -1,7 +1,7 @@
 package com.gfl.tarkovscav.client;
 
 import com.gfl.tarkovscav.entity.GunnerPillagerEntity;
-import com.tacz.guns.api.item.IGun;
+import com.gfl.tarkovscav.gun.TaczPresence;
 import net.minecraft.client.model.IllagerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
@@ -54,8 +54,7 @@ public class GunnerPillagerArmModel extends IllagerModel<GunnerPillagerEntity> {
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
 
         ArmPose pose = RigSupport.armPose(entity);
-        boolean longGun = !entity.getMainHandItem().isEmpty()
-                && IGun.getIGunOrNull(entity.getMainHandItem()) != null
+        boolean longGun = TaczPresence.isGun(entity.getMainHandItem())
                 && !entity.usesPistolClips();
         if (pose == ArmPose.LOWERED && !longGun) {
             return;

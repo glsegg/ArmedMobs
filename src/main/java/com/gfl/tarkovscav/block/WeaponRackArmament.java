@@ -83,7 +83,7 @@ public enum WeaponRackArmament {
         if (stack.isEmpty()) {
             return UNSUPPORTED;
         }
-        if (IGun.getIGunOrNull(stack) != null) {
+        if (com.gfl.tarkovscav.gun.TaczPresence.isGun(stack)) {
             return TACZ_GUN;
         }
         if (stack.getItem() instanceof com.gfl.tarkovscav.grenade.GrenadeItem) {

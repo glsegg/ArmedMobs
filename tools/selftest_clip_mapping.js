@@ -68,6 +68,7 @@ function productionSelectionTest() {
   const source = `
 import com.gfl.tarkovscav.gun.GunAiState;
 import com.gfl.tarkovscav.gun.GunClips;
+import net.minecraft.world.item.ItemStack;
 public class ClipSelectionTest {
   static int checks, armedSelections, unarmedSelections;
   static void check(boolean ok, String message) {
@@ -82,13 +83,6 @@ public class ClipSelectionTest {
   static class AnimationState<T> {
     String clip; int writes;
     PlayState setAndContinue(RawAnimation animation) { clip = animation.clip; writes++; return PlayState.CONTINUE; }
-  }
-  static class ItemStack {
-    final int kind; ItemStack(int kind) { this.kind = kind; }
-    boolean isEmpty() { return kind == 0; }
-  }
-  static class IGun {
-    static IGun getIGunOrNull(ItemStack held) { return held.kind == 2 ? new IGun() : null; }
   }
   static class Walk {
     boolean moving, running;
@@ -182,6 +176,8 @@ public class ClipSelectionTest {
       'GunAiState.java': fs.readFileSync(path.join(JAVA, 'gun/GunAiState.java'), 'utf8'),
       'Config.java': 'package com.gfl.tarkovscav; public class Config { public static boolean usesPistolClips(String type) { return "pistol".equals(type); } }',
       'GunLoadout.java': 'package com.gfl.tarkovscav.gun; public record GunLoadout(String gunType) {}',
+      'ItemStack.java': 'package net.minecraft.world.item; public class ItemStack { public final int kind; public ItemStack(int kind) { this.kind = kind; } public boolean isEmpty() { return kind == 0; } }',
+      'TaczPresence.java': 'package com.gfl.tarkovscav.gun; public class TaczPresence { public static boolean isGun(net.minecraft.world.item.ItemStack held) { return !held.isEmpty() && held.kind == 2; } }',
     };
     for (const [name, text] of Object.entries(sources)) fs.writeFileSync(path.join(temporary, name), text, 'utf8');
     const compile = cp.spawnSync(java('javac'), ['-encoding', 'UTF-8', '--release', '17', '-d', temporary,

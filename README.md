@@ -945,6 +945,18 @@ someone" and for talking during the fight. `IDLE` is now **its own pool** of the
 used to borrow `CHATTER` while that batch did not exist). `GRENADE` (2), `MARK` (1) and `DEATH` (4) are
 their own pools.
 
+**The scav says nothing now (2026-10).** These "shared" clips are the **pillager's** - they are the original
+27 the mod shipped - and the request was 「scav这种武装暴徒（非掠夺者暴徒），可以把掠夺者的声音去掉」: the armed
+thug that is not a pillager should stop using the pillager's voice lines. So `tarkovscav:scav` got a family
+of its own (`scav`, `ScavEntity#voiceFamily`) which **owns no clips and is the one family that may not fall
+back to the shared pool** - `VoicePools.pool` returns an empty list for it, so the thug is silent (all six
+categories: contact/chatter/idle/grenade/mark/death). `voice.scavClips = "shared"` is the escape hatch that
+puts the old behaviour back; any other value (including a typo) means silence, so a typo cannot quietly
+restore the pillager's voice. **Only the scav is affected**: the gunners, the snipers and the four troop
+types keep exactly the pools they had, and `scav=1.0` was added to `voice.familyVolume` so the volume lookup
+does not report an unknown family. `/armedmobs test sound scav` says all of this instead of "no such pool",
+and the gate asserts both halves (the family is `scav`, and the fallback is skipped).
+
 <!-- voice-inventory:start -->
 
 #### 阵营语音池（⑪：USEC / BEAR / 优质PMC，每池 5 条）
@@ -2677,6 +2689,59 @@ as the mob had been aiming.
 
 ---
 
+### 5ac. 没装 TaCZ 也能用：武装暴徒改用弓/弩（`[guns]` 的 `fallbackWeapon` / `fallbackArrows`）
+
+**需求原文**：「然后改一下如果没有装 tacz，也可以启用，这些生物会用弓或者弩。」
+
+以前 `mods.toml` 把 TaCZ 写成 `mandatory=true`：没装 TaCZ 时 Forge 直接在启动阶段拒绝加载本模组，一个实体都不会出现。现在改成 `mandatory=false`（`tools/spike/AssetTest.java` 会断言这一行，改回去就红），模组在任何整合包里都能加载。
+
+#### 有 TaCZ / 没 TaCZ，分别发生什么
+
+| | 装了 TaCZ | 没装 TaCZ |
+| --- | --- | --- |
+| 模组能否加载 | 能 | **能**（这就是这次改的东西） |
+| 刷怪、城市生成、建筑、武器架、语音、击杀播报 | 全部照旧 | 全部照旧 |
+| 单位手上的武器 | TaCZ 枪（按枪池/黑名单/白名单发放） | 弓或弩（`guns.fallbackWeapon`，副手配 `guns.fallbackArrows` 支箭） |
+| 远程战斗 AI | 枪械专用目标（点射、换弹、后坐、压制、精度档位……） | 原版远程目标 + 走位：拉近、停下、射箭、再走位 |
+| 击杀播报里写的武器 | 枪 id | `bow` / `crossbow` 的物品名 |
+| `/armedmobs gunpool`、改枪王、配件池、弹药掉落 | 正常 | 无枪可发，这些键等于空转（不报错，不刷屏） |
+
+**关键点：这是一次「降级」，不是「另一套玩法」。** 没有枪的暴徒仍然是同一个实体、同一种刷怪权重、同一套阵营与警戒情报、同一套掩体与走位 AI，只是把「扣扳机」换成「放箭」。所以整合包作者可以放心把本模组和别的枪械模组混装，也不会因为玩家卸掉 TaCZ 而让存档里的暴徒变成紫黑方块。
+
+#### 代码怎么判断的（为什么不会崩）
+
+- `gun/TaczPresence.java`：唯一一处「TaCZ 在不在」的判断，`loaded()` 走 `ModList.get().isLoaded("tacz")` 并缓存；`isGun(ItemStack)` = 非空 且 已装 TaCZ 且 `IGun.getIGunOrNull(stack) != null`。
+- 全仓只有 **7 个文件** `import com.tacz.guns.*`，再加上 `TaczPresence` 里那一处全限定名引用，一共 **8 个文件会碰到 TaCZ 的类**（`RenderStateGuard` 只是注释里提到）；这个清单已经钉在 `tools/selftest_no_tacz.js` 里，新增第 9 个会直接让它红。其中 `GunAttachments` 有 TaCZ 类型的静态字段（`AttachmentType[] SLOTS` 与两个 `Map<AttachmentType,…>`），**一旦被类加载就会在没装 TaCZ 时抛 `NoClassDefFoundError`**，所以它只在「TaCZ 已装」的分支里被碰到，没装 TaCZ 时那个类根本不会被加载（同一条 gate 会验证它是唯一一个有 TaCZ 类型静态字段的类）。`GunBrain` 没有 TaCZ 类型的字段与静态初始化，可以安全实例化，因此武器/目标代码复用它而不需要拆开。
+- 三个武装单位的装备与目标都是三分支：TaCZ 已装 → 原来的枪械分支；没装 → `MeleeAttackGoal`（贴身）+ `ArmedRangedGoal`；`ArmedRangedGoal` 本来就通过 `RangedAttackMob` 接口射弓/弩（村民与掠夺者原生实现，`ScavEntity` 这次补上了 `performRangedAttack`）。
+- 持久化同理：`loadout()` 与 `GunPool.loadoutFor(...)` 在没装 TaCZ 时直接返回空，不会读到枪的 NBT。
+- **「只在 TaCZ 存在时才执行」这件事，是逐条查过调用点的**（Java 的类解析是惰性的，编译通过完全不能证明运行安全）：`GunBrain.tick()` 在门行为之后立刻 `return`（因为它不只被枪战目标调用——`LadderClimbGoal` 爬梯子时也会调它，不拦就是一次爬梯必崩）；`GunBrain.onHurt()`（每次都从实体的 `hurt()` 进来）、`magazine()`、`debugSummary()` 各自有前置判断；`ClientCommands` 的 `/armedmobs reload` 在**第一次调用 `GunAttachments` 之前**判断（那个类的静态字段就是 TaCZ 类型，类初始化本身会抛 `NoClassDefFoundError`，方法内部的判断根本来不及跑）。
+- **只有枪才需要的命令会明确拒绝**，而不是崩：`/armedmobs` 的狙击手报告、配件报告、枪池报告和 `/armedmobs test` 战斗靶场都会先说一句「这个报告需要 TaCZ，本整合包没有装」然后返回（`ModCommands#requireTacz`，README 5ac）。
+- **照旧的**：门（开关门逻辑独立于枪）、爬梯子、手雷、语音、击杀播报、阵营/警戒、城市生成与刷怪上限、武器架（放弓/弩上去照样有人来拿）。
+
+#### 两个新键
+
+```toml
+[guns]
+    # crossbow = 弩（默认）| bow = 弓；别的值（含写错）都按弩处理，没有「空手」选项
+    fallbackWeapon = "crossbow"
+    # 副手放多少支箭（0..256）；纯外观，见下面的说明
+    fallbackArrows = 32
+```
+
+- `fallbackWeapon` 认值**不区分大小写**，只认 `bow`；其它任何值（含写错、含空串）都按 `crossbow` 处理，不会静默变成空手。
+- 两个键**只在没装 TaCZ 时生效**；装了 TaCZ 时它们完全不参与发放，所以你可以在整合包里先配好，之后卸 TaCZ 也不会变空手。
+- 想复现「纯弓」的复古整合包：`fallbackWeapon = "bow"` + `fallbackArrows = 64`。
+
+#### 一个诚实的说明（不打算假装它没问题）
+
+**`fallbackArrows` 是纯外观，没装 TaCZ 时箭实际上是无限的。** 原因在原版：`performRangedAttack` 走 `getProjectile(weapon)` → `ProjectileUtil.getMobArrow`，这条路**不扣箭**——这也是原版骷髅永远射不完的原因。副手那 32 支箭只是「看起来带着一个箭袋」，扣箭发生在玩家用弓时物品自己的 `releaseUsing` 里，生物这边根本没有那一步。
+
+要让它变成真实消耗，得在 `performRangedAttack` 里手动检查并扣除副手物品，那会和原版弓/弩自身的消耗逻辑打架（而且扣除后还要教会 `ArmedRangedGoal` 在没箭时转为贴身，否则单位会原地罚站）。所以这次**没有做**，这是一个刻意的取舍：没装 TaCZ 的暴徒本来就比装了 TaCZ 弱很多（武器、射程、射速都低），箭不消耗反而让它不至于变成活靶子。`FallbackEquipment` 的 javadoc、`Config.GUNS_FALLBACK_ARROWS` 的注释和 `tools/selftest_no_tacz.js` 都写着同一句话，所以这个「已知取舍」不会被后来的改动悄悄变成「以为已经修好了」。
+
+#### 怎么自己验证
+
+启动一个**只有本模组（连 GeckoLib 都可以不装）**的整合包：世界能进、城市照旧生成、`/armedmobs` 能打、暴徒和枪手会拿弓/弩并真的朝你放箭。**这一条只能由你在真客户端上确认**——开发环境里 TaCZ 永远在 classpath 上，`TaczPresence.loaded()` 在开发环境里恒为 true，自动化测试只能验证「没装 TaCZ 的代码路径不去碰 TaCZ 类」这种结构性事实。
+
 ### 5ab. 暴露目标的致命火力 + 被打就退（`[ai.<tier>]` 的六个新键）
 
 用户原话：「现在有个问题：面对**已经走出掩体**的敌人，troop 和 elite 只打**短点射**——一个弹匣都打不完，根本打不死人；而**他们自己被打、被打残的时候又不会缩进掩体**。TTK 本来可以非常短。」
@@ -3930,6 +3995,39 @@ pieces_buildings）已用 `CityMap` 重画。生成器是**确定性的**：连�
 | `capture.hudHideDelaySeconds` | `8` | 离开城市后血条再停留几秒；`0..60` |
 
 **门槛**：`node tools/selftest_capture.js`（169 项，其中 **34 项是编译并运行真 `CapturePools`** 的可执行证据，其余逐条标注为结构性断言）；`tools/spike/CaptureTest.java` 也注册进套件的 Java 测试清单。
+
+### 7q. 城市刷怪上限：一座城里同阵容最多 12 个持枪单位（2026-10）
+
+用户原话：「目前刷人会一直刷的问题 会导致卡顿严重，通常不是玩家手动放刷怪蛋的话 可以限制这个地方最多同时存在12个同阵容的持枪单位。」逐键表见 `docs/COMMAND_AND_CONFIG_REFERENCE.md` 的 5.1（四个键）与 5.29（规则说明）。
+
+**它解决的是哪一半问题**：占领战的兵力池限制的是**一座城总共能死多少人**，不限制**街上同时站着多少人**。刷怪笼方块会一直工作、自然刷怪照跑、池还在就还会补员，所以玩家一走开，那座城就变成一支常驻军，而每一个单位都在跑完整的枪械 AI——这就是卡顿的来源。上限是缺的那一半：**同时存活数**。
+
+**规则**（`world/CitySpawnCap.java`，算术在 `world/SpawnCapMath.java`）：
+
+| 项 | 做法 |
+| --- | --- |
+| 数的是谁 | **只数本模组的持枪单位**（实现了 `GunUser` 的那九种）。阵营标签里也包含原版村民/掠夺者，但它们不是这套 AI 的开销，数进去只会限错对象 |
+| 按什么分 | **城 × 阵营**，范围是该城市自己的包围盒。所以割据城市可以各容纳 N 个双方单位——拉锯才看得懂，而不是一面墙 |
+| 边界 | `>= cap` 就拒绝：上限 12 时**第 12 个放行、第 13 个拒绝**（「最多同时存在 12 个」的字面意思）。死掉一个立刻腾出名额 |
+| `0` 的含义 | `cityFactionCap <= 0` = **不设上限**。手改 toml 写 0 不会把世界清空 |
+| 计数与代价 | 一次 `getEntitiesOfClass` 覆盖城市盒，按 `维度\|城\|阵营` 缓存 `cityFactionCapCountTicks`（默认 20 tick = 1 秒）。窗口内还把**本窗口已放行**的数量加进去，所以一串刷怪笼不会各自看着同一个过期数字一起穿过去。热路径上只是一次哈希查找；关掉总开关就完全跳过 |
+| 三条刷怪路径 | 自然刷怪与刷怪笼在 1.20.1 是**同一个** `MobSpawnEvent.PositionCheck`（README 7p 有反汇编证据），所以一条判定覆盖两条；第三条是驻军，它直接放单位，所以在 `CityGarrison.spawn` 里**逐单位**问一次 |
+| 豁免 | 刷怪蛋与 `/summon`（「玩家手动放的」）。`cityFactionCapIgnoreManual = true` 才会连它们一起限 |
+| 维度 | **两个维度都生效**（这是性能护栏，不是占领玩法），所以**故意不判断** `Level.OVERWORLD`——废土正是刷怪笼堆人的地方。占领战本身仍然只在主世界 |
+| 不碰世界 | 被拒绝的刷新只是「不生成」：不删怪、不改写/不熄灭刷怪笼方块。类里没有任何 `setBlock`/`discard`/`kill`/`remove` 调用，门禁按「不存在」断言 |
+
+**诊断**：`/armedmobs spawncap` 打印生效配置 + 每个**已测量过**的「城×阵营」的 `live=` / `acceptedThisWindow=` / 是否已到上限；它**只读缓存不扫世界**（每次敲命令扫一遍世界，本身就是它要修的那种卡顿），`/armedmobs spawncap reset` 只清测量结果、下一次刷怪尝试重数。因上限拒绝刷新的那一行写进日志，标记 `[spawncap]`（受 `spawn.logSpawnGate` 控制）。
+
+**生效配置（`[spawn]` 里新增的四个键，默认值）**
+
+| 键 | 默认 | 说明 |
+| --- | --- | --- |
+| `spawn.cityFactionCapEnabled` | `true` | 总开关；false 完全回到不设上限的旧行为 |
+| `spawn.cityFactionCap` | `12` | 一城一阵营同时存活的持枪单位上限；`0..128`，**0 = 不设上限** |
+| `spawn.cityFactionCapCountTicks` | `20` | 重新计数的间隔；`1..200`。还堵不住就把这个调小 |
+| `spawn.cityFactionCapIgnoreManual` | `false` | true = 连刷怪蛋与 `/summon` 也计入上限 |
+
+**门禁**：`node tools/selftest_spawn_cap.js`（45 项，其中 **42 项是编译并运行真 `SpawnCapMath` 的可执行证据**：`effectiveCount` 的边界、第 N 个放行/第 N+1 个拒绝、0 = 不设上限、死亡腾名额、以及一个 200 次尝试的模拟证明「折叠窗口后存活数永不越过上限」）。**这个测试当场抓到一个真 bug**：第一版 `stale()` 直接做 `now - countedAt`，而缓存初值 `Long.MIN_VALUE` 会**溢出成负数** → 首次计数永不发生、窗口的「已放行」永不归零 → 一旦到上限那座城会**永久拒绝**所有刷新；现在显式判断「从未计数」与「时钟倒退」两种情况，并把这两条钉进测试。
 
 ### TODO (recorded, not done)
 

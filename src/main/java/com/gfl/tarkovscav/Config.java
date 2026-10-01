@@ -39,6 +39,10 @@ public final class Config {
     public static final ForgeConfigSpec.IntValue CITY_REGION_PADDING;
     public static final ForgeConfigSpec.IntValue CITY_FOUNDATION_DEPTH;
     public static final ForgeConfigSpec.BooleanValue LOG_SPAWN_GATE;
+    public static final ForgeConfigSpec.BooleanValue CITY_FACTION_CAP_ENABLED;
+    public static final ForgeConfigSpec.IntValue CITY_FACTION_CAP;
+    public static final ForgeConfigSpec.IntValue CITY_FACTION_CAP_COUNT_TICKS;
+    public static final ForgeConfigSpec.BooleanValue CITY_FACTION_CAP_IGNORE_MANUAL;
 
     // ------------------------------------------------------------------ guns
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> GUN_BLACKLIST;
@@ -52,6 +56,8 @@ public final class Config {
     public static final ForgeConfigSpec.DoubleValue GUN_DROP_CHANCE;
     public static final ForgeConfigSpec.DoubleValue AMMO_DROP_CHANCE;
     public static final ForgeConfigSpec.IntValue AMMO_ITEM_STACKS;
+    public static final ForgeConfigSpec.ConfigValue<String> GUNS_FALLBACK_WEAPON;
+    public static final ForgeConfigSpec.IntValue GUNS_FALLBACK_ARROWS;
     public static final ForgeConfigSpec.BooleanValue MANUAL_RELOAD_FALLBACK;
     public static final ForgeConfigSpec.IntValue MANUAL_RELOAD_TICKS;
     public static final ForgeConfigSpec.IntValue RELOAD_STALL_TICKS;
@@ -124,6 +130,7 @@ public final class Config {
     public static final ForgeConfigSpec.BooleanValue VOICE_DEATH;
     public static final ForgeConfigSpec.DoubleValue VOICE_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<List<? extends String>> VOICE_FAMILY_VOLUME;
+    public static final ForgeConfigSpec.ConfigValue<String> VOICE_SCAV_CLIPS;
     public static final ForgeConfigSpec.DoubleValue VOICE_EFFECT_VOLUME;
     public static final ForgeConfigSpec.DoubleValue VOICE_PITCH_MIN;
     public static final ForgeConfigSpec.DoubleValue VOICE_PITCH_MAX;
@@ -660,6 +667,48 @@ public final class Config {
                 .comment("Log every spawn-gate decision (accept and reject) to the server log.",
                         "Useful while wiring up a city mod; noisy in normal play.")
                 .define("logSpawnGate", true);
+        b.comment("The per-city limit on gun units of one line-up standing at the same time.",
+                "",
+                "The request behind these keys (its Chinese wording is quoted verbatim in README 7q):",
+                "spawners keep spawning endlessly and it causes serious stutter, so - unless a unit was placed",
+                "by hand with a spawn egg - a city should hold at most twelve gun-armed units of one line-up",
+                "at the same time. Spawner blocks keep firing, the natural spawner keeps working, and the",
+                "capture game keeps reinforcing while a pool is above zero - so a city the player walks away",
+                "from turns into a standing army running the full gun AI. The capture pools bound the total",
+                "number of DEATHS in a city; these keys bound how many are ALIVE IN THE STREETS AT ONCE.",
+                "",
+                "The unit counted is one of this mod's nine armed types (any GunUser) - a vanilla villager or",
+                "pillager that the faction tags also cover is not what costs anything here. The count is per",
+                "CITY and per FACTION, over the city's own box, so a contested city can hold up to the cap of",
+                "each side; that is what keeps a tug-of-war readable instead of one wall of units.",
+                "",
+                "Exempt by default: a spawn egg and /summon, i.e. 'a player put it there by hand' - exactly",
+                "the carve-out the request asked for. Both dimensions are capped, because this is a",
+                "performance guard rather than part of the capture game (which stays overworld-only).",
+                "",
+                "Nothing is written into the world: a refused spawn is simply not added, and no spawner block",
+                "is read, rewritten or extinguished. Diagnostics: /armedmobs spawncap (and its reset).");
+        CITY_FACTION_CAP_ENABLED = b
+                .comment("Master switch. false restores the uncapped behaviour exactly.")
+                .define("cityFactionCapEnabled", true);
+        CITY_FACTION_CAP = b
+                .comment("How many gun units of ONE faction may be alive in ONE city at the same time. 12 is",
+                        "the number the report asked for. 0 or less means 'no cap', so a hand-edited toml can",
+                        "never empty the world by accident.")
+                .defineInRange("cityFactionCap", 12, 0, 128);
+        CITY_FACTION_CAP_COUNT_TICKS = b
+                .comment("How often a city's live count is taken again, in ticks (20 = once a second). The",
+                        "count is a level query, so it is cached; within one window the cap counts the spawns",
+                        "it has already allowed as well, which over-counts by at most the spawns that were",
+                        "allowed and then failed later - it errs towards FEWER units, and self-corrects at the",
+                        "next recount. Lower it if units still pile up past the cap; raise it if you want the",
+                        "level query to cost less.")
+                .defineInRange("cityFactionCapCountTicks", 20, 1, 200);
+        CITY_FACTION_CAP_IGNORE_MANUAL = b
+                .comment("Also cap spawn eggs and /summon. Default false: a player placing a unit by hand is",
+                        "never refused, which is what the request asked for and what makes the cap safe to",
+                        "leave on while building a city.")
+                .define("cityFactionCapIgnoreManual", false);
         CITY_FOUNDATION_DEPTH = b
                 .comment("How many blocks of footing the city-district assembler guarantees UNDER every",
                         "piece it places (/tarkovscav city district). Default 5.",
@@ -702,6 +751,37 @@ public final class Config {
                 .comment("When non-empty, ONLY these gun ids may be issued (the blacklist still applies).",
                         "Leave empty to allow every gun TaCZ knows.")
                 .defineListAllowEmpty(List.of("gunWhitelist"), List::of, element -> element instanceof String);
+        b.comment("WHAT THE UNITS FIGHT WITH WHEN TaCZ IS NOT INSTALLED (README 5ac).",
+                "",
+                "TaCZ used to be a HARD dependency: a pack without it was refused at launch. It is optional",
+                "now, so without TaCZ the mod still loads and the nine units still spawn inside cities, path,",
+                "take cover, suppress, bound, retreat, throw grenades, open doors and climb ladders - they",
+                "just fight with a bow or a crossbow instead of a firearm. The shooting code is the same one",
+                "that already handles a bow taken off a weapon rack (ArmedRangedGoal -> the mob's own",
+                "performRangedAttack), so the arrow flight, the difficulty-scaled inaccuracy and the drop are",
+                "vanilla numbers rather than a second set to tune.",
+                "",
+                "The weapon goes in the MAIN HAND because that is where the ranged goal looks for it; the",
+                "arrows are carried in the offhand stack and are cosmetic (the vanilla shot path does not",
+                "consume them - see fallbackArrows). With TaCZ present these two keys do nothing at all.");
+        GUNS_FALLBACK_WEAPON = b
+                .comment("The fallback weapon: \"crossbow\" (the default) or \"bow\". Anything that is not",
+                        "\"bow\" (ignoring case) means the crossbow, so a typo cannot leave every unit empty",
+                        "handed. The crossbow is the default because the pillager-based units already know how",
+                        "to use one.")
+                .define("fallbackWeapon", "crossbow");
+        GUNS_FALLBACK_ARROWS = b
+                .comment("How many arrows the fallback unit carries in its OFFHAND (cosmetic: see the note",
+                        "below). 0 leaves the offhand empty.",
+                        "",
+                        "HONEST NOTE: the shot itself goes through the same vanilla path a skeleton uses",
+                        "(ProjectileUtil.getMobArrow), and vanilla skeletons never run out of arrows - the",
+                        "stack is not decremented by the shot. So this number changes what a unit visibly",
+                        "carries, not how long it can shoot; a TaCZ-free unit effectively has unlimited",
+                        "arrows. Making the shot consume the stack would fight the vanilla bow/crossbow",
+                        "handling, so it is deliberately not done, and the fallback stays the weaker option.",
+                        "Range 0..256.")
+                .defineInRange("fallbackArrows", 32, 0, 256);
         EXCLUDED_GUN_TYPES = b
                 .comment("TaCZ gun 'type' values that are never issued. Defaults to rpg: rocket launchers",
                         "are not a fair mob weapon.")
@@ -1203,6 +1283,8 @@ public final class Config {
                         "",
                         "shared is what every mob that has no family of its own speaks (the original",
                         "scavs/gunners), and the other three are the faction families (README 5y/5l).",
+                        "scav is the thug's own family, which owns no clips on purpose (voice.scavClips) - it is",
+                        "listed here so the volume lookup does not report an unknown family.",
                         "This is the escape hatch for the 'the usec/bear/elite voices are quieter than",
                         "the scav's' class of report: the clips themselves are now rendered to the same",
                         "measured loudness as the original 27 (see voice_levels.json), so 1.0 is the",
@@ -1210,8 +1292,19 @@ public final class Config {
                         "",
                         "An unknown family name or an unparseable number is reported once and ignored.")
                 .defineListAllowEmpty(List.of("familyVolume"),
-                        () -> List.of("shared=1.0", "usec=1.0", "bear=1.0", "elite=1.0"),
+                        () -> List.of("shared=1.0", "usec=1.0", "bear=1.0", "elite=1.0", "scav=1.0"),
                         element -> element instanceof String);
+        VOICE_SCAV_CLIPS = b
+                .comment("What the plain armed thug (tarkovscav:scav) says. The shared pool IS the pillager's",
+                        "clip set, and the request (quoted verbatim in README 5l) was that the armed thug which",
+                        "is not a pillager should stop using the pillager's voice lines, so the default is:",
+                        "  none   - the scav is silent. Its family is 'scav', it owns no clips, and it does NOT",
+                        "           fall back to the shared pool (the one family that may not).",
+                        "  shared - the old behaviour: the thug borrows the shared/pillager clips again.",
+                        "Only the scav is affected: the gunners, the snipers and the four troop types keep the",
+                        "pools they had. Anything that is not 'shared' (or 'SHARED') means none, so a typo",
+                        "cannot silently put the pillager's voice back on.")
+                .define("scavClips", "none");
         VOICE_EFFECT_VOLUME = b
                 .comment("Volume multiplier for the non-voice effect clips (the grenade impact/bounce, see",
                         "README 5v). It is separate from the families because the impact clip is a",
