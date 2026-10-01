@@ -143,8 +143,14 @@ check(captureVetoAt > 0 && capVetoAt > captureVetoAt,
 check(purityAt < 0 || capVetoAt < purityAt,
   'and before the faction-purity block, which is the more expensive question',
   `cap@${capVetoAt} purity@${purityAt}`);
-check(/!manual \|\| Config\.CITY_FACTION_CAP_IGNORE_MANUAL\.get\(\)/.test(positionCheck),
-  'the event path skips the cap for a manual spawn unless the ignore-manual key is on');
+check(/if \(!manual && event\.getLevel\(\) instanceof ServerLevel capLevel\)/.test(positionCheck),
+  'PositionCheck only reserves non-manual spawns, so FinalizeSpawn cannot reserve a manual spawn twice');
+const finalizeSpawn = bodyOf(spawnEvents, 'onFinalizeSpawn');
+check(/CITY_FACTION_CAP_IGNORE_MANUAL\.get\(\)[\s\S]*?CitySpawnCap\.vetoSpawn\(/.test(finalizeSpawn),
+  'FinalizeSpawn caps eggs and ordinary summon commands when the manual-cap switch is on');
+check(/Boolean\.TRUE\.equals\(cityOnly\) && Config\.GATE_COMMAND_SPAWNS\.get\(\)/.test(finalizeSpawn)
+  && finalizeSpawn.indexOf('CitySpawnCap.vetoSpawn(') > finalizeSpawn.indexOf('CityGate.test('),
+  'manual city gating runs before the independent manual-cap reservation');
 const garrisonSpawn = bodyOf(garrison, 'spawn');
 check(/CitySpawnCap\.vetoGarrison\(/.test(garrisonSpawn),
   'the garrison path asks it once per unit (it places units directly, so it never sees the spawn event)');
@@ -185,9 +191,10 @@ check(/manual && !Config\.CITY_FACTION_CAP_IGNORE_MANUAL\.get\(\)/.test(cap)
 // ------------------------------------------------------------------ 5. nothing touches the world
 console.log('');
 console.log('5. it refuses spawns and never edits the world (structural)');
-for (const call of ['.setBlock(', '.discard(', '.kill(', '.remove(', '.setRemoved(', '.extinguish']) {
+for (const call of ['.setBlock(', '.discard(', '.kill(', '.setRemoved(', '.extinguish']) {
   check(!cap.includes(call), `CitySpawnCap never calls ${call}`);
 }
+check(!/\b(?:mob|level)\.remove\(/.test(cap), 'CitySpawnCap never removes a world entity');
 check(!/BlockState|SpawnerBlockEntity/.test(cap),
   'and it never touches a spawner block (the whole feature stays reversible)');
 

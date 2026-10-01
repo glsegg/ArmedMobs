@@ -11,9 +11,8 @@
 //      ClientCommands.java has to appear somewhere in the document, so a command cannot ship
 //      undocumented. Each missing name is printed.
 //   2. THE CONFIG KEYS. Every `.define*("key", ...)` registration in Config.java has to appear in the
-//      document - both the 295 keys registered directly in configure() and the per-tier keys defined
-//      once each in AiSettings/TierSettings and instantiated per tier (26 and 7 registrations that
-//      expand to 132 toml keys). Each missing key is printed.
+//      document - both keys registered directly in configure() and per-tier keys defined once each in
+//      AiSettings/TierSettings and instantiated per tier. Each missing key is printed.
 //   3. THE FOUR TIER SECTIONS AND THE NINE ENTITY IDS. [ai.scav]/[ai.sniper]/[ai.troop]/[ai.elite]
 //      must be named, and the nine mob ids from ModEntities.java must all be in the document - with the
 //      registration table cross-checked so "nine" is the registry's number, not this file's.
@@ -96,11 +95,11 @@ const keyPattern = /\.define(?:InRange|ListAllowEmpty|List|Enum)?\(\s*(?:List\.o
 const keyMatches = [...config.matchAll(keyPattern)].map((m) => m[1]);
 const keys = [...new Set(keyMatches)];
 const missingKeys = keys.filter((key) => !doc.includes(key));
-check(keyMatches.length === 374,
-  `Config.java registers 374 define() call sites (+ voice.scavClips, + the two guns.fallback* keys)`,
+check(keyMatches.length === 365,
+  `Config.java registers 365 define() call sites including spawn caps, fallback weapons, scav clips and mount revision`,
   `found ${keyMatches.length}`);
-check(keys.length === 344,
-  `those call sites carry 344 distinct key names (voice.scavClips + the two guns.fallback* keys)`,
+check(keys.length === 335,
+  `those call sites carry 335 distinct key names, with retired lean keys removed`,
   `found ${keys.length}`);
 check(missingKeys.length === 0, `every config key appears in the document`,
   missingKeys.length ? `missing: ${missingKeys.join(', ')}` : `${keys.length} key(s)`);

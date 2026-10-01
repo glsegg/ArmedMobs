@@ -1,14 +1,19 @@
 package com.gfl.tarkovscav.client;
 
-import com.gfl.tarkovscav.Config;
 import com.gfl.tarkovscav.TarkovScav;
 import com.gfl.tarkovscav.entity.GunnerPillagerEntity;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
+import software.bernie.geckolib.cache.GeckoLibCache;
 import software.bernie.geckolib.constant.DataTickets;
+import software.bernie.geckolib.core.animation.Animation;
 import software.bernie.geckolib.core.animation.AnimationState;
+import software.bernie.geckolib.loading.object.BakedAnimations;
 import software.bernie.geckolib.model.GeoModel;
 import software.bernie.geckolib.model.data.EntityModelData;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The gun-armed pillager's Bedrock rig, used only when {@code client.useGeckoModel} is true.
@@ -25,6 +30,31 @@ public class GunnerPillagerGeoModel extends GeoModel<GunnerPillagerEntity> {
 
     /** See {@code ScavGeoModel}: /tarkovscav client reload bumps the generation. */
     private int configuredGeneration = -1;
+    private BakedAnimations fallbackAnimationsOn;
+    private final Map<String, Animation> fallbackAnimations = new HashMap<>();
+    private boolean fallbackReported;
+
+    @Override
+    public Animation getAnimation(GunnerPillagerEntity animatable, String name) {
+        // Keep Gecko's normal missing-file/path errors and any real clip supplied by a resource pack.
+        Animation original = super.getAnimation(animatable, name);
+        BakedAnimations animations = GeckoLibCache.getBakedAnimations().get(getAnimationResource(animatable));
+        if (this.fallbackAnimationsOn != animations) {
+            this.fallbackAnimationsOn = animations;
+            this.fallbackAnimations.clear();
+            this.fallbackReported = false;
+        }
+        if (original != null || animations == null) return original;
+        Animation fallback = this.fallbackAnimations.computeIfAbsent(name,
+                clip -> PillagerAnimationFallback.resolve(animations, clip));
+        if (fallback != null && !this.fallbackReported) {
+            this.fallbackReported = true;
+            TarkovScav.LOGGER.warn("[clips] {} lacks {}; using legacy movement and code-driven gun poses"
+                            + " where armed clips are absent. Resource: {}",
+                    animatable.getType().toShortString(), name, getAnimationResource(animatable));
+        }
+        return fallback;
+    }
 
     @Override
     public ResourceLocation getModelResource(GunnerPillagerEntity animatable) {

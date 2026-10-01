@@ -25,11 +25,11 @@ import com.gfl.tarkovscav.gun.GunAiState;
  * <p>The two states where the brain explicitly lowers the weapon at the TaCZ level are
  * {@code RELOAD} ({@code op.aim(false)}) and {@code RETREAT} ({@code op.aim(false)}); they get their
  * own poses instead of the raised one, which is exactly what the user asked for ("reloading: lower
- * the gun; retreating: hunker down"). {@code IDLE} keeps whatever the vanilla model already does -
- * that is the pose the user said was fine, and it is left untouched.</p>
+ * the gun; retreating: hunker down"). {@code IDLE} uses the model's relaxed carry: long guns on the
+ * vanilla illager use a lowered forward hold to keep long barrels above the ground.</p>
  */
 public enum ArmPose {
-    /** Nothing to do: the model's own pose is used, byte for byte. */
+    /** Relaxed carry, chosen by the model for its equipped weapon family. */
     LOWERED,
     /** Weapon up, pointing where the head looks: alert, advancing, aiming, firing, suppressing. */
     RAISED,

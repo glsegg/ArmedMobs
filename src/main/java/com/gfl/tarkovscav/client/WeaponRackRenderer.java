@@ -56,23 +56,26 @@ public class WeaponRackRenderer implements BlockEntityRenderer<WeaponRackBlockEn
             return;
         }
         ItemRenderer items = Minecraft.getInstance().getItemRenderer();
-        float spin = (rack.getLevel().getGameTime() + partialTick) * DEGREES_PER_TICK;
+        float spin = ((rack.getLevel().getGameTime() % 120L) + partialTick) * DEGREES_PER_TICK;
         // Legacy racks (and anything that somehow has no FACING) fall back to NORTH = no extra rotation.
         Direction facing = rack.getBlockState().hasProperty(WeaponRackBlock.FACING)
                 ? rack.getBlockState().getValue(WeaponRackBlock.FACING) : Direction.NORTH;
 
+        RenderStateGuard guard = RenderStateGuard.snapshot("weapon rack " + rack.getBlockPos());
         pose.pushPose();
-        // Above the base plate, centred, then turned and tilted so a flat item still reads as an object.
-        pose.translate(0.5D, 0.82D, 0.5D);
-        // 1) the rack's own facing, so the item turns with the rack ...
-        pose.mulPose(Axis.YP.rotationDegrees(facingDegrees(facing)));
-        // 2) ... and then the slow idle spin inside that frame.
-        pose.mulPose(Axis.YP.rotationDegrees(spin));
-        pose.scale(0.6F, 0.6F, 0.6F);
-        pose.mulPose(Axis.XP.rotationDegrees(20.0F));
-        items.renderStatic(stack, ItemDisplayContext.FIXED, packedLight,
-                OverlayTexture.NO_OVERLAY, pose, buffers, rack.getLevel(), 0);
-        pose.popPose();
+        try {
+            RenderStateGuard.forceAlwaysPassStencil();
+            pose.translate(0.5D, 0.82D, 0.5D);
+            pose.mulPose(Axis.YP.rotationDegrees(facingDegrees(facing)));
+            pose.mulPose(Axis.YP.rotationDegrees(spin));
+            pose.scale(0.6F, 0.6F, 0.6F);
+            pose.mulPose(Axis.XP.rotationDegrees(20.0F));
+            items.renderStatic(stack, ItemDisplayContext.FIXED, packedLight,
+                    OverlayTexture.NO_OVERLAY, pose, buffers, rack.getLevel(), 0);
+        } finally {
+            pose.popPose();
+            guard.restore();
+        }
     }
 
     /** No culling box: the item can stick out of the block, and a rack is cheap to draw. */

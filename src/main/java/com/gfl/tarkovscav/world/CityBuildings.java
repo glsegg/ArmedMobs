@@ -97,15 +97,16 @@ public final class CityBuildings {
         if (map == null || piece.getMirror() != Mirror.NONE) {
             return List.of();
         }
-        BoundingBox world = piece.getBoundingBox();
-        Rotation rotation = piece.getRotation();
+        return fromMap(map, piece.getBoundingBox(), piece.getRotation());
+    }
+
+    private static List<Building> fromMap(Map2 map, BoundingBox world, Rotation rotation) {
         BlockPos delta = StructureTemplate.transform(
                         new BlockPos(map.sizeX() - 1, 0, map.sizeZ() - 1), Mirror.NONE, rotation, BlockPos.ZERO)
                 .subtract(StructureTemplate.transform(BlockPos.ZERO, Mirror.NONE, rotation, BlockPos.ZERO));
-        boolean swapped = delta.getX() != 0 && delta.getZ() != 0
-                && (delta.getX() > 0) != (delta.getZ() > 0);
-        boolean xUp = swapped ? delta.getZ() > 0 : delta.getX() > 0;
-        boolean zUp = swapped ? delta.getX() > 0 : delta.getZ() > 0;
+        boolean swapped = rotation == Rotation.CLOCKWISE_90 || rotation == Rotation.COUNTERCLOCKWISE_90;
+        boolean xUp = delta.getX() > 0;
+        boolean zUp = delta.getZ() > 0;
 
         List<Building> out = new ArrayList<>(map.entries().size());
         for (Entry entry : map.entries()) {

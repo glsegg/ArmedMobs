@@ -186,7 +186,7 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
 
         ScavTier forced = forcedSpawnTier();
         this.tier = forced != null ? forced : ScavTier.pickWeighted(this.getRandom());
-        applyTierAttributes();
+        applyTierAttributes(true);
         if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
             this.gunBrain().equip(this.getRandom());
         } else {
@@ -232,13 +232,13 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
         return -1.0D;
     }
 
-    private void applyTierAttributes() {
+    private void applyTierAttributes(boolean heal) {
         Config.TierSettings settings = Config.tier(this.tier);
         if (this.getAttribute(Attributes.MAX_HEALTH) != null) {
             this.getAttribute(Attributes.MAX_HEALTH)
                     .setBaseValue(forcedMaxHealth() > 0.0D ? forcedMaxHealth() : settings.health.get());
         }
-        this.setHealth((float) (forcedMaxHealth() > 0.0D ? forcedMaxHealth() : settings.health.get()));
+        this.setHealth(heal ? this.getMaxHealth() : this.getHealth());
         if (this.getAttribute(Attributes.ARMOR) != null) {
             this.getAttribute(Attributes.ARMOR)
                     .setBaseValue(forcedArmorPoints() >= 0.0D ? forcedArmorPoints() : settings.armor.get());
@@ -366,27 +366,34 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
         // rifleman for the rest of its life).
         ScavTier forced = forcedSpawnTier();
         this.tier = forced != null ? forced : (saved == null ? ScavTier.RIFLE : saved);
-        applyTierAttributes();
+        // Preserve saved wounds; a /summon tag without Health still needs the tier's full spawn health.
+        applyTierAttributes(!tag.contains("Health", 99));
         if (this.level().isClientSide) {
             return;
+        }
+        if (com.gfl.tarkovscav.block.WeaponRackTaker.hasRackWeapon(this)) {
+            com.gfl.tarkovscav.block.WeaponRackTaker.restoreArmament(this, tag.contains("HandItems"));
+            if (com.gfl.tarkovscav.block.WeaponRackTaker.hasRackWeapon(this)) {
+                return;
+            }
         }
         if (tag.contains(TAG_GUN)) {
             ResourceLocation gunId = ResourceLocation.tryParse(tag.getString(TAG_GUN));
             GunLoadout loadout = gunId == null || !com.gfl.tarkovscav.gun.TaczPresence.loaded() ? null : GunPool.loadoutFor(this.tier, gunId);
             if (loadout != null) {
-                this.gunBrain().equipLoadout(loadout);
-                // The rack weapon still wins: a converted archer must not become a gunner on reload (5n).
-                com.gfl.tarkovscav.block.WeaponRackTaker.restoreArmament(this);
+                this.gunBrain().restoreLoadout(loadout);
                 return;
             }
         }
         if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
             this.gunBrain().equip(this.getRandom());
-        } else {
-            // No TaCZ (README 5ac): bow or crossbow, and the ranged goal below does the shooting.
+        } else if (!tag.contains("HandItems")
+                || (!this.getMainHandItem().is(net.minecraft.world.item.Items.BOW)
+                && !this.getMainHandItem().is(net.minecraft.world.item.Items.CROSSBOW))) {
+            // Vanilla already restored modern fallback weapon NBT, including damage and enchantments.
+            // Only legacy or unsupported equipment needs a freshly issued fallback weapon.
             com.gfl.tarkovscav.gun.FallbackEquipment.equip(this, this.getRandom());
         }
-        com.gfl.tarkovscav.block.WeaponRackTaker.restoreArmament(this);
     }
 
     // ------------------------------------------------------------------ loot
@@ -439,7 +446,7 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
     private PlayState singleController(AnimationState<GunnerPillagerEntity> state) {
         if (isArmed()) {
             String family = usesPistolClips() ? GunClips.FAMILY_PISTOL : GunClips.FAMILY_RIFLE;
-            String action = GunClips.actionFor(isGunReloading(), isGunFiring(), isGunAiming(), gunAiState());
+            String action = GunClips.actionFor(isGunAiming(), isGunFiring(), isGunReloading(), gunAiState());
             return state.setAndContinue(RawAnimation.begin().thenLoop(GunClips.gun(family, action)));
         }
         boolean moving = this.walk.isMoving();
@@ -459,16 +466,7 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
             return PlayState.STOP;
         }
         String family = usesPistolClips() ? GunClips.FAMILY_PISTOL : GunClips.FAMILY_RIFLE;
-        String action;
-        if (isGunReloading()) {
-            action = "reload";
-        } else if (isGunFiring()) {
-            action = "aim:fire";
-        } else if (isGunAiming()) {
-            action = "aim";
-        } else {
-            action = "hold";
-        }
+        String action = GunClips.actionFor(isGunAiming(), isGunFiring(), isGunReloading(), gunAiState());
         return state.setAndContinue(RawAnimation.begin().thenLoop(GunClips.gun(family, action)));
     }
 

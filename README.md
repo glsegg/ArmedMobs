@@ -1,5 +1,7 @@
 # Armed Mobs (武装暴徒)
 
+> **2026-09-26 持枪修复：** 握点、左右手、长枪低位姿态及旧配置迁移以 [配置参考表](docs/COMMAND_AND_CONFIG_REFERENCE.md) 为准；下文历史调参段落中的旧偏移不再作为当前默认。
+
 Minecraft **1.20.1 / Forge 47** mod: **Scav** mobs and a **gun-armed pillager** that fight with
 **TaCZ** (*Timeless and Classics Zero*) firearms, use cover, suppress, advance and break contact, and
 only spawn **inside city areas**. The Scav rig is the user's own YSM model, imported and layered.
@@ -36,9 +38,9 @@ only spawn **inside city areas**. The Scav rig is the user's own YSM model, impo
 | Commands | `command/ModCommands.java` | `/tarkovscav …`, including the head-less fight harness |
 | Tools | `tools/` | model importer, analysis, city generator, self-tests, RCON workflow |
 
-**TaCZ is a hard dependency and is never bundled.** `mods.toml` declares `tacz` mandatory; the jar
-lives in `libs/` (gitignored) and is pulled in as `compileOnly` + `runtimeOnly`. GeckoLib *is*
-bundled through `jarJar`.
+**TaCZ is optional and is never bundled.** Without it, units use the configured bow/crossbow fallback.
+The development jar lives in `libs/` (gitignored) and is pulled in as `compileOnly` + `runtimeOnly`.
+GeckoLib *is* bundled through `jarJar` in the `-all.jar` artifact.
 
 **No third-party art or audio is shipped.** The YSM model's geometry, animation and texture are the
 user's; the author's `avatar/*.png` and `sounds/*.ogg` (some of which is audio from other games) stay
@@ -287,22 +289,23 @@ Tiers are filled from TaCZ's gun `type` field, so a custom gun pack feeds them a
 | `gunMountOffhandScale` | `1.0` | extra scale for the offhand anchor |
 | `gunMountDisplayContext` | `THIRD_PERSON_RIGHT_HAND` | the `ItemDisplayContext` the gun item is rendered with. **This is the real fix for "the gun looks badly skewed"** - TaCZ's own gun renderer branches on it (see §5b). Do not set it to `FIXED` or `THIRD_PERSON_LEFT_HAND`: those produce an item-frame layout or nothing at all |
 | `gunMountRifleRotation` | `["0","0","0"]` | extra rifle-class rotation in degrees, `[x, y, z]` applied in that order. Neutral: TaCZ already places the gun for a hand |
-| `gunMountRifleOffset` | `["0","0","-0.7"]` | **the user's in-game measurement**, in blocks: 0.7 towards the muzzle along the hand frame's -Z. **This settles the axis question: in `normalisedHand` -Z is forward.** A translation cannot rotate anything, so the accepted orientation is untouched; in model space it moves the anchor 0.54 blocks forward and 0.44 to the character's left (§5f) |
+| `gunMountRifleOffset` | `["0","0","0"]` | 步枪档在手部坐标系里的额外位移（blocks）。**2026-10-01 起出厂值是 `["0","0","0"]`**（朋友 fork 的握点修复把整个手部/握把变换改成按时左/右手分别推导，旧的 `-0.7` 是给旧变换做的补偿）；旧配置由 `ConfigMigration` 一次性迁移并留备份（见 `gunMountRevision`）。坐标系约定不变：`normalisedHand` 下 `-Z` 是前方。§5f 里"用户量到 z=-0.7"那段是历史标定记录 |
 | `gunMountRifleScale` | `1.0` | extra rifle-class scale (multiplied on top of TaCZ's own `thirdperson` 0.6) |
 | `gunMountPistolRotation` | `["0","0","0"]` | extra pistol-class rotation in degrees |
-| `gunMountPistolOffset` | `["0","0","-0.7"]` | the same measured forward slide: a pistol is drawn in the same `normalisedHand` frame on the same anchor, so the frame axes and their meaning do not change. It **replaces** YSM's old `y=-0.125` (the triple is the whole offset) - write `[0,-0.125,-0.7]` if a pistol looks too high |
+| `gunMountPistolOffset` | `["0","0","0"]` | 手枪档的同一组位移。**2026-10-01 起出厂值是 `["0","0","0"]`**（与步枪档同一个修复、同一次迁移）。它**替换**了 YSM 旧的 `y=-0.125`（三元组就是全部位移），旧配置若想保留那个抬高手感可以写 `[0,-0.125,0]` |
+| `gunMountRevision` | `1` | 握把标定的一次性迁移版本。缺失或 `< 1` 时，`ConfigMigration` 只把**能确定是历史出厂值**的那几个键改成新值（`gunMount{Rifle,Pistol}Offset` 的 `[0,0,-0.7]`、村民四个旋转/偏移的老预设），改前把原文件备份成 `tarkovscav-common.toml.before-path-migration-*.bak`，并把本键写成 `1`。**你自己在游戏里调过的值不会被覆盖**：只有整组都等于老出厂值才迁移 |
 | `gunMountPistolScale` | `1.0` | extra pistol-class scale |
 | `gunnerVillagerAimArmPitch` | `0.0` | gunner villager pose (§5j): **offset** in degrees from the vanilla crossed arms while the weapon is raised. **All four arm pitches are the same kind of number since 2026-09-24: `0` = exactly the vanilla arms, negative = lift above that, positive = press down.** (The user's old absolute `-100` is now the offset `-57`.) |
 | `gunnerVillagerHoldArmPitch` | `0.0` | 闲置（`LOWERED`：拿着枪但没在用）那档手臂的**偏移量**，不是绝对角度：`0` = **完完全全的原版村民抱臂**。原版网格把抱臂烤在 `xRot = -0.75 rad ≈ -43°`（1.20.1 客户端 jar 字节码实测：`m_171052_` 里两个 `arms` 方块后面就是 `ldc -0.75f` 进 `PartPose.m_171423_`），模型在构造时把这个烘焙值抓下来，闲置档写的是"**烘焙值 + 本键**"。负 = 在原版基础上再往上抬（`-20` = 比原版高 20°），正 = 往下压进身体。**这就是 2026"闲置时他的手平放在身侧、和身体穿模"那个报告的修复**：以前这里写绝对角度，`0` 会把抱臂压平、`-20` 只是绕路；现在"原版位置"就是 `0` |
 | `gunnerVillagerReloadArmPitch` | `0.0` | same, for `RELOAD` - an offset now too. **A user who sets `0` gets the vanilla arms while reloading**, which is exactly what the "his arms lie flat while reloading" report asked for |
 | `gunnerVillagerHunkerArmPitch` | `0.0` | same, for `RETREAT`, as an offset. `0` = vanilla arms, `-20` = lifted 20° |
-| `gunnerVillagerGunOffset` | `["0","0.06","-0.09"]` | where the held gun sits on the villager, in blocks, `[x,y,z]` in the arm frame, applied just before the vanilla `ItemInHandLayer` adds the standard hand frame. **发布基线 = 用户在自己实例里校准的值**：这个坐标系里 `-Z` 是前方（与 `gunMountRifleOffset` 同一约定），他要求过"再往后一点"，并把 z 定在 `-0.09`。现场调 `x/y/z` 或 `forward/back/left/right/up/down` |
-| `gunnerVillagerGunRotation` | `["5","0","0"]` | 枪在那个手臂坐标系里的旋转（度，`[pitch,yaw,roll]`，X→Y→Z）。**`["5","0","0"]` 是用户在游戏里校准的值，2026-09-25 起就是出厂默认（发布基线）**；历史：先出厂 `-90`（枪口朝天，用户原话「现在这个朝天上看了」，要求回 50°）→ `-40` → 他在自己实例里定到 `5`。手臂角度与它是同一根栈上的 X 旋转、**相加**，所以枪的倾角是 `ARMS_REST + 手臂偏移 + 这个值 + 本档 delta - 90`（`ARMS_REST ≈ -42.97`，见 §5j 的表） |
+| `gunnerVillagerGunOffset` | `["0","0","0"]` | 村民手上那把枪的位置（blocks，`[x,y,z]`，手臂坐标系：`-Z` 前、`+Y` 上、`+X` 右），在香草 `ItemInHandLayer` 加上标准手部帧之前应用。**2026-10-01 起出厂值是 `["0","0","0"]`**（旧值 `["0","0.06","-0.09"]` 是给旧变换的补偿，由 `ConfigMigration` 一次性迁移）。现场调 `x/y/z` 或 `forward/back/left/right/up/down` |
+| `gunnerVillagerGunRotation` | `["10","0","0"]` | 枪在那个手臂坐标系里的旋转（度，`[pitch,yaw,roll]`，X→Y→Z）。**2026-10-01 起出厂值是 `["10","0","0"]`**（历史：出厂 `-90` → 用户要求回 50° → `-40` → 他调到 `5` → 朋友 fork 的握点修复后重新标定为 `10`，旧值由 `ConfigMigration` 一次性迁移）。手臂角度与它同一根栈上**相加**，枪的倾角 = `ARMS_REST + 手臂偏移 + 这个值 + 本档 delta - 90`（`ARMS_REST ≈ -42.97`，见 §5j 的表） |
 | `gunnerVillagerGunScale` | `1.0` | extra uniform scale for the villager's gun, on top of TaCZ's own `0.6` for the third-person-hand context: `1.0` is TaCZ's normal size, `>1.0` is bigger. Final visible size ≈ `renderScale × this × 0.6` |
 | `hideGunWhenIdle` | `false` | 闲置（`LOWERED`）时是否**隐藏手里的枪**。默认 `false` = 照常画在手上。`true` 只是口味开关：一瞄准/换弹/撤退枪立刻回来（每帧按状态判断） |
-| `gunnerVillagerIdleGunRotation` | `["-2","0","0"]` | **只在闲置时**叠加到 `gunnerVillagerGunRotation` 上的枪旋转（度，`[pitch,yaw,roll]`，X→Y→Z）。枪锚在 `arms` 上，所以手臂角度一变枪就跟着变：闲置手臂是**原版抱臂的 -43°**，于是闲置 tilt = `-43 + 5 + (-2) - 90 = -130`，正是用户在游戏里校准、并认可为发布基线的那条枪口方向。**只影响 `LOWERED`**；瞄准/换弹/撤退偏高时改的是 `gunnerVillagerGunRotation` |
-| `gunnerVillagerReloadGunRotation` | `["0","0","0"]` | **只在换弹时**叠加到 `gunnerVillagerGunRotation` 上的枪旋转（三轴，同构）。默认全 0 = **与加这个键之前逐帧完全一致**（换弹档过去与瞄准档共用基准）。现场调 `reloadPitch/reloadYaw/reloadRoll` |
-| `gunnerVillagerHunkerGunRotation` | `["0","0","0"]` | **只在撤退（`HUNKERED`）时**叠加的枪旋转（三轴）。默认全 0 = 撤退档观感不变。现场调 `hunkerPitch/hunkerYaw/hunkerRoll` |
+| `gunnerVillagerIdleGunRotation` | `["-12","0","0"]` | **只在闲置时**叠加到 `gunnerVillagerGunRotation` 上的枪旋转（度，`[pitch,yaw,roll]`，X→Y→Z）。**2026-10-01 起出厂值是 `["-12","0","0"]`**（旧值 `["-2","0","0"]`，一次性迁移）。枪锚在 `arms` 上，闲置手臂是原版抱臂的 -43°，于是闲置 tilt = `-43 + 10 + (-12) - 90 = -135`。**只影响 `LOWERED`**；瞄准/换弹/撤退偏高时改 `gunnerVillagerGunRotation` |
+| `gunnerVillagerReloadGunRotation` | `["-12","0","0"]` | **只在换弹时**叠加到 `gunnerVillagerGunRotation` 上的枪旋转（三轴）。**2026-10-01 起出厂值是 `["-12","0","0"]`**（与闲置档同一倾角，长枪管不会插地；旧值全 0，一次性迁移）。现场调 `reloadPitch/reloadYaw/reloadRoll` |
+| `gunnerVillagerHunkerGunRotation` | `["-12","0","0"]` | **只在撤退（`HUNKERED`）时**叠加的枪旋转（三轴）。**2026-10-01 起出厂值是 `["-12","0","0"]`**（与闲置/换弹同倾角；旧值全 0，一次性迁移）。现场调 `hunkerPitch/hunkerYaw/hunkerRoll` |
 | `gunnerVillagerIdleGunOffset` | `["0","0","0"]` | **只在闲置时**叠加到 `gunnerVillagerGunOffset` 上的枪**位置**偏移（blocks，`[x,y,z]`，同一手臂坐标系：`-Z` 前、`+Y` 上、`+X` 右）。默认全 0 = 与加这个键之前逐帧一致。存在理由：基准位置是**四档共用**的，所以"把闲置那把枪从身体里挪出来"以前做不到（一动就动到他已校准的瞄准档）。现场调 `idleX/idleY/idleZ` |
 | `gunnerVillagerReloadGunOffset` | `["0","0","0"]` | **只在换弹时**叠加的位置偏移（三轴）。现场调 `reloadX/reloadY/reloadZ` |
 | `gunnerVillagerHunkerGunOffset` | `["0","0","0"]` | **只在撤退时**叠加的位置偏移（三轴）。现场调 `hunkerX/hunkerY/hunkerZ` |
@@ -1366,79 +1369,9 @@ FAIL  every one of the 4 entity types is complete  tarkovscav:sniper_pillager: r
 FAIL  the sniper pillager (the 2026-09-23 crash) has a renderer
 ```
 
-### 5t. 玩家歪头 / peek-lean（长按 Q/E 从掩体侧身，射击也从歪出去的那一侧出）
+### 5t. Q/E 歪头已移除
 
-用户原话：「给玩家做点小功能，**长按 e 键或者 q 键像 FPS 一样朝着一边歪头**。**视角会倾斜一些**，**TaCZ 武器和箭 攻击会从你歪头一点的方向射出来**。」
-
-**怎么用**：按住 **Q = 向右歪**、**E = 向左歪**（都能在 选项→控制→武装暴徒 里改），松开自动回正。`client.leanEnabled = false` 时整个功能完全惰性。
-
-> **2026-09-23 修正（用户回报）**：Q/E 一开始是**反的**（Q 曾经是向左歪），现在 **Q=右、E=左**；改的是**键位映射**（`LeanClient` 里两个 `KeyMapping` 的 GLFW 键码对调），**lean 数学（偏移沿右向量、roll 与头部同向）一个字没改**。若你觉得"歪头方向/倾斜方向还是反的"，用下面两个独立开关微调，不用改代码：
->
-> | 键 | 默认 | 作用 |
-> | --- | --- | --- |
-> | `client.leanInvertOffset` | `false` | **只翻横移方向**（相机与枪口一起翻） |
-> | `client.leanInvertRoll` | `false` | **只翻视角 roll**（横移感觉对、只有地平线倾斜反了时用这个） |
->
-> **按键 → 偏移方向 → roll 符号对照表**（`lean` 为内部值，正 = 玩家右侧）：
->
-> | 按键 | `lean` | 偏移量（世界方向） | `roll` |
-> | --- | --- | --- | --- |
-> | Q（右歪） | `+1` | 沿**右向量** `(-cos yaw, 0, -sin yaw)` × 0.6 | `-`（12° × −1，地平线随头部倾） |
-> | E（左歪） | `-1` | 沿**左向量** × 0.6 | `+`（12°） |
-> | 两个键同时按 | `0` | 无 | 无 |
-> | `leanInvertOffset=true` | — | 整列取反 | 不变 |
-> | `leanInvertRoll=true` | — | 不变 | 整列取反 |
-
-#### 按键：Q/E 是原版键，所以必须"按住时不触发原版动作"
-Q 是原版的**丢弃物品**、E 是**打开背包**。长按必然误触发，所以：
-
-| 原版动作 | 怎么被压住 | 为什么这样做 |
-| --- | --- | --- |
-| **按下** | `InputEvent.Key` 的 PRESS 里立刻**吃掉 `options.keyDrop` / `options.keyInventory` 的点击**并**记下按下时刻** | 原版是在**按下那一瞬间**执行动作的，而"这是轻点还是长按"要到松开才知道——所以必须先把点击拿走，再由我们决定要不要重放 |
-| **轻点松开（< `tapThresholdTicks`，默认 5 tick = 250ms）** | **我们代为执行原版动作**：E → 打开 `InventoryScreen`（与 `Minecraft#handleKeybinds` 那条一致）；Q → `player.drop(false)` 丢**一个**（旁观者不丢），**只丢一次** | "短按才会开"是用户要的语义；重放在**松开时**发生，所以不会和原版抢 |
-| **长按（≥ 阈值）松开** | **什么都不做**（纯 peek） | "长按不开"；按住期间原版动作也早就被吃掉了 |
-| **歪头起始时机** | `client.leanStartMode = immediate`（默认）按下即开始歪——手感跟手，代价是"轻点一下"会有极短的一次歪头、松手立刻回正；`afterThreshold` 则要按住到阈值才歪，轻点完全不歪 | 两种都可用，配置切换 |
-
-
-`client.leanSuppressVanillaKeys = false` 可以整体关掉这两条压制（完全恢复原版）。**"只禁用被我们占用的那两个键"是按当前键位算的**：只要你把歪头键改绑到别的键，Q/E 立刻恢复原版（这条被闸门断言）。另外服务端还有一道兜底：`LeanServerEvents#onItemToss` 在收到"歪头中"的玩家丢东西时会取消这次投掷——**并且把物品放回背包**（见下）。
-
-> **一个坑，写在这里免得以后有人踩**：Forge 1.20.1 **没有** `PlayerEvent.ItemTossEvent`；真实事件是 `net.minecraftforge.event.entity.item.ItemTossEvent`，它在 `Player#drop(ItemStack, boolean, boolean)` 里触发，此时 **`ItemEntity` 已经建好、物品已经从背包里扣掉了**。所以只 `setCanceled(true)` 会把物品**销毁**——必须自己把 stack 加回背包（背包满则走 `Containers.dropItemStack` 掉在脚下，**绝不能再走 `Player#drop`**，否则事件会再次触发，无限递归）。
-
-#### 视角：只动客户端相机，**绝不动玩家实体**
-- 横向偏移 + roll（默认 **0.6 格 + 12°**，`client.leanMaxOffset` / `leanRollDegrees`），进/出都平滑（`leanSpeedTicks = 5` tick 到位），左右同时按则**互相抵消**（视为 0）。
-- **靠墙不穿视**：从**相机当前位置**沿偏移方向做方块碰撞检测，命中就把偏移**缩短到离墙 0.1 格**；完全没空间时偏移为 0（视角只剩 roll）。
-- **服务端玩家不动**：玩家的坐标、eye height、hitbox 一个字节都不改（闸门里有专门断言：歪头代码里不允许出现 `player.setPos / setDeltaMovement / setBoundingBox / refreshDimensions`）。所以歪头**不能**用来把 hitbox 挪出子弹、也不能挤过缺口或看穿不该看到的墙——它只是**眼睛**移动。
-- 相机位置的横移需要 `Camera#setPosition(Vec3)`，它在原版里是 `protected`。**2026-09-23 改成 access transformer（AT）**（`src/main/resources/META-INF/accesstransformer.cfg`，在 `build.gradle` 里用 `accessTransformer = file(...)` 声明），**彻底删掉了原来那条"按签名反射、失败静默降级"的路**——那次静默降级正是"歪头看起来只是转了一下、没有位移"的嫌疑来源。
-  - AT 那一行是 `public net.minecraft.client.Camera m_90581_(Lnet/minecraft/world/phys/Vec3;)V`：**SRG 成员名**（对着 `srg_to_official_1.20.1.tsrg` 查的：`m_90581_` → `setPosition`），因为运行时用的是 SRG 名；而 **`.cfg` 里不能有 `#` 注释**——Forge 的解析器会直接报 `Invalid access transformer line`（我们第一次就这么被构建拦下来了），所以解释写在 `build.gradle` 的注释里。
-  - **验证顺序（都可复跑）**：① 构建期 ForgeGradle 会把我们的 AT 应用到 dev 类上（日志 `JAR transformation complete`），**编译通过本身就是证明**——没有 AT 的话 `protected` 方法根本编译不过；② 产物里必须有 `META-INF/accesstransformer.cfg` 且内容仍是 SRG 那一行；③ `javap -c` 反查 `LeanClient`：必须是**直接** `invokevirtual net/minecraft/client/Camera.m_90581_(Lnet/minecraft/world/phys/Vec3;)V`，且**不能出现** `java/lang/reflect`/`Method.invoke`。这三条都写进了闸门（第 3 节）并在本次交付里逐条核过。
-  - 万一 AT 在运行时没生效，`camera.setPosition` 会抛 `IllegalAccessError` → **catch 住 + ERROR 一行**，`/tarkovscav client state` 显示 `cameraSlide=unavailable`（**响亮地降级**，不再静默）；正常时应显示 `cameraSlide=at`。
-
-#### 射击：弹道起点跟着歪，方向**故意不修**
-- 钩子：`EntityJoinLevelEvent`，**只在服务端**，只处理 **`owner` 是服务端玩家**的 `Projectile`。TaCZ 的子弹类 `EntityKineticBullet` **就是** `Projectile`（对 `libs/tacz-1.20.1-1.1.8-hotfix.jar` javap 确认：`extends net.minecraft.world.entity.projectile.Projectile`——顺带说明**没打包也没改 TaCZ**），所以同一个钩子覆盖 **TaCZ 枪 + 弓 + 弩**，一行 TaCZ 代码都不用碰。
-- 位移量 = **和相机完全同一个函数** `LeanMath.offsetFor(yaw, lean, leanMaxOffset)`（闸门断言两处调用同源，所以"相机偏多少、弹道起点就偏多少"是**按构造成立**的，不是两个常量碰巧相等）。
-- **方向不动**：相机横移 0.5 格后，准星仍然画在屏幕正中，也就是"从偏移后的眼睛沿原朝向前看"。把弹道起点平移 `o`、速度不变，得到的正是这条射线的**平行副本**，所以**子弹去的正是歪头后准星指的地方**；同时"两束平行射线相距 `o`，打到墙上也相距 `o`"——这就是验收要测的"弹着点横移 ≈ 0.4–0.6 格"（闸门里对 1/2/4/6/8/20/50 格都算出 **0.50**）。**反过来**去"修正速度以命中未偏移视线的落点"会让子弹偏离准星，所以**刻意不做**。
-- 起点位移同样经过**靠墙裁剪**（从子弹出生点算），所以贴墙时不会把子弹生成到墙里。
-- **只在服务端做的代价（必须说清）**：射手自己在客户端还会生成一份本地子弹做曳光（TaCZ 的客户端预测），服务端的权威副本带的是**偏移后**的位置。如果两边都偏移，携带服务端 spawn 数据的那一份会被**偏移两次**；只偏移客户端又会让曳光去的地方和真正结算伤害的地方不一致。所以选择**只偏移服务端**：其他人从第一帧看到的就是歪出去的弹道、**伤害结算也是歪的**，代价是**射手自己**的曳光可能在下一个包到达前的极短时间内还从原来的枪口出发。**真机观感必须由用户确认**（歪头打墙，弹着点应比站直时横移约 0.5 格）。
-
-#### 配置键（都在 `[client]`）
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `leanEnabled` | `true` | 总开关；false = 键位无作用、不压制原版键、不偏移弹道 |
-| `leanMaxOffset` | `0.6` | 满歪时相机（与弹道起点）横移的格数（0–1.5）；**同一个值同时决定两者** |
-| `leanInvertOffset` | `false` | 只翻横移方向（觉得左右反了用它） |
-| `leanInvertRoll` | `false` | 只翻视角 roll（只有倾斜方向反了用它） |
-| `leanRollDegrees` | `12.0` | 满歪时视角 roll（0–45；0 = 只平移不倾斜） |
-| `leanSpeedTicks` | `5` | 从正到满（以及回正）用多少 tick |
-| `leanSuppressVanillaKeys` | `true` | 拦截被歪头键**占用的**原版键（短按由我们重放原版动作、长按不触发）；改绑歪头键后这些键自动恢复；`false` 则完全不干预 |
-| `tapThresholdTicks` | `5` | 按住多少 tick 才算"长按/peek"；**短于它 = 轻点 = 原版动作** |
-| `startMode` | `immediate` | `immediate`（按下即歪）/ `afterThreshold`（到阈值才歪） |
-| `replayVanillaOnTap` | `true` | 轻点是否由我们重放原版动作（false = 轻点也什么都不做，即上一版行为） |
-
-**就地验证**：`/tarkovscav client state` 会多打一行
-`lean=0.00 (left=false right=false) maxOffset=0.60 roll=12.0 speed=5t invertOffset=false invertRoll=false tapThreshold=5t startMode=immediate replayOnTap=true holding=false suppressVanillaKeys=true cameraSlide=at`。
-**肉眼判据（2026-09-23 新增）**：**贴墙歪头**时，枪口/准星应当**真的绕过了墙角**（能看到墙角另一侧的东西），并且 `client state` 的 `cameraSlide=` 必须是 **`at`**（若显示 `unavailable` 就是 AT 没生效，把那一行发我）。**轻点 E 应打开背包、按住 E 应歪头且不开背包、轻点 Q 应丢出一个、按住 Q 应不丢**（2026-09-23 用户改定的语义）。
-
-**闸门**：`tools/selftest_lean.js` —— 键位与默认值、两条压制路径与开关、`leanEnabled=false` 惰性、**服务端不许动玩家**、相机与弹道同源、平行射线在 7 个距离上都相距 0.5、靠墙裁剪的算术（0.3 格墙 → 0.2、0.05 格墙 → 0）、以及配置键 + README（AssetTest 要求）。
+Q/E 恢复原版丢弃物品、背包操作；模组不再注册歪头按键、修改相机或偏移玩家弹道。旧配置中的十个歪头选项在启动时自动清理，修改前会保留原文件备份。
 
 ### 5y. 部队与优质单位（USEC 村民 / BEAR 掠夺者 / 优质村民 / 优质掠夺者）
 
@@ -4243,7 +4176,7 @@ Build the city into the dev world block by block over RCON:
 
 ## 9. TaCZ version tolerance (1.1.7 and 1.1.8)
 
-`mods.toml` declares `tacz` as `mandatory=true` with `versionRange="[1.1.7,)"`, so **both the 1.1.7
+`mods.toml` declares `tacz` as `mandatory=false` with `versionRange="[1.1.7,)"`, so **both the 1.1.7
 release and the 1.1.8 hotfix satisfy it** (and so does anything newer). The build compiles against
 1.1.8 because that is the jar in `libs/`, but every API member this mod touches was checked with
 `javap` against the user's `tacz-1.20.1-1.1.7-release.jar` and found **byte-identical**:

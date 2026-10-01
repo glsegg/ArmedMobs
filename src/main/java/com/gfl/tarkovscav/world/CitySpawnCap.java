@@ -10,12 +10,18 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.AABB;
+import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -55,6 +61,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * scans. Kill it with {@code spawn.cityFactionCapEnabled = false} and the whole thing is skipped before the
  * first lookup.</p>
  */
+@Mod.EventBusSubscriber(modid = TarkovScav.MOD_ID)
 public final class CitySpawnCap {
     /** One city's one faction: the last measured live count, this window's accepts, and when it was measured. */
     private static final class Window {
@@ -63,9 +70,23 @@ public final class CitySpawnCap {
         private long countedAt = Long.MIN_VALUE;
     }
 
-    private static final Map<String, Window> WINDOWS = new ConcurrentHashMap<>();
+    // Dimension ids and city keys can repeat in a different save. Counts belong to the actual level.
+    private static final Map<ServerLevel, Map<String, Window>> WINDOWS =
+            Collections.synchronizedMap(new WeakHashMap<>());
 
     private CitySpawnCap() {
+    }
+
+    @SubscribeEvent
+    public static void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel() instanceof ServerLevel level) {
+            WINDOWS.remove(level);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerStopped(ServerStoppedEvent event) {
+        reset();
     }
 
     /**
@@ -112,7 +133,8 @@ public final class CitySpawnCap {
     /** The shared decision: refresh the window if it aged out, compare, and book an accept when it passes. */
     private static boolean decide(ServerLevel level, CityGate.Area city, Faction faction, String source) {
         int cap = Config.CITY_FACTION_CAP.get();
-        Window window = WINDOWS.computeIfAbsent(cacheKey(level, city, faction), key -> new Window());
+        Window window = WINDOWS.computeIfAbsent(level, key -> new ConcurrentHashMap<>())
+                .computeIfAbsent(cacheKey(level, city, faction), key -> new Window());
         synchronized (window) {
             long now = level.getGameTime();
             if (SpawnCapMath.stale(now, window.countedAt, Config.CITY_FACTION_CAP_COUNT_TICKS.get())) {
@@ -176,13 +198,19 @@ public final class CitySpawnCap {
         }
         int cap = Config.CITY_FACTION_CAP.get();
         Map<String, String> sorted = new TreeMap<>();
-        for (Map.Entry<String, Window> entry : WINDOWS.entrySet()) {
-            Window window = entry.getValue();
-            int effective = SpawnCapMath.effectiveCount(window.live, window.accepted);
-            sorted.put(entry.getKey(), "  " + entry.getKey() + " live=" + window.live
-                    + " acceptedThisWindow=" + window.accepted + " counted=" + effective
-                    + (SpawnCapMath.overCap(window.live, window.accepted, cap)
-                            ? "  AT/OVER CAP " + cap : "  below cap " + cap));
+        synchronized (WINDOWS) {
+            for (Map<String, Window> levelWindows : WINDOWS.values()) {
+                for (Map.Entry<String, Window> entry : levelWindows.entrySet()) {
+                    Window window = entry.getValue();
+                    synchronized (window) {
+                        int effective = SpawnCapMath.effectiveCount(window.live, window.accepted);
+                        sorted.put(entry.getKey(), "  " + entry.getKey() + " live=" + window.live
+                                + " acceptedThisWindow=" + window.accepted + " counted=" + effective
+                                + (SpawnCapMath.overCap(window.live, window.accepted, cap)
+                                        ? "  AT/OVER CAP " + cap : "  below cap " + cap));
+                    }
+                }
+            }
         }
         out.addAll(sorted.values());
         return out;
@@ -190,8 +218,10 @@ public final class CitySpawnCap {
 
     /** Forgets every measurement, so the next spawn attempt recounts. Backs {@code /armedmobs spawncap reset}. */
     public static int reset() {
-        int size = WINDOWS.size();
-        WINDOWS.clear();
-        return size;
+        synchronized (WINDOWS) {
+            int size = WINDOWS.values().stream().mapToInt(Map::size).sum();
+            WINDOWS.clear();
+            return size;
+        }
     }
 }

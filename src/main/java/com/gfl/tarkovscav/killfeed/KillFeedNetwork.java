@@ -5,11 +5,13 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 import java.util.function.Supplier;
+import java.util.Optional;
 
 /**
  * The kill feed's packet (README 5u): <b>server -&gt; one player, one already-decided line</b>.
@@ -30,11 +32,11 @@ public final class KillFeedNetwork {
 
     public static void register() {
         CHANNEL.registerMessage(0, KillFeedMessage.class, KillFeedMessage::encode, KillFeedMessage::decode,
-                KillFeedMessage::handle);
+                KillFeedMessage::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         // The flashbang overlay rides the same server -> client channel (README 5v): it is the other thing this
         // mod has to tell one player's screen about, and it is the same kind of data (two numbers).
         CHANNEL.registerMessage(1, FlashMessage.class, FlashMessage::encode, FlashMessage::decode,
-                FlashMessage::handle);
+                FlashMessage::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     /** Server: one line to one player. */
@@ -69,6 +71,20 @@ public final class KillFeedNetwork {
     /** The line: names + weapon + category + the tick it happened. */
     public record KillFeedMessage(String killer, String victim, ItemStack weapon, KillFeedSource source,
                                   long gameTime) {
+        public KillFeedMessage {
+            killer = boundedName(killer);
+            victim = boundedName(victim);
+        }
+
+        private static String boundedName(String name) {
+            if (name.length() <= 256) {
+                return name;
+            }
+            // Respect FriendlyByteBuf's UTF-16 length limit without splitting an emoji pair.
+            int end = Character.isHighSurrogate(name.charAt(255)) ? 255 : 256;
+            return name.substring(0, end);
+        }
+
         static void encode(KillFeedMessage message, FriendlyByteBuf buffer) {
             buffer.writeUtf(message.killer(), 256);
             buffer.writeUtf(message.victim(), 256);

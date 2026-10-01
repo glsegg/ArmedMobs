@@ -89,14 +89,14 @@ public final class AlertNetwork {
     /** The eight compass names, for the log lines. */
     public static String sectorName(int sector) {
         return switch (sector & 7) {
-            case 0 -> "S";
-            case 1 -> "SW";
-            case 2 -> "W";
-            case 3 -> "NW";
-            case 4 -> "N";
-            case 5 -> "NE";
-            case 6 -> "E";
-            default -> "SE";
+            case 0 -> "N";
+            case 1 -> "NE";
+            case 2 -> "E";
+            case 3 -> "SE";
+            case 4 -> "S";
+            case 5 -> "SW";
+            case 6 -> "W";
+            default -> "NW";
         };
     }
 

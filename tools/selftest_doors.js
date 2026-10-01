@@ -283,9 +283,7 @@ function zipEntry(jar, name) {
   }
   return null;
 }
-const mappedJar = path.join(ROOT, '..', 'GirlsFrontline', '.gradle-home', 'caches', 'forge_gradle',
-  'minecraft_user_repo', 'net', 'minecraftforge', 'forge', '1.20.1-47.3.0_mapped_official_1.20.1',
-  'forge-1.20.1-47.3.0_mapped_official_1.20.1.jar');
+const mappedJar = require('./resolve_minecraft_jar')(ROOT);
 if (fs.existsSync(mappedJar)) {
   const jar = fs.readFileSync(mappedJar);
   const has = (entry, needle) => {

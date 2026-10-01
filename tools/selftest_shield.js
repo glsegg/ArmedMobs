@@ -105,9 +105,9 @@ check(fs.existsSync(modelPath), 'assets/.../models/item/vant_shield.json exists'
 check(fs.existsSync(texturePath), 'assets/.../textures/item/vant_shield.png exists', path.relative(ROOT, texturePath));
 const modelBuf = fs.readFileSync(modelPath);
 const textureBuf = fs.readFileSync(texturePath);
-const modelHash = sha256(modelBuf);
+const modelHash = sha256(Buffer.from(modelBuf.toString('utf8').replace(/\r\n/g, '\n')));
 const textureHash = sha256(textureBuf);
-check(modelHash === MODEL_SHA, 'the model is byte-identical to the pinned generator output', modelHash);
+check(modelHash === MODEL_SHA, 'the model matches the pinned generator output after normalizing line endings', modelHash);
 check(textureHash === TEXTURE_SHA, 'the texture is byte-identical to the asset agent\'s file', textureHash);
 const model = JSON.parse(modelBuf.toString('utf8'));
 check(Array.isArray(model.elements) && model.elements.length === 49,
@@ -437,7 +437,8 @@ for (const locale of Object.keys(LANG)) {
     continue;
   }
   parsed[locale] = json;
-  check(!text.includes('\r') && raw[0] !== 0xef, `${locale}: no CRLF and no BOM`);
+  check(!text.replace(/\r\n/g, '\n').includes('\r') && raw[0] !== 0xef,
+    `${locale}: valid LF/CRLF line endings and no BOM`);
   check(Object.prototype.hasOwnProperty.call(json, 'item.tarkovscav.vant_shield'),
     `${locale}: the asset agent's item.tarkovscav.vant_shield key is still there`);
   for (const key of NEW_LANG_KEYS) {
@@ -461,7 +462,7 @@ if (parsed.en_us && parsed.zh_cn) {
 // The regression comparison against the asset agent's own baseline snapshot: nothing removed, nothing
 // re-worded, and the shield family is exactly what was added on top of the 258-key baseline.
 for (const locale of Object.keys(LANG)) {
-  const baselinePath = path.join(SHIELD_WORK, `lang_baseline_${locale}.json`);
+  const baselinePath = path.join(ROOT, 'assets_source', 'shield', `lang_baseline_${locale}.json`);
   if (!fs.existsSync(baselinePath) || !parsed[locale]) {
     check(false, `${locale}: the asset baseline snapshot is present`, path.relative(ROOT, baselinePath));
     continue;

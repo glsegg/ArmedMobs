@@ -11,6 +11,7 @@ bin/
 .classpath
 .project
 .settings/
+__pycache__/
 
 # ---------- third-party mod jars: the user's own downloads, never bundled or committed ----------
 libs/*.jar

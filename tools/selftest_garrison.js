@@ -196,7 +196,8 @@ console.log('6. bookkeeping simulation (mirrors CityGarrison\'s pure helpers, dr
 // The mirror: same formulas as the Java above, expressed once so the table below is the assertion.
 const mirror = {
   key: (dimension, cityKey) => `${dimension}|${cityKey}`,
-  due: (now, lastCheck, intervalTicks) => lastCheck === null || now - lastCheck >= Math.max(1, intervalTicks),
+  due: (now, lastCheck, intervalTicks) => lastCheck === null || now < lastCheck
+    || now - lastCheck >= Math.max(1, intervalTicks),
   withinRadius: (distance, radius) => radius > 0 && distance <= radius,
   squadsForCity: (width, depth, configured) => {
     if (configured >= 1) return Math.min(configured, 6);
@@ -218,7 +219,7 @@ check(/1\s*\+\s*span\s*\/\s*48/.test(squadsBody) && /Math\.min\(Math\.max\(1/.te
 check(/configuredSquads\s*>=\s*1/.test(squadsBody) && /MAX_SQUADS/.test(squadsBody),
   'and a configured 1..6 pins the count instead');
 const dueText = dueBody.replace(/\s+/g, ' ');
-check(/lastCheck == Long\.MIN_VALUE \|\| now - lastCheck >= Math\.max\(1, intervalTicks\)/.test(dueText),
+check(/lastCheck == Long\.MIN_VALUE \|\| now < lastCheck \|\| now - lastCheck >= Math\.max\(1, intervalTicks\)/.test(dueText),
   'the Java due() is the same comparison as the mirror', dueText.slice(0, 140));
 const rollBody = bodyOf(garrison, 'rollSquadSize').replace(/\s+/g, ' ');
 check(/Math\.min\(min, max\)/.test(rollBody) && /Math\.max\(min, max\)/.test(rollBody),
@@ -247,6 +248,7 @@ check(mirror.rollSquadSize(0, 5, 1) >= 1 && mirror.rollSquadSize(0, 5, 1) <= 5,
   'min > max is swapped rather than crashing or returning 0');
 
 const dueCases = [
+  [5, 100000, 100, true, 'a new world clock or rollback is checked immediately'],
   [1000, null, 100, true, 'a dimension that has never been checked is due'],
   [1000, 950, 100, false, '50 ticks after the last check is inside the interval'],
   [1000, 900, 100, true, '100 ticks after is due'],

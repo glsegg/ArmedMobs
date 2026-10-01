@@ -172,7 +172,8 @@ console.log('4. the HUD');
 check(/public final class KillFeedHud implements IGuiOverlay/.test(hud)
   && /event\.registerAboveAll\("killfeed", KillFeedHud\.INSTANCE\)/.test(setup),
   'the HUD is a Forge GUI overlay registered above everything');
-check(/!Config\.KILLFEED_ENABLED\.get\(\) \|\| LINES\.isEmpty\(\)/.test(hudCode),
+check(/clearIfDisabled\(\) \|\| LINES\.isEmpty\(\)/.test(hudCode)
+  && /!Config\.KILLFEED_ENABLED\.get\(\)/.test(hudCode),
   'enabled = false draws nothing at all');
 check(/minecraft\.options\.hideGui/.test(hudCode), 'F1 hides it (the vanilla flag, not a copy of it)');
 check(/LINES\.add\(0, new Line\(/.test(hudCode) && /LINES\.remove\(LINES\.size\(\) - 1\)/.test(hudCode),
@@ -187,8 +188,9 @@ let lines = [];
 for (let i = 1; i <= 8; i++) push(lines, `line${i}`, 5);
 check(lines.length === 5 && lines[0] === 'line8' && lines[4] === 'line4',
   'simulated: maxLines = 5 keeps the newest five, newest first', lines.join(','));
-check(/switch \(position\(\)\)/.test(hudCode) && /case "top_left"/.test(hudCode)
-  && /case "top_right"/.test(hudCode),
+check(/HudLayout\.allocate\(position\(\)/.test(hudCode)
+  && /case "top_left"/.test(read('client/HudLayout.java'))
+  && /case "top_right"/.test(read('client/HudLayout.java')),
   'the horizontal anchor is configurable (top_center / top_left / top_right)');
 check(/graphics\.pose\(\)\.scale\(\(float\) scale/.test(hudCode),
   'and the scale is applied to the pose stack');
@@ -218,7 +220,7 @@ check(widthOf(trimmed) <= 240 && trimmed.endsWith('...'),
   'a 300-character name is truncated to the width with an ellipsis, never wrapped',
   `${longName.length} chars -> ${trimmed.length}`);
 check(trimToWidth(widthOf, '短名', 240) === '短名', 'a short name is left exactly as it is');
-check(/int allowed = \(int\) \(width \* MAX_WIDTH_SHARE \/ scale\)/.test(hudCode),
+check(/int allowed = Math\.max\(0, \(int\) \(\(width \* MAX_WIDTH_SHARE - 8\) \/ scale\)\)/.test(hudCode),
   'and the width budget is the screen width (scaled), so a bigger scale truncates earlier');
 check(/font\.plainSubstrByWidth\(text, room\) \+ ellipsis/.test(hudCode),
   'the cut is done by the font (so it never splits a glyph in half)');

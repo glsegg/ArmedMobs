@@ -346,8 +346,8 @@ for (const locale of Object.keys(LANG)) {
     JSON.stringify(current[SHIELD_KEY]));
 
   const raw = fs.readFileSync(LANG[locale], 'utf8');
-  check(`${locale}: no CRLF and no BOM (matches the rest of the file)`,
-    !raw.includes('\r') && raw.charCodeAt(0) !== 0xfeff);
+  check(`${locale}: valid LF/CRLF line endings and no BOM`,
+    !raw.replace(/\r\n/g, '\n').includes('\r') && raw.charCodeAt(0) !== 0xfeff);
 
   if (fs.existsSync(LANG_BASELINE[locale])) {
     const baseline = JSON.parse(fs.readFileSync(LANG_BASELINE[locale], 'utf8'));
@@ -384,28 +384,36 @@ for (const locale of Object.keys(LANG)) {
 section('generator idempotency');
 check('generator exists', fs.existsSync(GENERATOR), path.relative(ROOT, GENERATOR));
 const hashes = [];
+const originalTexture = fs.readFileSync(TEXTURE);
+const originalModel = fs.readFileSync(MODEL);
 function snapshot(tag) {
+  // Git may check JSON out as CRLF on Windows. Compare generated content independently of EOLs.
+  const modelBytes = Buffer.from(fs.readFileSync(MODEL, 'utf8').replace(/\r\n/g, '\n'));
   const h = {
     texture: sha256(fs.readFileSync(TEXTURE)),
-    model: sha256(fs.readFileSync(MODEL)),
+    model: sha256(modelBytes),
     textureBytes: fs.statSync(TEXTURE).size,
-    modelBytes: fs.statSync(MODEL).size,
+    modelBytes: modelBytes.length,
   };
   hashes.push(h);
   console.log(`run ${tag}      : texture ${h.texture} (${h.textureBytes} B), model ${h.model} (${h.modelBytes} B)`);
   return h;
 }
-snapshot('as-on-disk');
-const runs = [];
-for (let i = 0; i < 2; i++) {
-  const res = spawnSync(process.execPath, [GENERATOR], { cwd: ROOT, stdio: 'ignore' });
-  check(`generator run ${i + 1} exited 0`, res.status === 0, `status ${res.status}${res.error ? ' ' + res.error.message : ''}`);
-  runs.push(snapshot(`after #${i + 1}`));
+try {
+  snapshot('as-on-disk');
+  for (let i = 0; i < 2; i++) {
+    const res = spawnSync(process.execPath, [GENERATOR], { cwd: ROOT, stdio: 'ignore' });
+    check(`generator run ${i + 1} exited 0`, res.status === 0, `status ${res.status}${res.error ? ' ' + res.error.message : ''}`);
+    snapshot(`after #${i + 1}`);
+  }
+} finally {
+  fs.writeFileSync(TEXTURE, originalTexture);
+  fs.writeFileSync(MODEL, originalModel);
 }
 check('texture is byte-identical across two generator runs and the file on disk',
   hashes[0].texture === hashes[1].texture && hashes[1].texture === hashes[2].texture,
   hashes.map((h) => h.texture.slice(0, 12)).join(' '));
-check('model is byte-identical across two generator runs and the file on disk',
+check('model is identical across two generator runs and disk after normalizing line endings',
   hashes[0].model === hashes[1].model && hashes[1].model === hashes[2].model,
   hashes.map((h) => h.model.slice(0, 12)).join(' '));
 check('texture size is stable', hashes[0].textureBytes === hashes[1].textureBytes && hashes[1].textureBytes === hashes[2].textureBytes,

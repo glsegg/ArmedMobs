@@ -8,14 +8,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Counts how many times this mod submits a rig for drawing, per mob per frame.
- *
- * <p>The number exists because "the model is drawn twice" is a claim that has to be checkable rather
- * than argued about. A geometry pass is counted where GeckoLib enters the per-bone walk for one
- * animatable ({@link GunInHandGeoLayer#preRender}); one pass per mob per frame is the invariant, so the
- * log prints the pass count, the number of distinct mobs and the worst per-mob count for the window.
- * Anything above 1 is a WARN with the frame time it happened at, which is how a genuine second
- * submission (or a mod re-rendering the mob) would show up instead of being believed to happen.</p>
+ * Counts model submissions over a five-second window. These are window totals, not frame counts:
+ * rendering the same mob on successive frames is normal and is not evidence of duplicate rendering.
  *
  * <p>Turn it on with {@code client.logRenderStats = true}. It is a diagnostic, off by default.</p>
  */
@@ -38,10 +32,11 @@ public final class RenderStats {
             return;
         }
         if (!Config.SPEC.isLoaded() || !Config.LOG_RENDER_STATS.get()) {
-            PASSES_PER_MOB.clear();
+            clear();
             return;
         }
-        if (windowStart < 0L) {
+        if (windowStart < 0L || gameTime < windowStart) {
+            clear();
             windowStart = gameTime;
         }
         passes++;
@@ -52,19 +47,19 @@ public final class RenderStats {
         }
         if (gameTime - windowStart >= WINDOW_TICKS) {
             int mobs = PASSES_PER_MOB.size();
-            String line = String.format("geometry passes=%d distinct mobs=%d worst per mob=%d",
-                    passes, mobs, worstPerMob);
-            if (worstPerMob > 1) {
-                TarkovScav.LOGGER.warn("[rendercount] {} - more than one pass for mob {} means something"
-                        + " is drawing this rig again (the glow outline is the one legitimate case)", line, worstMobId);
-            } else {
-                TarkovScav.LOGGER.info("[rendercount] {} - one submission per mob per frame", line);
-            }
-            passes = 0;
-            worstPerMob = 0;
-            worstMobId = -1;
-            PASSES_PER_MOB.clear();
+            TarkovScav.LOGGER.info("[rendercount] over {} ticks: geometry passes={}, distinct mobs={},"
+                            + " largest per-mob total={} (entity {}). These totals include successive frames.",
+                    gameTime - windowStart, passes, mobs, worstPerMob, worstMobId);
+            clear();
             windowStart = gameTime;
         }
+    }
+
+    public static void clear() {
+        passes = 0;
+        worstPerMob = 0;
+        worstMobId = -1;
+        PASSES_PER_MOB.clear();
+        windowStart = -1L;
     }
 }

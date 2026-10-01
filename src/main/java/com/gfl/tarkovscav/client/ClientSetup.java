@@ -60,17 +60,7 @@ public final class ClientSetup {
 
     @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        boolean useGecko = Config.SPEC.isLoaded() && Config.USE_GECKO_MODEL.get();
-        registerAll(event, useGecko);
-    }
-
-    /**
-     * The lean key bindings (README 5s): Q = lean left, E = lean right, as the user asked. Both are vanilla
-     * keys, and {@code LeanClient} suppresses the vanilla actions while they are held.
-     */
-    @SubscribeEvent
-    public static void onRegisterKeys(net.minecraftforge.client.event.RegisterKeyMappingsEvent event) {
-        LeanClient.registerKeys(event);
+        registerAll(event);
     }
 
     /**
@@ -80,10 +70,10 @@ public final class ClientSetup {
      */
     @SubscribeEvent
     public static void onRegisterOverlays(net.minecraftforge.client.event.RegisterGuiOverlaysEvent event) {
-        event.registerAboveAll("killfeed", KillFeedHud.INSTANCE);
         // The city-capture strength bars (README 7p) sit above everything too: they are the other
         // top-of-screen element, and the config decides whether they ever appear.
         event.registerAboveAll("capture", CaptureHud.INSTANCE);
+        event.registerAboveAll("killfeed", KillFeedHud.INSTANCE);
         // The flashbang white-out (README 5v) is BELOW the kill feed but above the hotbar: a flash must not
         // hide the feed (that would be a double punishment) but it does cover the world.
         event.registerBelow(net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CHAT_PANEL.id(),
@@ -91,7 +81,7 @@ public final class ClientSetup {
     }
 
     /** The one place where "this entity type gets this renderer" is decided. */
-    private static void registerAll(EntityRenderersEvent.RegisterRenderers event, boolean useGecko) {
+    private static void registerAll(EntityRenderersEvent.RegisterRenderers event) {
         renderer(event, ModEntities.SCAV, ScavRenderer::new);
 
         // The villager-bodied types render with the vanilla villager model/texture (see
@@ -105,7 +95,7 @@ public final class ClientSetup {
         // types, so each needs its own registration - and they are passed to ONE helper as a list, so a new
         // member of the family is added in one place and cannot land in one branch but not the other. The
         // sniper being left out of the hand-written version of this is what crashed the client.
-        illagerRenderers(event, useGecko, new RegistryObject[] { ModEntities.GUNNER_PILLAGER,
+        illagerRenderers(event, new RegistryObject[] { ModEntities.GUNNER_PILLAGER,
                 ModEntities.SNIPER_PILLAGER, ModEntities.BEAR_PILLAGER, ModEntities.ELITE_PILLAGER });
 
         // Grenades (README 5v): the vanilla thrown-item renderer draws whatever item the entity carries, so all
@@ -159,16 +149,17 @@ public final class ClientSetup {
      * acceptable here - they are declared for the base type and are valid supertypes of each member.
      */
     @SafeVarargs
-    private static void illagerRenderers(EntityRenderersEvent.RegisterRenderers event, boolean useGecko,
+    private static void illagerRenderers(EntityRenderersEvent.RegisterRenderers event,
                                          RegistryObject<? extends EntityType<? extends GunnerPillagerEntity>>...
                                                  types) {
-        if (useGecko) {
-            TarkovScav.LOGGER.info("Illager-bodied mobs: using the GeckoLib Bedrock renderer");
-        }
         for (RegistryObject<? extends EntityType<? extends GunnerPillagerEntity>> type : types) {
             EntityType<? extends GunnerPillagerEntity> entityType = type.get();
-            event.registerEntityRenderer(entityType,
-                    useGecko ? GunnerPillagerGeoRenderer::new : GunnerPillagerRenderer::new);
+            event.registerEntityRenderer(entityType, context -> {
+                // Forge can fire RegisterRenderers before loading the common TOML. Providers are
+                // instantiated later, during resource loading, when the configured choice is available.
+                boolean useGecko = Config.SPEC.isLoaded() && Config.USE_GECKO_MODEL.get();
+                return useGecko ? new GunnerPillagerGeoRenderer(context) : new GunnerPillagerRenderer(context);
+            });
             RENDERED.add(type.getId());
         }
     }

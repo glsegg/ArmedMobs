@@ -1,8 +1,7 @@
 {
   "itemGroup.tarkovscav": "Armed Mobs",
+  "item.tarkovscav.creative_tab_icon": "Armed Mobs Emblem",
   "key.categories.tarkovscav": "Armed Mobs",
-  "key.tarkovscav.lean_left": "Lean Left (hold)",
-  "key.tarkovscav.lean_right": "Lean Right (hold)",
   "tarkovscav.killfeed.environment": "Environment",
   "tarkovscav.killfeed.weapon.item": "Weapon",
   "tarkovscav.killfeed.weapon.fists": "Bare Hands",

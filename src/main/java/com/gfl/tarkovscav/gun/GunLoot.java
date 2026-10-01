@@ -1,6 +1,8 @@
 package com.gfl.tarkovscav.gun;
 
 import com.gfl.tarkovscav.Config;
+import com.gfl.tarkovscav.block.WeaponRackArmament;
+import com.gfl.tarkovscav.block.WeaponRackTaker;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -23,15 +25,21 @@ public final class GunLoot {
         }
 
         GunLoadout loadout = brain.loadout();
+        boolean rackWeapon = WeaponRackTaker.hasRackWeapon(mob);
+        WeaponRackArmament heldKind = WeaponRackArmament.armamentOf(mob.getMainHandItem());
+        boolean mayDropWeapon = rackWeapon
+                ? heldKind == WeaponRackArmament.BOW || heldKind == WeaponRackArmament.CROSSBOW
+                    || heldKind == WeaponRackArmament.MELEE
+                : loadout != null;
         float gunChance = Config.GUN_DROP_CHANCE.get().floatValue() + lootingLevel * 0.05F;
-        if (loadout != null && mob.getRandom().nextFloat() < gunChance) {
+        if (mayDropWeapon && mob.getRandom().nextFloat() < gunChance) {
             ItemStack gun = mob.getMainHandItem().copy();
             if (!gun.isEmpty()) {
                 mob.spawnAtLocation(gun);
             }
         }
 
-        if (mob.getRandom().nextFloat() < Config.AMMO_DROP_CHANCE.get()) {
+        if (!rackWeapon && loadout != null && mob.getRandom().nextFloat() < Config.AMMO_DROP_CHANCE.get()) {
             for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
                 ItemStack stack = inventory.getItem(slot);
                 if (!stack.isEmpty()) {

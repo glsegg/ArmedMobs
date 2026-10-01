@@ -1,7 +1,6 @@
 package com.gfl.tarkovscav.item;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
@@ -32,7 +31,7 @@ public class FactionSpawnEggItem extends ForgeSpawnEggItem {
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip,
                                 TooltipFlag flag) {
         if (this.tooltipKey == null) {
-            this.tooltipKey = "item." + BuiltInRegistries.ITEM.getKey(this).getPath() + ".tooltip";
+            this.tooltipKey = getDescriptionId() + ".tooltip";
         }
         tooltip.add(Component.translatable(this.tooltipKey).withStyle(ChatFormatting.GRAY));
     }

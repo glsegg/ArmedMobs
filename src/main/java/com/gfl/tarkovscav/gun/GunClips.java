@@ -47,8 +47,8 @@ public final class GunClips {
 
     /**
      * Which family of gun clips this weapon uses. TaCZ's gun {@code type} decides it, so a custom gun
-     * pack is classified automatically: {@code pistol} and {@code smg} fire one-handed (the config
-     * lists them) and everything else uses the two-handed poses.
+     * pack is classified automatically. By default only {@code pistol} uses one-handed clips;
+     * {@code guns.pistolClipTypes} can add other types, while the rest use two-handed poses.
      */
     public static String family(GunLoadout loadout) {
         if (loadout == null) {

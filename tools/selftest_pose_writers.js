@@ -791,7 +791,7 @@ if (census.status === 0) {
 // claims this mod depends on.
 console.log('\nGeckoLib Molang evidence (read out of the geckolib jar on this machine):');
 const GECKOLIB_CANDIDATES = [
-  path.join(process.env.USERPROFILE || '', '.gradle', 'caches', 'modules-2', 'files-2.1',
+  path.join(process.env.GRADLE_USER_HOME || path.join(process.env.USERPROFILE || '', '.gradle'), 'caches', 'modules-2', 'files-2.1',
     'software.bernie.geckolib'),
   'D:\\deepseek\\GirlsFrontline\\.gradle-home\\caches\\modules-2\\files-2.1\\software.bernie.geckolib',
   path.join(ROOT, 'build', 'tmp'),

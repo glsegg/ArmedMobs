@@ -204,7 +204,7 @@ public final class CityGate {
         ResourceLocation dimension = level.dimension().location();
 
         // ---- 0. runtime instances (placed with /tarkovscav city place) --------------------
-        for (CityStructures.Placed placed : CityStructures.placed()) {
+        for (CityStructures.Placed placed : CityStructures.placed(level.getServer())) {
             if (!placed.dimension().equals(dimension) || distanceToBox(placed.box(), pos) > reach) {
                 continue;
             }

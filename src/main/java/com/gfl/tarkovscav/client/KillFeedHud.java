@@ -10,6 +10,8 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.locale.Language;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
@@ -98,7 +100,7 @@ public final class KillFeedHud implements IGuiOverlay {
 
     /** Server -&gt; client: one line arrived. */
     public static void accept(KillFeedNetwork.KillFeedMessage message) {
-        if (!Config.SPEC.isLoaded() || !Config.KILLFEED_ENABLED.get()) {
+        if (!ClientHudEvents.ensureWorld() || clearIfDisabled()) {
             return;
         }
         add(message.killer(), message.victim(), message.weapon(), message.source());
@@ -106,9 +108,10 @@ public final class KillFeedHud implements IGuiOverlay {
 
     /** Also used by {@code /tarkovscav test killfeed}: the preview path needs no server round trip. */
     public static void add(String killer, String victim, ItemStack weapon, KillFeedSource source) {
+        if (!ClientHudEvents.ensureWorld() || clearIfDisabled()) return;
         // The colours are resolved ONCE, here: looking an entity up by name every frame for every line would be
         // a per-frame scan of the entity list for no reason.
-        LINES.add(0, new Line(killer, victim, weapon, source, colorOf(killer), colorOf(victim)));
+        LINES.add(0, new Line(killer, victim, weapon.copy(), source, colorOf(killer), colorOf(victim)));
         int max = Config.SPEC.isLoaded() ? Config.KILLFEED_MAX_LINES.get() : 5;
         while (LINES.size() > max) {
             LINES.remove(LINES.size() - 1);
@@ -136,13 +139,23 @@ public final class KillFeedHud implements IGuiOverlay {
         return out;
     }
 
-    /** Client tick: age the lines and drop the expired ones. Registered from {@code ClientSetup}. */
+    static boolean clearIfDisabled() {
+        if (!Config.SPEC.isLoaded() || !Config.KILLFEED_ENABLED.get()) {
+            clear();
+            return true;
+        }
+        return false;
+    }
+
+    /** Client tick: age the lines and drop the expired ones. Called by {@link ClientHudEvents}. */
     public static void tick() {
-        if (LINES.isEmpty()) {
+        if (clearIfDisabled() || LINES.isEmpty()) {
             return;
         }
         int duration = Config.SPEC.isLoaded() ? Config.KILLFEED_LINE_DURATION_TICKS.get() : 100;
         LINES.removeIf(line -> ++line.age > duration);
+        int max = Config.KILLFEED_MAX_LINES.get();
+        if (LINES.size() > max) LINES.subList(max, LINES.size()).clear();
     }
 
     // ------------------------------------------------------------------ drawing
@@ -151,39 +164,45 @@ public final class KillFeedHud implements IGuiOverlay {
     public void render(net.minecraftforge.client.gui.overlay.ForgeGui gui, GuiGraphics graphics, float partialTick,
                        int width, int height) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (!Config.SPEC.isLoaded() || !Config.KILLFEED_ENABLED.get() || LINES.isEmpty()
-                || minecraft.options.hideGui || minecraft.player == null) {
+        if (clearIfDisabled() || LINES.isEmpty()
+                || minecraft.options.hideGui || minecraft.player == null || minecraft.level == null) {
             return;
         }
         Font font = minecraft.font;
         double scale = Config.KILLFEED_SCALE.get();
         int duration = Math.max(1, Config.KILLFEED_LINE_DURATION_TICKS.get());
         int lineHeight = (int) Math.ceil((font.lineHeight + 2) * scale);
-        int top = 4;
-        int index = 0;
-        for (Line line : LINES) {
+        int allowed = Math.max(0, (int) ((width * MAX_WIDTH_SHARE - 8) / scale));
+        List<FormattedText> texts = new ArrayList<>(LINES.size());
+        int textWidth = 0;
+        for (Line entry : LINES) {
+            FormattedText text = trimStyled(font, line(entry), allowed);
+            texts.add(text);
+            textWidth = Math.max(textWidth, font.width(text));
+        }
+        HudLayout.Panel panel = HudLayout.allocate(position(), (int) Math.ceil(textWidth * scale) + 8,
+                lineHeight, LINES.size(), 1);
+        if (panel == null) return;
+        for (int index = 0; index < panel.rows(); index++) {
+            Line line = LINES.get(index);
             int alpha = alphaOf(line.age(), duration);
             if (alpha <= 0) {
-                index++;
                 continue;
             }
-            MutableComponent text = line(line);
-            int allowed = (int) (width * MAX_WIDTH_SHARE / scale);
-            String trimmed = trimToWidth(font, text.getString(), allowed);
-            int textWidth = font.width(trimmed);
-            int x = switch (position()) {
-                case "top_left" -> (int) (6 / scale);
-                case "top_right" -> (int) ((width / scale) - textWidth - 6);
-                default -> (int) ((width / scale - textWidth) / 2.0D);
-            };
-            int y = top + index * lineHeight;
+            FormattedText text = texts.get(index);
+            // The allocated coordinates are GUI pixels. Translation happens before scaling so row
+            // spacing and screen margins are scaled exactly once.
             graphics.pose().pushPose();
-            graphics.pose().scale((float) scale, (float) scale, 1.0F);
-            // A dark plate behind the line: the feed has to be readable over a bright sky too.
-            graphics.fill(x - 2, y - 1, x + textWidth + 2, y + font.lineHeight, (alpha / 3) << 24);
-            graphics.drawString(font, trimmed, x, y, withAlpha(0xFFFFFF, alpha), true);
-            graphics.pose().popPose();
-            index++;
+            try {
+                graphics.pose().translate(panel.bounds().left() + 4,
+                        panel.bounds().top() + 2 + index * lineHeight, 0);
+                graphics.pose().scale((float) scale, (float) scale, 1.0F);
+                graphics.fill(-1, -1, font.width(text) + 1, font.lineHeight, (alpha / 3) << 24);
+                graphics.drawString(font, Language.getInstance().getVisualOrder(text), 0, 0,
+                        withAlpha(WHITE, alpha), true);
+            } finally {
+                graphics.pose().popPose();
+            }
         }
     }
 
@@ -285,5 +304,12 @@ public final class KillFeedHud implements IGuiOverlay {
             return font.plainSubstrByWidth(text, maxWidth);
         }
         return font.plainSubstrByWidth(text, room) + ellipsis;
+    }
+
+    private static FormattedText trimStyled(Font font, FormattedText text, int maxWidth) {
+        if (font.width(text) <= maxWidth) return text;
+        int room = maxWidth - font.width("...");
+        if (room <= 0) return font.substrByWidth(text, Math.max(0, maxWidth));
+        return FormattedText.composite(font.substrByWidth(text, room), Component.literal("..."));
     }
 }

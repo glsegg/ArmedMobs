@@ -27,12 +27,16 @@ public final class FlashOverlay implements IGuiOverlay {
 
     /** Server -&gt; client: a flash arrived. A stronger or longer flash replaces a weaker one. */
     public static void accept(double newIntensity, int ticks) {
-        if (!Config.SPEC.isLoaded() || !Config.GRENADES_ENABLED.get() || newIntensity <= 0.0D || ticks <= 0) {
+        if (!ClientHudEvents.ensureWorld() || clearIfDisabled()
+                || !Double.isFinite(newIntensity) || newIntensity <= 0.0D || ticks <= 0) {
             return;
         }
         double clamped = Math.max(0.0D, Math.min(1.0D, newIntensity));
-        if (clamped >= intensity || ticks >= ticksLeft) {
-            intensity = Math.max(intensity, clamped);
+        double current = intensity * ((double) ticksLeft / Math.max(1, totalTicks));
+        if (clamped >= current || ticks >= ticksLeft) {
+            // A second flash starts from the brightness remaining now, not the original peak of an
+            // almost-recovered flash. Otherwise even a weak flash can restore a full white-out.
+            intensity = Math.max(current, clamped);
             ticksLeft = Math.max(ticksLeft, ticks);
             totalTicks = Math.max(1, ticksLeft);
         }
@@ -40,7 +44,7 @@ public final class FlashOverlay implements IGuiOverlay {
 
     /** Client tick: run the recovery down. */
     public static void tick() {
-        if (ticksLeft <= 0) {
+        if (clearIfDisabled() || ticksLeft <= 0) {
             return;
         }
         ticksLeft--;
@@ -66,11 +70,19 @@ public final class FlashOverlay implements IGuiOverlay {
         totalTicks = 0;
     }
 
+    static boolean clearIfDisabled() {
+        if (!Config.SPEC.isLoaded() || !Config.GRENADES_ENABLED.get()) {
+            clear();
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public void render(net.minecraftforge.client.gui.overlay.ForgeGui gui, GuiGraphics graphics, float partialTick,
                        int width, int height) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (ticksLeft <= 0 || !Config.SPEC.isLoaded() || !Config.GRENADES_ENABLED.get()
+        if (clearIfDisabled() || ticksLeft <= 0 || minecraft.player == null || minecraft.level == null
                 || minecraft.options.hideGui) {
             return;
         }

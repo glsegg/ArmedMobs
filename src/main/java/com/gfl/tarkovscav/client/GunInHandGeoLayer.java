@@ -18,6 +18,7 @@ import software.bernie.geckolib.core.animatable.GeoAnimatable;
 import software.bernie.geckolib.core.animatable.model.CoreGeoBone;
 import software.bernie.geckolib.renderer.GeoRenderer;
 import software.bernie.geckolib.renderer.layer.BlockAndItemGeoLayer;
+import software.bernie.geckolib.util.RenderUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -25,42 +26,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Draws the TaCZ gun a mob is holding on the rig's in-hand locator bone.
- *
- * <p>Vanilla only renders held items for players ({@code ItemInHandRenderer} is client-player only),
- * so without a layer like this a Bedrock-rigged mob looks unarmed no matter what it carries.</p>
- *
- * <h2>Which bone, and why not {@code Gun3}</h2>
- * <p>The default anchor is {@code RightHandLocator}, the model author's in-hand item locator. Running
- * YSM 2.6.5 through {@code javap} shows it renders a held TaCZ gun on its
- * {@code ILocationModel#tacPistolBones()/tacRifleBones()} bone groups after applying a fixed
- * transform, and in this rig the {@code tac:hold:*}, {@code tac:aim:*} and {@code tac:reload:*} clips
- * <b>animate {@code RightHandLocator}}</b> - that is how the authored gun pose is expressed. The
- * {@code Gun3} bone is a <em>sibling</em> of it (both are children of {@code RightHand}), so a gun
- * mounted on {@code Gun3} would sit in the palm but ignore every authored gun pose. The anchor is a
- * config value ({@code client.gunAnchorBone}) if you want to try {@code Gun3} anyway.</p>
- *
- * <h2>The anchor is resolved against the rig that is actually loaded</h2>
- * <p>A rig that does not carry the configured bone used to render the mob empty-handed and say
- * nothing - which is exactly what the gunner pillager's placeholder rig did before it was given a
- * {@code RightHandLocator} of its own. The anchor is now the first bone of
- * {@code configured -> RightHandLocator -> Gun3 -> RightHand} that exists in the baked model, the
- * choice is reported once per bake, and a rig with none of them gets a WARN naming the bones it does
- * have instead of failing silently. The resolution is keyed on the {@link BakedGeoModel} object, for
- * the same reason the hidden-bone pass is: a resource reload rebakes the model and the answer has to
- * be worked out again.</p>
- *
- * <h2>The transform is YSM's own, not a guess</h2>
- * <p>Measured from YSM 2.6.5's TaCZ renderer:</p>
- * <ul>
- *   <li>rifle-class: {@code scale(0.65)}, {@code Axis.Y -180 deg}, no translation</li>
- *   <li>pistol-class: {@code translate(0, -0.125, 0)}, {@code scale(0.65)}, {@code Axis.Y -90 deg},
- *       {@code Axis.Z +90 deg}</li>
- *   <li>rendered with {@link ItemDisplayContext#FIXED}</li>
- * </ul>
- * <p>All of it is overridable per family through {@code client.gunMount*}. The one deliberate
- * difference: YSM applies the rotation in the order Y-then-Z, which is what the config's
- * {@code [x, y, z]} triple reproduces here (X, then Y, then Z).</p>
+ * Attaches items to animated hand locators and draws them after the body has finished its buffer.
+ * The rig locator is already at the palm. TaCZ's THIRD_PERSON_RIGHT_HAND renderer positions each
+ * gun by its own thirdperson_hand group, so no per-gun shoulder offset belongs in this layer.
+ * Anchor resolution is repeated after a model rebake or configuration reload.
  */
 public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAndItemGeoLayer<T> {
     /**
@@ -105,6 +74,8 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
     /** The bone of the current model the offhand item is mounted on, or null when the rig has none. */
     private String offhandAnchorBone = RigSupport.DEFAULT_OFFHAND_ANCHOR;
 
+    private final DeferredItemPass itemPass = new DeferredItemPass();
+
     public GunInHandGeoLayer(GeoRenderer<T> renderer) {
         super(renderer);
     }
@@ -125,6 +96,7 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
     public void preRender(PoseStack poseStack, T animatable, BakedGeoModel bakedModel, RenderType renderType,
                           MultiBufferSource bufferSource, VertexConsumer buffer, float partialTick,
                           int packedLight, int packedOverlay) {
+        this.itemPass.clear();
         // One call per geometry pass, so this is where the "is the rig submitted twice?" counter lives.
         RenderStats.onGeometryPass(animatable, animatable.level() == null ? 0L : animatable.level().getGameTime());
         if (bakedModel != this.anchorResolvedOn || this.resolvedGeneration != RigSupport.configGeneration()) {
@@ -133,6 +105,47 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
             this.anchorBone = resolveAnchor(animatable, bakedModel);
             this.offhandAnchorBone = resolveOffhandAnchor(animatable, bakedModel);
         }
+    }
+
+    /**
+     * Capture the animated hand frame without drawing into GeckoLib's active model buffer.
+     * TaCZ can end buffers while drawing. Resuming the original consumer after that causes
+     * "BufferBuilder not started" with some shader/outline buffer wrappers.
+     */
+    @Override
+    public void renderForBone(PoseStack poseStack, T animatable, GeoBone bone, RenderType renderType,
+                              MultiBufferSource bufferSource, VertexConsumer buffer, float partialTick,
+                              int packedLight, int packedOverlay) {
+        ItemStack stack = getStackForBone(bone, animatable);
+        if (stack == null || stack.isEmpty()) {
+            return;
+        }
+        poseStack.pushPose();
+        try {
+            // renderRecursively has already applied this bone's rotation and scale.
+            // Return to its pivot without multiplying its animated rotation a second time.
+            RenderUtils.translateToPivotPoint(poseStack, bone);
+            boolean offhand = this.offhandAnchorBone != null && bone.getName().equals(this.offhandAnchorBone);
+            if (Config.normalisedHandMode() || (!offhand && !isGun(stack))) {
+                if (isGun(stack)) {
+                    applyPalmGunFrame(poseStack);
+                } else {
+                    applyVanillaHandFrame(poseStack, offhand);
+                }
+            }
+            this.itemPass.add(poseStack, captured -> renderStackForBone(captured, bone, stack, animatable,
+                    bufferSource, partialTick, packedLight, packedOverlay));
+        } finally {
+            poseStack.popPose();
+        }
+    }
+
+    /** GeckoLib invokes this after all body bones have submitted their vertices. */
+    @Override
+    public void render(PoseStack poseStack, T animatable, BakedGeoModel bakedModel, RenderType renderType,
+                       MultiBufferSource bufferSource, VertexConsumer buffer, float partialTick,
+                       int packedLight, int packedOverlay) {
+        this.itemPass.render();
     }
 
     /**
@@ -245,7 +258,8 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
         if (this.anchorBone != null && bone.getName().equals(this.anchorBone)) {
             ItemStack held = living.getMainHandItem();
             logMountDecision(bone, animatable, false, held);
-            return isGun(held) ? held : null;
+            // Weapon racks also equip bows, crossbows and melee weapons on Gecko-rendered pillagers.
+            return held.isEmpty() ? null : held;
         }
         if (this.offhandAnchorBone != null && bone.getName().equals(this.offhandAnchorBone)) {
             ItemStack offhand = living.getOffhandItem();
@@ -309,14 +323,18 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
      * {@code translate(0.5, 2, 0.5)}, {@code scale(-1, -1, 1)} (a mirror flip), the model's
      * {@code fixed} positioning group and the {@code fixed} display scale, which is 1.2 in TaCZ's own
      * gun pack. {@code THIRD_PERSON_RIGHT_HAND} instead applies the model's third-person-hand
-     * positioning group and the {@code thirdperson} display scale (0.6) with no flip. That mirror and
-     * the doubled scale are what made the gun look badly skewed on the hand; the default here is the
+     * positioning group and the {@code thirdperson} display scale (0.6), with the same XY axis conversion.
+     * The different locator and doubled fixed scale are unsuitable for a hand; the default here is the
      * same context vanilla's {@code ItemInHandLayer} uses for a mob's held item.</p>
      *
      * @param offhand true when the stack is being drawn on the left-hand anchor, which selects the
      *                {@code *_LEFT_HAND} variant of the context
      */
     private static ItemDisplayContext displayContext(boolean offhand, ItemStack stack) {
+        if (!isGun(stack)) {
+            return offhand ? ItemDisplayContext.THIRD_PERSON_LEFT_HAND
+                    : ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
+        }
         ItemDisplayContext context;
         try {
             context = ItemDisplayContext.valueOf(Config.gunMountDisplayContext());
@@ -405,13 +423,8 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
         boolean offhand = this.offhandAnchorBone != null && bone.getName().equals(this.offhandAnchorBone);
         boolean normalised = Config.normalisedHandMode();
 
-        // 1. the anchor frame itself: either leave GeckoLib's, or turn it into a real hand frame.
-        if (normalised) {
-            cancelDuplicateBoneRotation(poseStack, bone);
-            applyVanillaHandFrame(poseStack, offhand);
-        }
-
-        // 2. the extra transform: the family values for the held gun, the offhand values otherwise.
+        // The animated anchor/hand frame was captured during traversal. Apply only the extra mount
+        // transform here; another render layer may have changed the shared bone rotations by now.
         float[] rotation;
         float[] offset;
         float scale;
@@ -420,64 +433,55 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
             rotation = new float[]{mount[0], mount[1], mount[2]};
             offset = new float[]{mount[3], mount[4], mount[5]};
             scale = mount[6];
-        } else {
+        } else if (isGun(stack)) {
             boolean pistol = pistolFamily(animatable);
             rotation = mountRotation(pistol);
             offset = mountOffset(pistol);
             scale = mountScale(pistol);
+        } else {
+            rotation = new float[]{0, 0, 0};
+            offset = new float[]{0, 0, 0};
+            scale = 1.0F;
         }
 
         poseStack.pushPose();
-        if (rotation[0] != 0.0F) {
-            poseStack.mulPose(Axis.XP.rotationDegrees(rotation[0]));
-        }
-        if (rotation[1] != 0.0F) {
-            poseStack.mulPose(Axis.YP.rotationDegrees(rotation[1]));
-        }
-        if (rotation[2] != 0.0F) {
-            poseStack.mulPose(Axis.ZP.rotationDegrees(rotation[2]));
-        }
-        if (offset[0] != 0.0F || offset[1] != 0.0F || offset[2] != 0.0F) {
-            poseStack.translate(offset[0], offset[1], offset[2]);
-        }
-        if (scale != 1.0F) {
-            poseStack.scale(scale, scale, scale);
-        }
-
-        // ---------------------------------------------------------------------------------------
-        // The foreign draw. TaCZ's gun renderer manipulates the stencil buffer and leaves the stencil
-        // func at GL_EQUAL/0 in Minecraft's state cache; its enable/disable calls are raw GL11 calls
-        // that bypass that cache (bytecode evidence in README 5k). Two things matter here: our own
-        // geometry must never be tested against that leftover state, and the next draw must not inherit
-        // it. So dump what it did (only when asked), then force the test back to always-pass.
-        // ---------------------------------------------------------------------------------------
-        if (Config.logGlState()) {
-            TarkovScav.LOGGER.info(RenderStateGuard.describe("before item draw (" + bone.getName() + ")"));
-        }
-        // ---------------------------------------------------------------------------------------
-        // The foreign draw, guarded in full (README 5w). TaCZ's gun renderer is a foreign renderer inside
-        // OUR model traversal: GeckoLib calls per-bone layers from renderRecursively, so everything the
-        // traversal draws AFTER this bone inherits whatever state TaCZ leaves behind. The old code only
-        // forced the stencil back; the texture binding was never repaired, and that is the bug this guard
-        // now closes:
-        //   * snapshot/restore everything the guard knows (stencil, depth, blend, cull AND the texture);
-        //   * put the MODEL's own texture back on the shader, through the cache-aware RenderSystem call;
-        //   * resync the raw binding with the cache, so the next RenderType setup cannot skip its bind and
-        //     leave the remaining bones sampling texture 0 (a block of pure black).
-        // ---------------------------------------------------------------------------------------
-        RenderStateGuard guard = RenderStateGuard.snapshot("item draw (" + bone.getName() + ")");
         try {
-            super.renderStackForBone(poseStack, bone, stack, animatable, bufferSource, partialTick,
-                    packedLight, packedOverlay);
+            if (rotation[0] != 0.0F) {
+                poseStack.mulPose(Axis.XP.rotationDegrees(rotation[0]));
+            }
+            if (rotation[1] != 0.0F) {
+                poseStack.mulPose(Axis.YP.rotationDegrees(rotation[1]));
+            }
+            if (rotation[2] != 0.0F) {
+                poseStack.mulPose(Axis.ZP.rotationDegrees(rotation[2]));
+            }
+            if (offset[0] != 0.0F || offset[1] != 0.0F || offset[2] != 0.0F) {
+                poseStack.translate(offset[0], offset[1], offset[2]);
+            }
+            if (scale != 1.0F) {
+                poseStack.scale(scale, scale, scale);
+            }
+
+            // The body has finished submitting vertices. Guard the foreign draw and restore its GL
+            // state before another deferred item or entity starts; do not resume the old model buffer.
+            if (Config.logGlState()) {
+                TarkovScav.LOGGER.info(RenderStateGuard.describe("before item draw (" + bone.getName() + ")"));
+            }
+            RenderStateGuard guard = RenderStateGuard.snapshot("item draw (" + bone.getName() + ")");
+            try {
+                super.renderStackForBone(poseStack, bone, stack, animatable, bufferSource, partialTick,
+                        packedLight, packedOverlay);
+            } finally {
+                guard.restore();
+                RenderStateGuard.rebindTexture(this.renderer.getTextureLocation(animatable));
+                RenderStateGuard.forceAlwaysPassStencil();
+            }
+            if (Config.logGlState()) {
+                TarkovScav.LOGGER.info(RenderStateGuard.describe("after item draw (" + bone.getName() + ")"));
+            }
         } finally {
-            guard.restore();
-            RenderStateGuard.rebindTexture(this.renderer.getTextureLocation(animatable));
-            RenderStateGuard.forceAlwaysPassStencil();
+            poseStack.popPose();
         }
-        if (Config.logGlState()) {
-            TarkovScav.LOGGER.info(RenderStateGuard.describe("after item draw (" + bone.getName() + ")"));
-        }
-        poseStack.popPose();
 
         // 3. the optional two-handed support copy of the main-hand gun, on the offhand anchor and only
         //    when the offhand itself is not carrying something (otherwise it would be drawn under it).
@@ -486,70 +490,49 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
             ItemStack main = living.getMainHandItem();
             if (living.getOffhandItem().isEmpty() && isGun(main) && main != stack) {
                 poseStack.pushPose();
-                if (normalised) {
-                    // The bone rotation was already cancelled and the hand frame already applied
-                    // before step 2, so only the extra transform has to be repeated here.
-                    float[] mount = Config.offhandMount();
-                    if (mount[0] != 0.0F) {
-                        poseStack.mulPose(Axis.XP.rotationDegrees(mount[0]));
-                    }
-                    if (mount[1] != 0.0F) {
-                        poseStack.mulPose(Axis.YP.rotationDegrees(mount[1]));
-                    }
-                    if (mount[2] != 0.0F) {
-                        poseStack.mulPose(Axis.ZP.rotationDegrees(mount[2]));
-                    }
-                }
-                // The same guard for the support copy: it is the same foreign renderer (README 5w).
-                RenderStateGuard supportGuard = RenderStateGuard.snapshot("offhand item draw ("
-                        + bone.getName() + ")");
                 try {
-                    super.renderStackForBone(poseStack, bone, main, animatable, bufferSource, partialTick,
-                            packedLight, packedOverlay);
+                    if (normalised) {
+                        // The bone rotation was already cancelled and the hand frame already applied
+                        // before step 2, so only the extra transform has to be repeated here.
+                        float[] mount = Config.offhandMount();
+                        if (mount[0] != 0.0F) {
+                            poseStack.mulPose(Axis.XP.rotationDegrees(mount[0]));
+                        }
+                        if (mount[1] != 0.0F) {
+                            poseStack.mulPose(Axis.YP.rotationDegrees(mount[1]));
+                        }
+                        if (mount[2] != 0.0F) {
+                            poseStack.mulPose(Axis.ZP.rotationDegrees(mount[2]));
+                        }
+                    }
+                    // The same guard for the support copy: it is the same foreign renderer (README 5w).
+                    RenderStateGuard supportGuard = RenderStateGuard.snapshot("offhand item draw ("
+                            + bone.getName() + ")");
+                    try {
+                        super.renderStackForBone(poseStack, bone, main, animatable, bufferSource, partialTick,
+                                packedLight, packedOverlay);
+                    } finally {
+                        supportGuard.restore();
+                        RenderStateGuard.rebindTexture(this.renderer.getTextureLocation(animatable));
+                        RenderStateGuard.forceAlwaysPassStencil();
+                    }
                 } finally {
-                    supportGuard.restore();
-                    RenderStateGuard.rebindTexture(this.renderer.getTextureLocation(animatable));
-                    RenderStateGuard.forceAlwaysPassStencil();
+                    poseStack.popPose();
                 }
-                poseStack.popPose();
             }
         }
     }
 
     /**
-     * Undoes the bone's own rotation that {@code BlockAndItemGeoLayer} applies a second time.
-     *
-     * <p>{@code renderRecursively} has already left the bone's transform (pivot, rotation, scale) on the
-     * pose stack when the layer is called, and the layer then calls
-     * {@code RenderUtils.translateAndRotateMatrixForBone} - which is the pivot and the rotation
-     * <em>again</em> - so the item's frame carries {@code R * R} for that bone. For a locator bone no
-     * clip touches (the usual case) that is invisible; {@code RightHandLocator} is animated by every
-     * {@code tac:*} clip, so on this rig it over-rotates the weapon by 27-32 degrees. This multiplies by
-     * {@code R^-1} on the right, exactly cancelling the duplicate and leaving one application, which is
-     * what a real hand bone gets.</p>
+     * Gecko's palm locator uses +Y along the hand; the gunpack uses -Z along the barrel.
+     * Rx(-90) maps the gun forward along -Y of the locator. Vanilla's extra Ry(180) would
+     * reverse it, and its shoulder-to-hand translation would move it away from the palm.
      */
-    private static void cancelDuplicateBoneRotation(PoseStack poseStack, GeoBone bone) {
-        // GeckoLib applies Z, then Y, then X (RenderUtils.rotateMatrixAroundBone). mulPose(A) followed by
-        // mulPose(B) composes A*B, so the inverse Rz*Ry*Rx is applied as X, Y, Z with negated angles.
-        if (bone.getRotX() != 0.0F) {
-            poseStack.mulPose(Axis.XP.rotationDegrees(-bone.getRotX() * net.minecraft.util.Mth.RAD_TO_DEG));
-        }
-        if (bone.getRotY() != 0.0F) {
-            poseStack.mulPose(Axis.YP.rotationDegrees(-bone.getRotY() * net.minecraft.util.Mth.RAD_TO_DEG));
-        }
-        if (bone.getRotZ() != 0.0F) {
-            poseStack.mulPose(Axis.ZP.rotationDegrees(-bone.getRotZ() * net.minecraft.util.Mth.RAD_TO_DEG));
-        }
+    private static void applyPalmGunFrame(PoseStack poseStack) {
+        poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
     }
 
-    /**
-     * The frame vanilla's {@code ItemInHandLayer} hands a held item to
-     * {@code ItemRenderer#renderStatic}: {@code mulPose(X, -90)}, {@code mulPose(Y, 180)} and
-     * {@code translate(arm == LEFT ? -1/16 : +1/16, 0.125, -0.625)}. TaCZ's gun models carry their own
-     * positioning groups ("定位组") for exactly that frame, so applying it is what makes a gun sit in the
-     * hand the way it does for a player - the same thing the user asked for with "treat the locator as
-     * the right hand".
-     */
+    /** Standard frame for ordinary items, retained independently from the TaCZ palm mount. */
     private static void applyVanillaHandFrame(PoseStack poseStack, boolean leftHand) {
         poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
         poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));

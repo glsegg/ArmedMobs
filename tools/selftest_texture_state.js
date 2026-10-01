@@ -128,8 +128,9 @@ check(/GlStateManager\._bindTexture\(this\.texture\);/.test(guard),
   'the guard RESTORES the texture binding it snapshotted');
 check(/public static void resyncTextureBinding\(\)/.test(guard)
   && /int cached = RenderSystem\.getShaderTexture\(0\);/.test(guard)
-  && /GlStateManager\._bindTexture\(cached\);/.test(guard),
-  'and can resync the raw binding with Minecraft\'s cache (the call that actually fixes the black)');
+  && /restoreUnitBinding\(GL13\.GL_TEXTURE0, cached\);/.test(guard)
+  && /finally \{\s*activateTexture\(entryUnit\);/.test(guard),
+  'resync repairs the base texture unit and preserves the active unit (verified by the live-GL gate)');
 const layerGuard = /RenderStateGuard guard = RenderStateGuard\.snapshot\("item draw/.test(layer);
 const layerTry = /try \{\s*super\.renderStackForBone\(/.test(layer);
 const layerRestore = /finally \{\s*guard\.restore\(\);/.test(layer);

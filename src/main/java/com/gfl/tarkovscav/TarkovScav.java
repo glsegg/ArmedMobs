@@ -43,10 +43,9 @@ import java.util.stream.Stream;
  * <ul>
  *   <li><b>GeckoLib</b> is bundled into the jar with jarJar (see build.gradle), so players do not
  *       have to install it; if their own copy is older than the bundled one, Forge uses ours.</li>
- *   <li><b>TaCZ</b> is a hard dependency that is deliberately <em>not</em> bundled and <em>not</em>
+ *   <li><b>TaCZ</b> is an optional dependency that is deliberately <em>not</em> bundled and <em>not</em>
  *       redistributed. It is a 57 MB third-party mod that supplies every gun, magazine and bullet
- *       this mod fires. {@code mods.toml} declares it mandatory so a missing TaCZ fails loudly at
- *       load instead of at the first shot.</li>
+ *       this mod fires. Without it, units use the configured bow/crossbow fallback.</li>
  * </ul>
  */
 @Mod(TarkovScav.MOD_ID)
@@ -79,6 +78,8 @@ public class TarkovScav {
         com.gfl.tarkovscav.loot.ModLoadedLootCondition.CONDITIONS.register(modBus);
         modBus.addListener(this::onCommonSetup);
 
+        ConfigMigration.migrate(net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get()
+                .resolve(MOD_ID + "-common.toml"));
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         MinecraftForge.EVENT_BUS.register(this);
@@ -90,9 +91,6 @@ public class TarkovScav {
         // The delayed assertions of /tarkovscav test watch|stall (see FightHarness for why they are
         // not scheduled with a TickTask).
         MinecraftForge.EVENT_BUS.register(com.gfl.tarkovscav.command.FightHarness.class);
-        // Player lean, server half (README 5s): the shot-origin offset for a leaning player's projectiles and
-        // the guard that keeps the vanilla drop key from throwing items while leaning.
-        MinecraftForge.EVENT_BUS.register(com.gfl.tarkovscav.lean.LeanServerEvents.class);
         // The kill feed (README 5u): one line per death, for the players allowed to see it.
         MinecraftForge.EVENT_BUS.register(com.gfl.tarkovscav.killfeed.KillFeed.class);
         // Grenades (README 5v): the smoke clouds are ticked by hand; the blast itself is called from the entity.
@@ -124,8 +122,6 @@ public class TarkovScav {
 
     private void onCommonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(ModEntities::registerSpawnPlacements);
-        // The lean's one packet (README 5s). Registered on both sides; only a client ever sends it.
-        com.gfl.tarkovscav.lean.LeanNetwork.register();
         // The kill feed's one packet (README 5u): server -> client only.
         com.gfl.tarkovscav.killfeed.KillFeedNetwork.register();
         // The capture HUD's one packet (README 7p): server -> client only, names and numbers.
@@ -146,12 +142,12 @@ public class TarkovScav {
             }
         });
 
-        // TaCZ is mandatory, so by the time this runs it is present; log the version we integrate with
-        // because the gun-data format has changed between releases more than once.
+        // Log the integration version or the active fallback, since TaCZ is optional.
         ModList.get().getModContainerById(TACZ_MOD_ID).ifPresentOrElse(
                 container -> LOGGER.info("TaCZ {} detected - guns come from its index at runtime",
                         container.getModInfo().getVersion()),
-                () -> LOGGER.error("TaCZ is missing! mods.toml requires it; gun AI cannot work."));
+                () -> LOGGER.info("TaCZ is not installed - {}",
+                        com.gfl.tarkovscav.gun.FallbackEquipment.describe()));
 
         warnAboutDuplicateGeckoLibJars();
     }

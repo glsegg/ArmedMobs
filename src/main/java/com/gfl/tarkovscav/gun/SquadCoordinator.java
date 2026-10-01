@@ -1,6 +1,7 @@
 package com.gfl.tarkovscav.gun;
 
 import com.gfl.tarkovscav.Config;
+import com.gfl.tarkovscav.TarkovScav;
 import com.gfl.tarkovscav.faction.AlertNetwork;
 import com.gfl.tarkovscav.faction.Faction;
 import net.minecraft.core.BlockPos;
@@ -8,6 +9,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -15,6 +19,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * The squad layer for the coordinated tiers (README 5aa): focus fire, bounding overwatch, flanking
@@ -58,6 +63,7 @@ import java.util.Map;
  * {@code tools/selftest_ai_profiles.js} mirrors them, compares the sources textually and simulates
  * the real cases (two mobs cannot claim one spot, the suppressor rotates, a squad picks one target).
  */
+@Mod.EventBusSubscriber(modid = TarkovScav.MOD_ID)
 public final class SquadCoordinator {
     /**
      * One cover claim: which entity took the position and when it stops being reserved. Keyed by the
@@ -66,8 +72,15 @@ public final class SquadCoordinator {
     private record Claim(int ownerId, long expiresAt) {
     }
 
-    /** The shared claim table; entries expire, so a dead owner frees its spot after coverClaimTicks. */
-    private static final Map<BlockPos, Claim> CLAIMS = new HashMap<>();
+    /** Cover coordinates and clocks belong to one level, never another dimension or saved world. */
+    private static final Map<ServerLevel, Map<BlockPos, Claim>> CLAIMS = new WeakHashMap<>();
+
+    @SubscribeEvent
+    public static void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel() instanceof ServerLevel) {
+            CLAIMS.remove(event.getLevel());
+        }
+    }
 
     /**
      * The persistent-data key a garrison squad's shared id lives under. Namespaced because
@@ -149,7 +162,7 @@ public final class SquadCoordinator {
         int size = this.members.size();
         this.flankSide = isFlanker(index, size, Config.AI_COORD_FLANK_FRACTION.get())
                 ? (index % 2 == 0 ? 1 : -1) : 0;
-        pruneClaims(now);
+        pruneClaims(level, now);
     }
 
     // ------------------------------------------------------------------ garrison squad identity
@@ -178,8 +191,12 @@ public final class SquadCoordinator {
         if (pos == null || !Config.SPEC.isLoaded() || !Config.AI_COORD_COVER_CLAIMS.get()) {
             return;
         }
-        long expires = mob.level().getGameTime() + Math.max(1, Config.AI_COORD_COVER_CLAIM_TICKS.get());
-        CLAIMS.put(pos.immutable(), new Claim(mob.getId(), expires));
+        if (!(mob.level() instanceof ServerLevel level)) {
+            return;
+        }
+        long expires = level.getGameTime() + Math.max(1, Config.AI_COORD_COVER_CLAIM_TICKS.get());
+        CLAIMS.computeIfAbsent(level, unused -> new HashMap<>())
+                .put(pos.immutable(), new Claim(mob.getId(), expires));
     }
 
     /** "Alert-shared": the candidate is actually in this fight, not walking past it. */
@@ -267,8 +284,7 @@ public final class SquadCoordinator {
         if (pos == null || !AiProfile.coordination(this.mob) || !Config.AI_COORD_COVER_CLAIMS.get()) {
             return;
         }
-        long expires = this.mob.level().getGameTime() + Config.AI_COORD_COVER_CLAIM_TICKS.get();
-        CLAIMS.put(pos.immutable(), new Claim(this.mob.getId(), expires));
+        claimFor(this.mob, pos);
     }
 
     /** True when nobody else holds this block. */
@@ -276,13 +292,17 @@ public final class SquadCoordinator {
         if (!AiProfile.coordination(this.mob) || !Config.AI_COORD_COVER_CLAIMS.get()) {
             return true;
         }
-        return isCoverFree(pos, this.mob.getId(), this.mob.level().getGameTime());
+        return !(this.mob.level() instanceof ServerLevel level)
+                || isCoverFree(level, pos, this.mob.getId(), level.getGameTime());
     }
 
     /** Drops every claim this mob owns (goal stopped, mob died, engagement over). */
     public void release() {
         int id = this.mob.getId();
-        CLAIMS.entrySet().removeIf(entry -> entry.getValue().ownerId() == id);
+        Map<BlockPos, Claim> claims = CLAIMS.get(this.mob.level());
+        if (claims != null) {
+            claims.entrySet().removeIf(entry -> entry.getValue().ownerId() == id);
+        }
     }
 
     // ------------------------------------------------------------------ pure decision helpers
@@ -355,16 +375,20 @@ public final class SquadCoordinator {
         return ownerId == claimantId || expiresAt <= now;
     }
 
-    private static boolean isCoverFree(BlockPos pos, int claimantId, long now) {
-        Claim claim = CLAIMS.get(pos);
+    private static boolean isCoverFree(ServerLevel level, BlockPos pos, int claimantId, long now) {
+        Map<BlockPos, Claim> claims = CLAIMS.get(level);
+        Claim claim = claims == null ? null : claims.get(pos);
         if (claim == null) {
             return true;
         }
         return claimIsFree(claim.ownerId(), claimantId, claim.expiresAt(), now);
     }
 
-    private static void pruneClaims(long now) {
-        CLAIMS.entrySet().removeIf(entry -> entry.getValue().expiresAt() <= now);
+    private static void pruneClaims(ServerLevel level, long now) {
+        Map<BlockPos, Claim> claims = CLAIMS.get(level);
+        if (claims != null) {
+            claims.entrySet().removeIf(entry -> entry.getValue().expiresAt() <= now);
+        }
     }
 
     /** One-line readout for {@code /tarkovscav debug}. */

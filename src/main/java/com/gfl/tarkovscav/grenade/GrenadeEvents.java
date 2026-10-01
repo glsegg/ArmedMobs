@@ -10,6 +10,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.ArrayList;
@@ -56,11 +58,12 @@ public final class GrenadeEvents {
         if (event.phase != TickEvent.Phase.END || CLOUDS.isEmpty()) {
             return;
         }
-        long now = CLOUDS.get(0).level().getGameTime();
         Iterator<Cloud> iterator = CLOUDS.iterator();
         while (iterator.hasNext()) {
             Cloud cloud = iterator.next();
-            if (now > cloud.until() || !Config.GRENADES_ENABLED.get()) {
+            long now = cloud.level().getGameTime();
+            if (cloud.level().getServer() != event.getServer()
+                    || now >= cloud.until() || !Config.GRENADES_ENABLED.get()) {
                 iterator.remove();
                 continue;
             }
@@ -93,5 +96,17 @@ public final class GrenadeEvents {
     /** Test-command hook: forget every cloud (so a test can start clean). */
     public static void clearClouds() {
         CLOUDS.clear();
+    }
+
+    @SubscribeEvent
+    public static void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel() instanceof ServerLevel) {
+            CLOUDS.removeIf(cloud -> cloud.level() == event.getLevel());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerStopped(ServerStoppedEvent event) {
+        CLOUDS.removeIf(cloud -> cloud.level().getServer() == event.getServer());
     }
 }
