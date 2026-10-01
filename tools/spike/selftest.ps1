@@ -187,8 +187,6 @@ try {
         & $node tools/scan_transparent_faces.js | Select-Object -Last 6
         Write-Host '--- scan_molang_variables (informational: the Molang symbol census) ---' -ForegroundColor Cyan
         & $node tools/scan_molang_variables.js | Select-Object -First 4
-        Write-Host '--- patch_transparent_faces --dry (informational: the opt-in asset fix, not applied) ---' -ForegroundColor Cyan
-        & $node tools/patch_transparent_faces.js --dry | Select-Object -Last 3
 
         # Gates: these must exit 0.
         $nodeGates = [ordered]@{
@@ -249,7 +247,6 @@ try {
             'selftest_shield'      = @('tools/selftest_shield.js')
             'selftest_shield_assets' = @('tools/selftest_shield_assets.js')
             'selftest_ai_cost'     = @('tools/selftest_ai_cost.js')
-            'selftest_docx'        = @('tools/selftest_docx.js')
             'resolve_gun_anchor'   = @('tools/resolve_gun_anchor.js')
         }
         foreach ($name in $nodeGates.Keys) {

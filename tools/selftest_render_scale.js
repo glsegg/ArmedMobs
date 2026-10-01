@@ -1,4 +1,4 @@
-// Two model sizes, two keys (README 5b). This gate exists because they were ONE key, and that made every
+// Two model sizes, two keys. This gate exists because they were ONE key, and that made every
 // armed villager 10 % too big the moment the Bedrock rig was enlarged - the rig's baseline is 0.7, the vanilla
 // villager's is 1.0, so a single shared number cannot mean the same thing to both.
 //
@@ -34,7 +34,7 @@ const pillagerVanilla = strip(read('client/GunnerPillagerRenderer.java'));
 const villagerEntity = strip(read('entity/GunnerVillagerEntity.java'));
 const scavEntity = strip(read('entity/ScavEntity.java'));
 const commands = strip(read('command/ClientCommands.java'));
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 console.log('1. the two keys and their defaults');
 check(/DEFAULT_RENDER_SCALE = 0\.77D/.test(config),
@@ -102,13 +102,9 @@ check(/client scale \[villager\] <value>/.test(commands) || /client scale villag
   'the usage string documents both forms');
 
 console.log('');
-console.log('6. the README records the division of labour');
-check(readme.includes('villagerRenderScale') && readme.includes('renderScale'),
-  'README documents both keys');
-check(/\| `villagerRenderScale` \| `1\.0` \|/.test(readme),
-  'with the villager default 1.0 = vanilla size');
-check(/两个 scale 键/.test(readme) && /client scale villager/.test(readme),
-  'and a section stating which key governs which family, plus the live-tuning form');
+console.log('6. the command/config reference records the division of labour');
+check(referenceDoc.includes('villagerRenderScale') && referenceDoc.includes('renderScale'),
+  'command/config reference documents both keys');
 
 console.log('');
 if (failures > 0) {

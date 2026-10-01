@@ -1,4 +1,4 @@
-// The accuracy profile (README 5o): wild first shots, a 75 % steady-state ceiling, and a counter that only
+// The accuracy profile: wild first shots, a 75 % steady-state ceiling, and a counter that only
 // a real shot advances.
 //
 //   node tools/selftest_accuracy.js
@@ -37,7 +37,7 @@ const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/
 const profile = read('gun/AccuracyProfile.java');
 const brain = strip(read('gun/GunBrain.java'));
 const config = read('Config.java');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 const debug = read('command/ModCommands.java');
 
 console.log('1. where the number comes from, and that it is the ONLY place');
@@ -179,15 +179,11 @@ check(/AccuracyProfile\.describe\(mob\)/.test(debug), '/tarkovscav debug reports
 for (const key of ['hardCeiling', 'profileRookieCap', 'profileVeteranCap', 'profileEliteCap',
   'profileScav', 'profileGunnerPillager', 'profileGunnerVillager', 'profileSniperTier',
   'warmupShots', 'warmupMultiplier', 'resetTicks', 'enabled']) {
-  check(readme.includes(key), `README documents accuracy.${key}`);
+  check(referenceDoc.includes(key), `command/config reference documents accuracy.${key}`);
 }
-check(!/steadyStateCap/.test(config) && !/steadyStateCap/.test(readme),
-  'the old global steadyStateCap key is gone from both code and docs (replaced by the profiles)');
-check(/### 5o\./.test(readme), 'README has the 5o section');
-check(/误差锥角|error cone|cone/.test(readme),
-  'README explains that accuracy scales the error cone rather than rolling a hit dice');
-check(/shots=/.test(profile) && /debug/i.test(readme.slice(readme.indexOf('### 5o.'), readme.indexOf('### 5o.') + 6000)),
-  'README mentions the debug readout');
+check(!/steadyStateCap/.test(config), 'the old global steadyStateCap key is gone (replaced by tier profiles)');
+
+check(/shots=/.test(profile), 'the accuracy profile exposes its debug shot count');
 
 console.log('');
 if (failures > 0) {

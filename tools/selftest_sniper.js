@@ -1,4 +1,4 @@
-// The snipers: the sniper pillager and the sniper villager (README 5q).
+// The snipers: the sniper pillager and the sniper villager.
 //
 //   node tools/selftest_sniper.js
 //
@@ -44,7 +44,7 @@ const faction = read('faction/Faction.java');
 const config = read('Config.java');
 const commands = read('command/ModCommands.java');
 const accuracy = read('gun/AccuracyProfile.java');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 console.log('1. two real, independent entities that share ONE behaviour');
 check(/ENTITY_TYPES\.register\("sniper_pillager"/.test(entities), 'the pillager sniper is registered');
@@ -269,7 +269,7 @@ check(veteran === 0.85, 'and the veteran cap is 0.85 - above the small fry, belo
   String(veteran));
 check(!/accuracy|AccuracyProfile/.test(pillagerCode + villagerCode),
   'neither sniper class contains accuracy code: the promotion is the tier rule doing the work');
-// The hit-chance table the README quotes, recomputed here so the two cannot drift.
+// The hit-chance table the command/config reference quotes, recomputed here so the two cannot drift.
 function erf(value) {
   const sign = Math.sign(value); const z = Math.abs(value);
   const t = 1 / (1 + 0.3275911 * z);
@@ -282,7 +282,7 @@ function hitChance(acc, distance, radius) {
   return Math.max(0, Math.min(1, erf(Math.atan2(radius, distance) * 180 / Math.PI / (sigma * Math.SQRT2))));
 }
 // The profile clamps the HIT CHANCE, not just the number (see selftest_accuracy), so the veteran numbers the
-// README quotes are the clamped ones - this mirrors AccuracyProfile.clampToHitChance exactly.
+// command/config reference quotes are the clamped ones - this mirrors AccuracyProfile.clampToHitChance exactly.
 function clampToHitChance(acc, distance, radius, cap) {
   if (cap >= 1 || distance <= 0 || radius <= 0) return acc;
   if (hitChance(acc, distance, radius) <= cap) return acc;
@@ -297,7 +297,7 @@ function clampToHitChance(acc, distance, radius, cap) {
 const veteranAt = (d) => clampToHitChance(0.85, d, 0.3, 0.85);
 const table = [6, 10, 20, 30, 40, 52].map((d) => `${d}b=${(100 * hitChance(veteranAt(d), d, 0.3)).toFixed(1)}%`);
 check(table.join(' ') === '6b=85.0% 10b=85.0% 20b=85.0% 30b=72.5% 40b=58.7% 52b=47.1%',
-  'the veteran hit-chance numbers quoted in the README reproduce', table.join(' '));
+  'the veteran hit-chance numbers quoted in the command/config reference reproduce', table.join(' '));
 for (const value of table) {
   check(parseFloat(value.split('=')[1]) <= 85.0 + 1e-9, `and ${value} is within the veteran cap`);
 }
@@ -317,12 +317,9 @@ check(/\.push\("sniper"\)/.test(config), 'the keys live in their own [sniper] se
 for (const key of ['followRange', 'discoveredRange', 'shotsBeforeMove', 'minPostDistance', 'closeRange',
   'moveSpeed', 'relocateTimeoutTicks', 'minSpawnDistanceFromPlayer', 'preferHighGround', 'minElevation',
   'spawnWeight', 'villagerWeight', 'enabled']) {
-  check(readme.includes(key), `README documents sniper.${key}`);
+  check(referenceDoc.includes(key), `command/config reference documents sniper.${key}`);
 }
-check(/### 5q\./.test(readme), 'README has the 5q section');
-check(/狙击手掠夺者/.test(readme) && /狙击手村民/.test(readme) && /偏好高处/.test(readme),
-  'README explains both mobs in Chinese');
-check(/SniperBehavior/.test(readme), 'and documents that the two share ONE behaviour implementation');
+
 check(/Commands\.literal\("sniper"\)/.test(commands) && /testSniper/.test(commands),
   '/tarkovscav test sniper exists');
 check(/"sniper"\) \? "sniper_pillager"/.test(commands), '/tarkovscav spawn sniper is an alias');

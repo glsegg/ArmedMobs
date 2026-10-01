@@ -1,4 +1,4 @@
-// The city district (README 7 + docs/CITY_EDIT_GUIDE.md): the extracted building pieces, the jigsaw
+// The city district (command/config reference + docs/CITY_EDIT_GUIDE.md): the extracted building pieces, the jigsaw
 // connectors inside them, the template pools, the worldgen structure and the in-game assembler.
 //
 //   node tools/selftest_city_district.js
@@ -223,21 +223,7 @@ check(/literal\("district"\)/.test(commands) && /cityDistrict\(/.test(commands),
   '/tarkovscav city district exists');
 check(/LongArgumentType/.test(commands) && /seed/.test(commands),
   'the seed is an argument, so a layout can be reproduced');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
-check(/city district/.test(readme), 'README documents the command');
-check(/terrain_adaptation|不替换地形/.test(readme), 'README states the no-terrain-replacement rule');
-check(/city_district/.test(readme), 'README names the structure');
-check(/还没生成|已生成的区块/.test(readme),
-  'README says honestly that only ungenerated chunks can grow a district');
-check(fs.existsSync(path.join(ROOT, 'docs', 'CITY_EDIT_GUIDE.md')), 'docs/CITY_EDIT_GUIDE.md exists');
-const guide = fs.readFileSync(path.join(ROOT, 'docs', 'CITY_EDIT_GUIDE.md'), 'utf8');
-check(/SaveBuildingExtract|city_survey|foundationDepth|地基/.test(guide),
-  'the guide documents the extraction pipeline (survey -> extract -> connectors -> pools)');
-check(/foundationDepth/.test(readme), 'README documents the city.foundationDepth key');
-check(/64.*80|66.*80|wall_ring/.test(readme) && /把城区撑成固定形状|not in a pool|没入池/.test(readme),
-  'README says why wall_ring is not in a pool');
-check(/FROZEN|frozen|死数/.test(readme) && /generator/.test(readme),
-  'README distinguishes the frozen extracted depth from the generator/config one');
+
 const generatedPool = JSON.parse(fs.readFileSync(path.join(RES, 'worldgen', 'template_pool', 'city_district', 'building.json'), 'utf8'));
 for (const generated of ['gen_district_b1', 'gen_district_b2']) {
   check(generatedPool.elements.some((e) => e.element.location === 'tarkovscav:buildings/' + generated),
@@ -252,10 +238,9 @@ for (const generated of ['gen_district_b1', 'gen_district_b2']) {
 const configSource = fs.readFileSync(path.join(JAVA, 'Config.java'), 'utf8');
 const assemblerSource = fs.readFileSync(path.join(JAVA, 'worldgen', 'CityDistrictAssembler.java'), 'utf8');
 check(/CITY_FOUNDATION_DEPTH/.test(configSource) && /cityFoundationDepth\(\)/.test(configSource),
-  'the city.foundationDepth key really exists in Config (not just in the README)');
+  'the city.foundationDepth key really exists in Config (not just in the command/config reference)');
 check(/cityFoundationDepth\(\)/.test(assemblerSource), 'and the assembler reads it');
 check(/poolPieces\(/.test(assemblerSource), 'the assembler reads the template pools instead of a second hard-coded list');
-check(/--pieces-only/.test(readme), 'README documents how the generator pieces are produced');
 
 console.log('');
 console.log('7. the 4 older city NBTs are byte-untouched');

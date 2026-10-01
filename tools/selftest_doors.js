@@ -1,4 +1,4 @@
-// Doors (README 5a): every armed unit opens and shuts wooden doors, and never touches an iron one.
+// Doors: every armed unit opens and shuts wooden doors, and never touches an iron one.
 //
 //   node tools/selftest_doors.js
 //
@@ -12,7 +12,7 @@
 //      only active while the mob has a live target and a gun, so the brain hook alone would leave
 //      doors open whenever a unit stops fighting - the LivingTickEvent hook and the once-per-tick
 //      guard are the answer;
-//   3. the three [ai] keys exist with the shipped defaults and are documented in the README (AssetTest
+//   3. the three [ai] keys exist with the shipped defaults and are documented in the command/config reference (AssetTest
 //      also requires the documentation, but the defaults are only asserted here);
 //   4. the two safety branches really exist in the source: "somebody is standing in the doorway" and
 //      "this is not a wooden door" (which is what leaves iron doors alone);
@@ -68,7 +68,7 @@ const gunUser = strip(read('gun/GunUser.java'));
 const attackGoal = strip(read('gun/GunAttackGoal.java'));
 const main = strip(read('TarkovScav.java'));
 const entities = strip(read('registry/ModEntities.java'));
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 // ---------------------------------------------------------------------------------------------
 console.log('1. every armed unit type reaches the shared door behaviour');
@@ -135,7 +135,7 @@ check(/Config\.SPEC\.isLoaded\(\)/.test(tickBody || ''), 'the config is checked 
 
 // ---------------------------------------------------------------------------------------------
 console.log('');
-console.log('3. the [ai] config keys, with the documented defaults, in the README');
+console.log('3. the [ai] config keys, with the documented defaults, in the command/config reference');
 const keyDefaults = [
   ['closeDoorsBehind', /\.define\("closeDoorsBehind", true\)/],
   ['doorCloseDelayTicks', /\.defineInRange\("doorCloseDelayTicks", 40,/],
@@ -144,7 +144,7 @@ const keyDefaults = [
 for (const [key, re] of keyDefaults) {
   check(re.test(config), `Config defines ${key} with the documented default`);
   check(config.includes(`"${key}"`), `Config declares the ${key} spec value`);
-  check(readme.includes(key), `README documents ${key}`, 'AssetTest requires every config key to be documented');
+  check(referenceDoc.includes(key), `command/config reference documents ${key}`, 'AssetTest requires every config key to be documented');
 }
 check(new RegExp('push\\("ai"\\)').test(config), 'the keys live in the new [ai] section');
 for (const field of ['CLOSE_DOORS_BEHIND', 'DOOR_CLOSE_DELAY_TICKS', 'DOOR_CLOSE_ALLY_RADIUS']) {

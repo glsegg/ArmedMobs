@@ -1,4 +1,4 @@
-// The per-city faction cap (README 7q): "at most N gun units of one line-up alive in one city at a time".
+// The per-city faction cap: "at most N gun units of one line-up alive in one city at a time".
 //
 //   node tools/selftest_spawn_cap.js
 //
@@ -26,7 +26,7 @@
 //      Level.OVERWORLD - the wasteland is exactly where the endless spawners are. Asserted as an absence of
 //      that gate plus the documented intent.
 //   7. THE DOCS AND THE COMMAND. /armedmobs spawncap [reset] is how a player sees the numbers, and every key
-//      has to be in the reference and the README.
+//      has to be in the reference and the command/config reference.
 //
 // Nothing here can see a running game, a spawn attempt or a frame time; the arithmetic and the wiring are what
 // this gate can prove.
@@ -91,7 +91,6 @@ const garrisonRaw = read('world/CityGarrison.java');
 const garrison = strip(garrisonRaw);
 const commands = strip(read('command/ModCommands.java'));
 const config = strip(read('Config.java'));
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
 const reference = fs.readFileSync(path.join(ROOT, 'docs', 'COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 // ------------------------------------------------------------------ 1. the arithmetic, executed
@@ -216,9 +215,7 @@ check(/root\.then\(spawnCap\(\)\)/.test(commands), 'and it is registered on the 
 check(/CitySpawnCap\.reset\(\)/.test(commands), 'reset calls the cap, not a copy of its cache');
 for (const key of ['cityFactionCapEnabled', 'cityFactionCap', 'cityFactionCapCountTicks',
   'cityFactionCapIgnoreManual']) {
-  check(reference.includes(key), `the reference documents ${key}`);
-  check(readme.includes(key), `the README documents ${key}`);
-}
+  check(reference.includes(key), `the reference documents ${key}`);}
 check(reference.includes('spawncap'), 'the reference documents /armedmobs spawncap');
 check(/CITY_FACTION_CAP\s*=\s*b[\s\S]{0,2500}?\.defineInRange\("cityFactionCap",\s*12,\s*0,\s*128\)/
   .test(config), 'the shipped default really is 12 (range 0..128, where 0 means uncapped)');

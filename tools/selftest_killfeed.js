@@ -1,4 +1,4 @@
-// The kill feed (README 5u).
+// The kill feed.
 //
 //   node tools/selftest_killfeed.js
 //
@@ -40,7 +40,7 @@ const setup = read('client/ClientSetup.java');
 const config = read('Config.java');
 const main = read('TarkovScav.java');
 const clientCommands = read('command/ClientCommands.java');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 console.log('1. naming the killer: the fallback chain');
 // The order in the method body is the chain: assert the three answers appear in this order.
@@ -245,10 +245,9 @@ for (const [key, value] of [['KILLFEED_ENABLED', 'define("enabled", true)'],
 check(/\.push\("killFeed"\)/.test(config), 'the keys live in their own [killFeed] section');
 for (const key of ['mode', 'radius', 'showMobKills', 'showPlayerKills', 'showEnvironmentDeaths',
   'lineDurationTicks', 'maxLines', 'position', 'scale', 'maxPerSecond', 'dedupTicks', 'enabled']) {
-  check(readme.includes(key), `README documents killFeed.${key}`);
+  check(referenceDoc.includes(key), `command/config reference documents killFeed.${key}`);
 }
-check(/### 5u\./.test(readme), 'README has the 5u section');
-check(/击杀列表|击杀播报/.test(readme), 'README explains the feature in Chinese');
+
 check(/MinecraftForge\.EVENT_BUS\.register\(com\.gfl\.tarkovscav\.killfeed\.KillFeed\.class\)/.test(main),
   'the death listener is registered');
 check(/KillFeedNetwork\.register\(\)/.test(main), 'and the packet is registered');

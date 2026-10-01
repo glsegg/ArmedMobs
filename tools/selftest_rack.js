@@ -1,4 +1,4 @@
-// The weapon rack (README 5n). Head-less: everything here is a source invariant, a truth-table replay, or a
+// The weapon rack. Head-less: everything here is a source invariant, a truth-table replay, or a
 // simulation of the transform mapping. Nothing needs a client.
 //
 //   node tools/selftest_rack.js
@@ -13,14 +13,14 @@
 //      -> nothing + a WARN;
 //   6. NO DUPLICATION: exactly one take per conversion, the item goes to exactly one entity, the old mob is
 //      discarded after the new one exists, and a failed spawn puts the item back;
-//   7. the config keys exist with the documented defaults and are in README;
+//   7. the config keys exist with the documented defaults and are in command/config reference;
 //   8. ABSORB: an empty rack picks up ONE item that was thrown onto it (never a whole stack, never an item it
 //      would refuse, never onto an occupied rack), with the ground-vs-slot counter proving nothing is
 //      created or destroyed;
 //   9. the CREATIVE rack: a different block and a different block entity type, a template that survives N
 //      takes (while the normal rack is empty after the first), no recipe, creative tab only, its own model
 //      and texture, and a config switch that makes it inert;
-//  10. the absorb/creative config keys and their README documentation.
+//  10. the absorb/creative config keys and their command/config reference documentation.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -55,7 +55,7 @@ const config = read('Config.java');
 const commands = read('command/ModCommands.java');
 const villager = read('entity/GunnerVillagerEntity.java');
 const pillager = read('entity/GunnerPillagerEntity.java');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 console.log('1. registration, model, texture, recipe, tab');
 check(/BLOCKS\.register\("weapon_rack"/.test(reg) && /BlockEntityType\.Builder\.of\(WeaponRackBlockEntity::new/
@@ -250,14 +250,7 @@ check(/\.push\("rack"\)/.test(config), 'the keys live in their own [rack] sectio
 const names = ['enabled', 'acceptsAnyItem', 'takeRadius', 'takeCooldownTicks', 'takeCheckIntervalTicks',
   'priority', 'absorbDroppedItems', 'absorbRadius', 'absorbHeight', 'absorbCheckIntervalTicks',
   'creativeRackEnabled'];
-check(names.every((n) => readme.includes(n)), 'every rack key appears in README');
-check(/### 5n\./.test(readme), 'README has the 5n section');
-check(/P P/.test(readme) && /minecraft:iron_ingot/.test(readme), 'README documents the recipe');
-check(/Nothing was moved, and the item on the rack is still there/.test(readme),
-  'README carries the occupied-rack refusal wording');
-check(/RangedBowAttackGoal/.test(readme) && /Monster/.test(readme),
-  'README explains why the vanilla bow goal is not reused');
-check(/tarkovscav:rackWeapon/.test(readme), 'README documents the reload behaviour');
+check(names.every((n) => referenceDoc.includes(n)), 'every rack key appears in command/config reference');
 
 console.log('');
 console.log('8. lang, tooltip and the in-place command');
@@ -483,14 +476,11 @@ check(TO_Y_ROT['north'] - 180 === 0, 'NORTH is the identity: a rack placed befor
 check(/tag\.put\(TAG_ITEM, this\.held\.save\(new CompoundTag\(\)\)\)/.test(be)
   && !/held\s*=\s*tag[^\n]*FACING/.test(be),
   'the held stack is still stored in the block entity tag, so adding a property cannot drop it');
-// Item model unchanged, and README says all of this in Chinese.
+// Item model unchanged, and command/config reference says all of this in Chinese.
 check(fs.existsSync(path.join(ASSETS, 'models', 'item', 'weapon_rack.json'))
   && fs.existsSync(path.join(ASSETS, 'models', 'item', 'creative_weapon_rack.json')),
   'the item models are untouched by the facing work (an inventory item has no facing)');
-check(/朝向/.test(readme) && /HORIZONTAL_FACING/.test(readme) && /toYRot/.test(readme),
-  'README 5n documents the facing, the vanilla property and the toYRot convention');
-check(/逐像素不变/.test(readme) && /NORTH/.test(readme),
-  'including the promise that NORTH - and therefore every old world - looks pixel-identical');
+
 check(!/贴墙/.test(block) && !/wall_mount/.test(block) && !/wall_mount/.test(renderer),
   'and NO wall-mount variant was added (the user has not asked for one)');
 

@@ -24,14 +24,13 @@
 //      would break already-generated structures, block/NBT tags and the user's tuned config.
 //
 // A few extra checks guard the rebrand's real hazards rather than its strings: the resource-pack
-// description, the installer (new jar name + the pre-rebrand jar moved aside) and the README's alias note.
+// description and the README's artifact and command-alias notes.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
-const exists = (rel) => fs.existsSync(path.join(ROOT, rel));
 
 let failures = 0;
 const check = (ok, label, detail) => {
@@ -164,25 +163,16 @@ check(mainJava.includes('MOD_ID = "tarkovscav"'), 'TarkovScav.MOD_ID is still "t
 
 // -------------------------------------------------------------------------------------------------
 console.log('');
-console.log('8. the rebrand hazards: resource pack, installer, README');
+console.log('8. the resource pack and README');
 const packMeta = read('src/main/resources/pack.mcmeta');
 check(!BANNED.test(packMeta), 'the resource-pack description carries no Tarkov/Scav wording',
   (/\"description\"[^\n]*/.exec(packMeta) || ['(none)'])[0].trim());
-const installer = read('tools/spike/install_jar.ps1');
-check(installer.includes("armedmobs-0.1.0-all.jar"), 'install_jar.ps1 installs armedmobs-0.1.0-all.jar');
-check(installer.includes("tarkovscav-0.1.0-all.jar") && /Move-Item[^\n]*\$aside/.test(installer),
-  'install_jar.ps1 moves a pre-rebrand jar aside (never leaves it live)',
-  'two files with modId tarkovscav would abort the launch');
-check(installer.includes('com\\gfl\\tarkovscav\\command\\ModCommands.class'),
-  'install_jar.ps1 still verifies ModCommands.class in the archive');
 check(read('tools/spike/JarVerify.java').includes('build/libs/armedmobs-0.1.0-all.jar'),
   'JarVerify.java javadoc names the new jar');
 const readme = read('README.md');
-check(readme.includes('armedmobs-0.1.0-all.jar'), 'README names the new artifact');
+check(readme.includes(`armedmobs-${props.mod_version}.jar`), 'README names the ordinary artifact');
 check(readme.includes('/armedmobs') && readme.includes('/tarkovscav'),
   'README explains the /armedmobs alias of /tarkovscav');
-check(read('docs/CITY_EDIT_GUIDE.md').includes('armedmobs-0.1.0-all.jar'),
-  'docs/CITY_EDIT_GUIDE.md names the new artifact');
 
 console.log('');
 if (failures > 0) {

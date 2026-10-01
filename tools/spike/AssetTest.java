@@ -20,11 +20,12 @@ import java.util.regex.Pattern;
  *   <li>every translation key used from Java exists in both {@code en_us.json} and
  *       {@code zh_cn.json} (this mod ships both, and a missing key shows as a raw
  *       {@code tarkovscav.command...} in chat);</li>
- *   <li>{@code mods.toml} declares TaCZ as an OPTIONAL dependency (the bow/crossbow fallback, README 5ac) and
+ *   <li>{@code mods.toml} declares TaCZ as an OPTIONAL dependency (the bow/crossbow fallback) and
  *       {@code build.gradle} does
  *       <b>not</b> jarJar it - bundling a 57 MB third-party mod is not allowed, so the build script
  *       itself is checked;</li>
- *   <li>every configuration key defined in {@code Config.java} is documented in {@code README.md};
+ *   <li>every configuration key defined in {@code Config.java} is documented in
+ *       {@code docs/COMMAND_AND_CONFIG_REFERENCE.md};
  *       a config nobody can find is a config that does not exist.</li>
  * </ol>
  *
@@ -132,12 +133,12 @@ public final class AssetTest {
         } else {
             int index = modsToml.indexOf("modId=\"tacz\"");
             String block = modsToml.substring(index, Math.min(modsToml.length(), index + 400));
-            // OPTIONAL on purpose since 2026-10 (README 5ac): without TaCZ the mod loads and the units fight
+            // Without TaCZ the mod loads and the units fight
             // with bows/crossbows, so a mandatory entry would now be the bug - it would refuse a pack that the
             // code handles. The fallback side of that is asserted by tools/selftest_no_tacz.js.
             if (!block.contains("mandatory=false")) {
                 problems.add("the tacz dependency in mods.toml is mandatory - a pack without TaCZ would be"
-                        + " refused at launch even though the bow/crossbow fallback exists (README 5ac)");
+                        + " refused at launch even though the bow/crossbow fallback exists");
             }
         }
         String buildGradle = Files.readString(root.resolve("build.gradle"));
@@ -150,27 +151,27 @@ public final class AssetTest {
         if (!buildGradle.contains("compileOnly") || !buildGradle.contains("runtimeOnly")) {
             problems.add("build.gradle should pull TaCZ in as compileOnly + runtimeOnly");
         }
-        System.out.println("mods.toml declares tacz OPTIONAL (bow/crossbow fallback, README 5ac),"
+        System.out.println("mods.toml declares tacz OPTIONAL (bow/crossbow fallback),"
                 + " build.gradle does not bundle it");
 
         // ---------------------------------------------------------------- 5. config keys are documented
-        Path readme = root.resolve("README.md");
-        if (!Files.isRegularFile(readme)) {
-            problems.add("README.md is missing - the config keys have to be documented somewhere");
+        Path reference = root.resolve("docs/COMMAND_AND_CONFIG_REFERENCE.md");
+        if (!Files.isRegularFile(reference)) {
+            problems.add("docs/COMMAND_AND_CONFIG_REFERENCE.md is missing");
         } else {
-            String readmeText = Files.readString(readme);
+            String referenceText = Files.readString(reference);
             Matcher define = CONFIG_DEFINE.matcher(Files.readString(javaDir.resolve("Config.java")));
             Set<String> undocumented = new LinkedHashSet<>();
             while (define.find()) {
                 String key = define.group(1);
-                if (!readmeText.contains(key)) {
+                if (!referenceText.contains(key)) {
                     undocumented.add(key);
                 }
             }
             if (!undocumented.isEmpty()) {
-                problems.add("README.md does not document these config keys: " + undocumented);
+                problems.add("COMMAND_AND_CONFIG_REFERENCE.md does not document these config keys: " + undocumented);
             } else {
-                System.out.println("every config key is documented in README.md");
+                System.out.println("every config key is documented in COMMAND_AND_CONFIG_REFERENCE.md");
             }
         }
 

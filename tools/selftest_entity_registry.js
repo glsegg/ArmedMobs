@@ -193,7 +193,7 @@ check(rows.some((row) => row.id === 'tarkovscav:sniper_villager'
   'and the sniper villager added later has one too (no sibling can be forgotten)');
 
 console.log('');
-console.log('11. names: no raw translation key may reach a screen (README 5x)');
+console.log('11. names: no raw translation key may reach a screen');
 const names = read('entity/EntityNames.java');
 const villagerEntity = read('entity/GunnerVillagerEntity.java');
 const killFeed = read('killfeed/KillFeed.java');
@@ -255,10 +255,9 @@ for (const row of rows) {
 }
 check(/VillagerData/.test(villagerEntity) || /getVillagerData\(\)/.test(villagerEntity),
   'only the Villager-derived entities have a variant-sensitive name (surveyed: nobody else builds one)');
-check(/### 5x\./.test(fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8')), 'README has the 5x section');
 
 console.log('');
-console.log('12. faction troops: 40 health, the rolled armor class, the tier and the voice pools (README 5y)');
+console.log('12. faction troops: 40 health, the rolled armor class, the tier and the voice pools');
 const armor = read('entity/ArmorClass.java');
 const armorSpawn = read('entity/ArmorClassSpawn.java');
 const tierProfile = read('entity/FactionTierProfile.java');
@@ -266,7 +265,7 @@ const voicePools = read('voice/VoicePools.java');
 const villagerBase = read('entity/GunnerVillagerEntity.java');
 const pillagerBase = read('entity/GunnerPillagerEntity.java');
 const accuracy = read('gun/AccuracyProfile.java');
-const README5y = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 // ---------------------------------------------------------------- the four troops, one table
 // One row per entity: the class file, its parent, the voice family and the accuracy tier. Everything below
@@ -441,8 +440,6 @@ const optionB = 1 - (1 - 0.60) * (1 - 0.80);
 check(optionB > 0.60 && Math.abs(optionB - 0.92) < 1e-9,
   'a vanilla 20-point suit on top of class 6 would reduce 92 %, not 60 % - that is why option B is not done',
   `${(optionB * 100).toFixed(0)} % at 20 armor points`);
-check(/方案 B/.test(README5y) && /平均吻合/.test(README5y),
-  'and README 5y says out loud why (the vanilla curve only matches on average)');
 
 // ---------------------------------------------------------------- the accuracy tier mapping
 const veteranCap = Number((/ACCURACY_VETERAN_CAP\s*=[\s\S]{0,400}?defineInRange\("profileVeteranCap",\s*([\d.]+)D/
@@ -544,10 +541,10 @@ check(/armor=/.test(armor) && /less damage/.test(armor),
 check(/ModEntities\.USEC_VILLAGER\.get\(\)/.test(commandsSrc)
   && /ModEntities\.ELITE_PILLAGER\.get\(\)/.test(commandsSrc),
   '/tarkovscav spawn accepts the four troops (they used to be refused by the whitelist)');
-check(/### 5y\./.test(README5y), 'README has the 5y section');
+
 for (const key of ['armorEnabled', 'armorReductionPerClass', 'minArmorClass', 'maxArmorClass',
   'usecVillagerWeight', 'bearPillagerWeight', 'eliteVillagerWeight', 'elitePillagerWeight']) {
-  check(README5y.includes(key), `README documents the troop config key ${key}`);
+  check(referenceDoc.includes(key), `command/config reference documents the troop config key ${key}`);
 }
 for (const weight of [['USEC_VILLAGER_SPAWN_WEIGHT', 'usecVillagerWeight', 1],
   ['BEAR_PILLAGER_SPAWN_WEIGHT', 'bearPillagerWeight', 1],

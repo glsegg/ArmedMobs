@@ -1,4 +1,4 @@
-// The VANT ballistic shield (README 5zb): a craftable item whose passive rule is
+// The VANT ballistic shield: a craftable item whose passive rule is
 // "bullet damage from your front is reduced 99 %, explosions are never reduced, and the shield pays
 // durability per blocked hit until it shatters".
 //
@@ -49,7 +49,7 @@ const section = (title) => {
 };
 
 // The numbers the batch promises. Everything below is derived from the repository or simulated from
-// the shipped formula; nothing is copied from the README prose.
+// the shipped formula; nothing is copied from the command/config reference prose.
 const DURABILITY = 500;
 const REDUCTION = 0.99;
 const HALF_ANGLE = 90;
@@ -78,7 +78,6 @@ const itemShell = read('item/VantShieldItem.java');
 const handler = strip(read('combat/VantShieldHandler.java'));
 const hardTarget = strip(read('combat/HardTarget.java'));
 const config = read('Config.java');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
 const reference = fs.readFileSync(path.join(ROOT, 'docs', 'COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 // ---------------------------------------------------------------------------------------------
@@ -390,7 +389,7 @@ hands = ['empty', 'empty'];
 check(protects(hands) === false, 'after the shatter nothing is held, so nothing protects', hands.join('+'));
 
 // ---------------------------------------------------------------------------------------------
-section('9. the config surface: five keys, documented in both documents');
+section('9. the config surface: five keys, documented in the command/config reference');
 for (const [key, pattern, expectedValue] of [
   ['enabled', /\.define\("enabled", true\)/, 'true'],
   ['bulletReduction', /defineInRange\("bulletReduction", 0\.99D, 0\.0D, 1\.0D\)/, '0.99'],
@@ -399,24 +398,13 @@ for (const [key, pattern, expectedValue] of [
   ['protectFromExplosions', /\.define\("protectFromExplosions", false\)/, 'false'],
 ]) {
   check(pattern.test(shieldConfig), `Config declares shield.${key} = ${expectedValue}`,
-    `default ${expectedValue}`);
-  check(readme.includes(`shield.${key}`), `README documents shield.${key}`);
-  check(reference.includes(`shield.${key}`), `the command/config reference documents shield.${key}`);
+    `default ${expectedValue}`);  check(reference.includes(`shield.${key}`), `the command/config reference documents shield.${key}`);
 }
 check((shieldConfig.match(/\.define/g) || []).length === CONFIG_KEYS.length,
   `the [shield] section holds exactly ${CONFIG_KEYS.length} define call sites`,
   shieldSection ? `${(shieldConfig.match(/\.define/g) || []).length} define call(s)` : 'missing');
 check(reference.includes('| `shield.protectFromExplosions` | `false` |'),
   'the reference states the false default (grenades always get through)');
-// Every claim the README and the reference make about the user's four numbers must be there.
-for (const claim of ['500', '0.99', '90', 'vant_shield']) {
-  check(readme.includes(claim), `README mentions ${claim}`);
-}
-check(/5zb\./.test(readme), 'README has the 5zb section');
-check(/VANT 防弹盾牌/.test(readme), 'README names the item in Chinese');
-check(/#tacz:bullets/.test(readme) && /HardTarget\.isGunfire/.test(readme),
-  'README says which classifier is reused');
-check(/踢盾|举盾/.test(readme), 'README says the raise state is not in this batch');
 
 // ---------------------------------------------------------------------------------------------
 section('10. the language files: key-for-key identical, only ADDED keys');
@@ -459,8 +447,8 @@ if (parsed.en_us && parsed.zh_cn) {
     'the two files are key-for-key identical (no key exists in only one language)',
     `missing in zh: ${missingInZh.length}, missing in en: ${missingInEn.length}`);
 }
-// The regression comparison against the asset agent's own baseline snapshot: nothing removed, nothing
-// re-worded, and the shield family is exactly what was added on top of the 258-key baseline.
+// Preserve existing translations, allowing only the intentionally removed Q/E lean key bindings.
+const REMOVED_LEAN_KEYS = new Set(['key.tarkovscav.lean_left', 'key.tarkovscav.lean_right']);
 for (const locale of Object.keys(LANG)) {
   const baselinePath = path.join(ROOT, 'assets_source', 'shield', `lang_baseline_${locale}.json`);
   if (!fs.existsSync(baselinePath) || !parsed[locale]) {
@@ -470,11 +458,12 @@ for (const locale of Object.keys(LANG)) {
   const baseline = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
   const baseKeys = Object.keys(baseline);
   const nowKeys = Object.keys(parsed[locale]);
-  const lost = baseKeys.filter((key) => !Object.prototype.hasOwnProperty.call(parsed[locale], key));
+  const lost = baseKeys.filter((key) => !Object.prototype.hasOwnProperty.call(parsed[locale], key)
+    && !REMOVED_LEAN_KEYS.has(key));
   const changed = baseKeys.filter((key) => Object.prototype.hasOwnProperty.call(parsed[locale], key)
     && parsed[locale][key] !== baseline[key]);
   const added = nowKeys.filter((key) => !Object.prototype.hasOwnProperty.call(baseline, key));
-  check(lost.length === 0, `${locale}: no baseline key was removed`, `lost=${lost.length}`);
+  check(lost.length === 0, `${locale}: no other baseline key was removed`, `lost=${lost.length}`);
   check(changed.length === 0, `${locale}: no baseline value was changed`, `changed=${changed.length}`);
   const mine = NEW_LANG_KEYS.filter((key) => added.includes(key));
   check(mine.length === NEW_LANG_KEYS.length, `${locale}: all 5 new keys are additions`,

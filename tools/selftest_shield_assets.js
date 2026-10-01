@@ -353,26 +353,28 @@ for (const locale of Object.keys(LANG)) {
     const baseline = JSON.parse(fs.readFileSync(LANG_BASELINE[locale], 'utf8'));
     const baseKeys = Object.keys(baseline);
     const nowKeys = Object.keys(current);
-    const lost = baseKeys.filter((k) => !Object.prototype.hasOwnProperty.call(current, k));
+    const removedLeanKeys = new Set(['key.tarkovscav.lean_left', 'key.tarkovscav.lean_right']);
+    const lost = baseKeys.filter((k) => !Object.prototype.hasOwnProperty.call(current, k)
+      && !removedLeanKeys.has(k));
     const changed = baseKeys.filter((k) => Object.prototype.hasOwnProperty.call(current, k) && current[k] !== baseline[k]);
     const added = nowKeys.filter((k) => !Object.prototype.hasOwnProperty.call(baseline, k));
-    check(`${locale}: no key was removed`, lost.length === 0, `${baseKeys.length} baseline keys, lost ${lost.length}`);
+    check(`${locale}: no other key was removed`, lost.length === 0, `${baseKeys.length} baseline keys, lost ${lost.length}`);
     check(`${locale}: no existing value was changed`, changed.length === 0, `changed ${changed.length}`
       + (changed.length ? ' first ' + changed[0] : ''));
-    // This gate was written when the shield's own item key was the only addition. The gameplay batch
-    // later added four tooltips and the shatter message (both requested by the user), so the expected
-    // set is spelled out instead of counted to one: any OTHER addition, or any removal, still fails.
+    // Allow the shield additions and creative-tab icon; all other translations remain unchanged.
     const expectedAdditions = [SHIELD_KEY,
       'item.tarkovscav.vant_shield.tooltip', 'item.tarkovscav.vant_shield.tooltip2',
       'item.tarkovscav.vant_shield.tooltip3', 'item.tarkovscav.vant_shield.tooltip4',
-      'tarkovscav.shield.broken'];
+      'tarkovscav.shield.broken', 'item.tarkovscav.creative_tab_icon'];
     const missingAdditions = expectedAdditions.filter((k) => !added.includes(k));
     const unexpected = added.filter((k) => !expectedAdditions.includes(k));
-    check(`${locale}: the only keys added are the shield's own keys`,
+    check(`${locale}: the added keys match the shield and creative-tab icon`,
       missingAdditions.length === 0 && unexpected.length === 0,
       `added ${added.length} [${added.join(', ')}]`);
-    check(`${locale}: key count grew by exactly ${expectedAdditions.length}`,
-      nowKeys.length === baseKeys.length + expectedAdditions.length,
+    const removedCount = baseKeys.filter((k) => removedLeanKeys.has(k)
+      && !Object.prototype.hasOwnProperty.call(current, k)).length;
+    check(`${locale}: the key count matches additions and removed lean bindings`,
+      nowKeys.length === baseKeys.length + expectedAdditions.length - removedCount,
       `${baseKeys.length} -> ${nowKeys.length}`);
     console.log(`${locale}      : ${baseKeys.length} baseline keys -> ${nowKeys.length} keys, added [${added}]`);
   } else {

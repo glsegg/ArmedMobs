@@ -1,4 +1,4 @@
-// The stencil-leak guard: "part of the mob is missing and I see the entity behind it" (README 5k).
+// The stencil-leak guard: "part of the mob is missing and I see the entity behind it".
 //
 //   node tools/selftest_texture_state.js
 //
@@ -38,7 +38,7 @@ const skip = (label, why) => console.log(`  SKIP  ${label}  (${why})`);
 const guard = strip(read('client/RenderStateGuard.java'));
 const layer = strip(read('client/GunInHandGeoLayer.java'));
 const config = strip(read('Config.java'));
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 console.log('1. every renderer brackets its draw in the guard, paired');
 for (const file of ['ScavRenderer.java', 'GunnerPillagerGeoRenderer.java', 'GunnerVillagerRenderer.java']) {
@@ -94,9 +94,7 @@ console.log('');
 console.log('5. the debug switch');
 check(/define\("logGlState", false\)/.test(config), 'Config defines client.logGlState (default false)');
 check(/public static boolean logGlState\(\)/.test(config), 'and exposes it as logGlState()');
-check(readme.includes('logGlState'), 'README documents logGlState');
-check(readme.includes('5k.'), 'README has the section that explains the leak');
-check(/gl_state_audit\.js/.test(readme), 'README points at the bytecode audit tool');
+check(referenceDoc.includes('logGlState'), 'command/config reference documents logGlState');
 
 console.log('');
 console.log('6. the bytecode facts (re-run when javap + the TaCZ jar are available)');
@@ -119,7 +117,7 @@ if (fs.existsSync(javap) && fs.existsSync(taczJar)) {
 }
 
 console.log('');
-console.log('7. the TEXTURE half of the guard (README 5w: the black head/backpack block)');
+console.log('7. the TEXTURE half of the guard (command/config reference: the black head/backpack block)');
 // The bug: TaCZ's gun renderer binds textures with raw calls, so after the per-bone item draw the raw GL
 // binding and Minecraft's texture cache disagree; the next RenderType#setupRenderState then skips its bind
 // because the cache says "already bound", and every bone drawn after the anchor samples texture 0 - pure
@@ -162,12 +160,11 @@ for (const victim of ['Bag', 'Head', 'LeftArm', 'Leg']) {
     `${victim} is drawn AFTER the gun anchor (${anchor})`,
     `index ${geo.findIndex((b) => b.name === victim)} vs anchor ${anchorIndex}`);
 }
-check(/geckolib|GeoRenderer/.test(readme) || /骨骼遍历|draw order/i.test(readme),
-  'README explains the draw-order reason for "only the head/back/left arm"');
-check(/5w/.test(readme), 'README has the 5w section');
+
 for (const knob of ['poseSource=code', 'molangVariables=off', 'modelRenderType=zOffset', 'torsoYawShare=0',
   'logPoseWriters=true']) {
-  check(readme.includes(knob), `README gives the bisection knob ${knob}`);
+  const key = knob.split('=')[0];
+  check(referenceDoc.includes(key), `command/config reference documents the diagnostic key ${key}`);
 }
 // Hypothesis 2/3: a non-finite pose value is now reported instead of being silently rendered.
 const pose = read('client/PoseWriters.java');

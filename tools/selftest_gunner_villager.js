@@ -48,7 +48,7 @@ const config = strip(read('Config.java'));
 const configRaw = read('Config.java');
 const setup = strip(read('client/ClientSetup.java'));
 const commands = strip(read('command/ModCommands.java'));
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 console.log('1. a vanilla villager with the shared gun AI');
 check(/class GunnerVillagerEntity extends Villager implements GunUser/.test(entity),
@@ -60,7 +60,7 @@ check(!/extends Villager implements.*GeoEntity/.test(entity) && !entity.includes
 check(!/getAmbientSound|getHurtSound/.test(entity),
   'it does not override the ambient or hurt sounds', 'Villager already answers with SoundEvents.VILLAGER_*');
 // getDeathSound IS overridden - but only to get out of the way of the voice module's death cry
-// (README 5l): it must return the vanilla sound whenever voice.death is off.
+//: it must return the vanilla sound whenever voice.death is off.
 check(/getDeathSound\(\)\s*\{\s*return Config\.VOICE_ENABLED\.get\(\) && Config\.VOICE_DEATH\.get\(\)\s*\?\s*null :/.test(entity),
   'getDeathSound is silenced only while the voice module replaces it',
   'so with voice.death=false the vanilla villager death sound is back');
@@ -169,10 +169,7 @@ check(/villagerGun rot=\[/.test(clientCommands)
   && /gun tilt = armPitch \+ rot\.x \+ thisPoseDeltaX - 90/.test(clientCommands)
   && /idleRot=\[/.test(clientCommands),
   'client state prints the villager gun rot/offset/scale/anchor AND the arm pitches it adds to');
-check(readme.includes('client villagerpose'), 'README documents the command');
-check(/Do the arm angle first/i.test(readme), 'README carries the arm-angle-first timing warning',
-  'the gun hangs off the arms block, so the arm angle moves it');
-check(/forward=n.*z -= n/s.test(readme), 'README documents the axis meaning');
+
 // All FOUR arm pitches are live-tunable (the user named this: only hold= used to be), so the four-pose
 // silhouette no longer needs a toml edit plus a reload.
 for (const arm of ['hold', 'aim', 'reload', 'hunker']) {
@@ -231,15 +228,15 @@ check(/case RAISED -> Config\.gunnerVillagerAimArmPitch\(\)/.test(setupAnim)
     && /case RELOADING -> Config\.gunnerVillagerReloadArmPitch\(\)/.test(setupAnim)
     && /case HUNKERED -> Config\.gunnerVillagerHunkerArmPitch\(\)/.test(setupAnim),
   'while aim, reload and hunker still come from their own keys');
-// The optional "hide the gun while idle" switch (README 5j).
+// The optional "hide the gun while idle" switch.
 check(/HIDE_GUN_WHEN_IDLE\s*=[\s\S]{0,1200}?define\("hideGunWhenIdle", false\)/.test(config),
   'client.hideGunWhenIdle exists and ships false (the gun keeps being drawn on the crossed arms)');
-check(readme.includes('hideGunWhenIdle'), 'and README documents it');
+check(referenceDoc.includes('hideGunWhenIdle'), 'and command/config reference documents it');
 check(/Config\.hideGunWhenIdle\(\) && RigSupport\.armPose\(entity\) == ArmPose\.LOWERED/.test(renderer),
   'the renderer skips the held-gun layer only while the state is LOWERED (it comes back when aiming)');
 check(/class HeldGunLayer[\s\S]{0,400}?extends TaczItemInHandLayer/.test(renderer),
   'through the compatibility layer, which keeps ordinary items on the vanilla path');
-// The idle-ONLY gun offset (README 5j, the 2026 "the gun points up while idle" report). It exists because
+// The idle-ONLY gun offset (command/config reference, the 2026 "the gun points up while idle" report). It exists because
 // the idle gun rides the arms block, so it needs its own correction there - and nowhere else.
 function fallbackMatchesDefault(source, key) {
   const match = new RegExp('triple\\((?:Config\\.)?' + key
@@ -264,11 +261,8 @@ check(/idlepitch/.test(clientCommands) && /idleyaw/.test(clientCommands) && /idl
 check(/GUNNER_VILLAGER_IDLE_GUN_ROTATION\.set\(/.test(clientCommands)
   && /DEFAULT_GUNNER_VILLAGER_IDLE_GUN_ROTATION/.test(clientCommands),
   'and writes it to the toml, with reset reading the shipped default');
-check(/gunnerVillagerIdleGunRotation/.test(readme)
-  && /闲置/.test(readme) && /gunnerVillagerGunRotation/.test(readme),
-  'README documents the key AND which of the two gun-rotation keys is for which pose');
 
-// 4c. One gun-rotation DELTA per pose (README 5j, the user's "不同状态下枪的旋转角度"). The base rotation is
+// 4c. One gun-rotation DELTA per pose (command/config reference, the user's "不同状态下枪的旋转角度"). The base rotation is
 // the RAISED pose itself; the other three states each add their own calibrated triple.
 console.log('');
 console.log('4c. one gun-rotation delta per pose (RAISED = the base itself)');
@@ -315,7 +309,7 @@ check(/gunnerVillagerReloadGunRotation = /.test(clientCommands)
 check(/reloadRot=\[/.test(clientCommands) && /hunkerRot=\[/.test(clientCommands)
   && /rotation deltas/.test(clientCommands) && /offsetDelta idle=\[/.test(clientCommands),
   'and client state prints them too, next to the arm pitches');
-// B: the weapon POSITION deltas, one triple per pose (README 5j). Same arrangement as the rotation deltas.
+// B: the weapon POSITION deltas, one triple per pose. Same arrangement as the rotation deltas.
 for (const pose of ['Idle', 'Reload', 'Hunker']) {
   check(new RegExp('DEFAULT_GUNNER_VILLAGER_' + pose.toUpperCase() + '_GUN_OFFSET = List\\.of\\("0", "0", "0"\\)')
     .test(config), pose + ' gun offset ships [0,0,0] (frame-for-frame what shipped before)');
@@ -339,9 +333,7 @@ for (const axis of ['idlex', 'idley', 'idlez', 'reloadx', 'reloady', 'reloadz', 
 check(/GUNNER_VILLAGER_IDLE_GUN_OFFSET\.set\(/.test(clientCommands)
   && /DEFAULT_GUNNER_VILLAGER_HUNKER_GUN_OFFSET/.test(clientCommands),
   'reset restores all three position deltas from the DEFAULT_* constants');
-check(/gunnerVillagerReloadGunRotation/.test(readme) && /gunnerVillagerHunkerGunRotation/.test(readme)
-  && /不同状态下枪的旋转角度/.test(readme),
-  'README documents both new keys and the request they come from');
+
 console.log('');
 console.log('5. spawning, gate and wiring');
 check(/GUNNER_VILLAGER\s*=\s*ENTITY_TYPES\.register\("gunner_villager"/.test(entities), 'the entity type is registered');
@@ -371,7 +363,7 @@ check(spawner && scavSpawner && spawner.weight < scavSpawner.weight,
 check(/gunner_villager/.test(commands) && commands.includes('gunner_villager'), '/tarkovscav spawn accepts it');
 
 console.log('');
-console.log('6. the config keys, with the documented defaults, in README');
+console.log('6. the config keys, with the documented defaults, in command/config reference');
 const keys = [
   ['gunnerVillagerCityOnly', /\.define\("gunnerVillagerCityOnly", true\)/],
   ['gunnerVillagerNaturalSpawn', /\.define\("gunnerVillagerNaturalSpawn", true\)/],
@@ -382,13 +374,12 @@ const keys = [
 ];
 for (const [key, re] of keys) {
   check(re.test(config), `Config defines ${key}`);
-  check(readme.includes(key), `README documents ${key}`);
+  check(referenceDoc.includes(key), `command/config reference documents ${key}`);
 }
 check(/DEFAULT_GUNNER_VILLAGER_HOLD_ARM_PITCH = 0\.0D/.test(config),
   'the hold default means the baked vanilla rest, not an absolute zero arm angle');
 check(/this\.armsRestXRot = this\.arms\.xRot/.test(model),
   'the model reads the real baked arm rotation rather than replacing it with a guessed constant');
-check(readme.includes('5j.'), 'README has the section that explains the mob');
 
 // The three vanilla facts the design rests on, read out of the real class files when the mapped jar is
 // available (a class only names a type/field it actually uses, so absence is meaningful here).

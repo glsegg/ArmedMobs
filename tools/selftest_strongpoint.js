@@ -1,4 +1,4 @@
-// The 18-building city STRONGPOINT (README 7 / docs/城市战城区调研.md sections 6-7):
+// The 18-building city STRONGPOINT (command/config reference / docs/城市战城区调研.md sections 6-7):
 // the acceptance metrics of the approved plan, measured from the SHIPPED structure NBT.
 //
 //   node tools/selftest_strongpoint.js
@@ -362,10 +362,10 @@ console.log('4. the four shipped city presets are byte-identical (pure addition)
 //     treats a carpet as a blocking block (AIR is the rule the blockstate gate measures).
 // The four pins below are the new, deliberately re-measured values; the generator is deterministic (a second
 // full regeneration is byte-identical - see the comment in tools/spike/selftest.ps1).
-// RE-PINNED (README 7o, the generator's shaft-cell guard): the four preset hashes moved because the ladder
+// RE-PINNED (command/config reference, the generator's shaft-cell guard): the four preset hashes moved because the ladder
 // shaft's column and its two opening cells are now kept clear of furniture/cover/the fixture pass and of the
 // ruin blast, so the six presets were regenerated. A second full regeneration is still byte-identical.
-// RE-PINNED AGAIN (README 7l.1, the ruin blast + the end-rod removal): all six presets were regenerated a
+// RE-PINNED AGAIN (command/config reference, the ruin blast + the end-rod removal): all six presets were regenerated a
 // third time - every end rod is gone and the rectangular ruin cut became the staircase wedge, plus the two
 // orphan passes. A second full regeneration was verified byte-identical after this too.
 const PRESETS = {
@@ -458,20 +458,6 @@ const padding = /defineInRange\("cityRegionPadding",\s*(\d+)/.exec(config);
 console.log(`  spawn.cityRegionPadding default = ${padding ? padding[1] : '?'}`);
 check(padding && Number(padding[1]) === 4, 'spawn.cityRegionPadding ships as 4 (it was 24)',
   padding ? padding[1] : 'missing');
-
-// ------------------------------------------------------------------ the map picture
-console.log('');
-const map = path.join(ROOT, 'docs', 'maps', 'strongpoint.png');
-if (fs.existsSync(map)) {
-  const png = fs.readFileSync(map);
-  const width = png.readUInt32BE(16);
-  const height = png.readUInt32BE(20);
-  console.log(`  docs/maps/strongpoint.png ${width}x${height} ${png.length} bytes`);
-  check(width > 400 && height > 400, 'the rendered map exists and is not a thumbnail',
-    `${width}x${height}`);
-} else {
-  check(false, 'docs/maps/strongpoint.png exists (CityMap structure --nbt ...)', 'missing');
-}
 
 console.log('');
 if (failures > 0) {

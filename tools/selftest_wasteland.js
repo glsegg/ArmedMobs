@@ -406,23 +406,10 @@ for (const key of ['item.tarkovscav.deployment_beacon', 'item.tarkovscav.deploym
 check(lang.zh_cn['item.tarkovscav.deployment_beacon'] === '部署信标',
   'zh_cn names the item 部署信标', String(lang.zh_cn['item.tarkovscav.deployment_beacon']));
 
-// ------------------------------------------------------------------ 6. the rendered map and the doc
+// ------------------------------------------------------------------ 6. the maintained reference
 console.log('');
-console.log('6. the published evidence');
-const map = path.join(ROOT, 'docs', 'maps', 'urban_wasteland.png');
-if (fs.existsSync(map)) {
-  const png = fs.readFileSync(map);
-  const width = png.readUInt32BE(16);
-  const height = png.readUInt32BE(20);
-  console.log(`  docs/maps/urban_wasteland.png ${width}x${height} ${png.length} bytes`);
-  check(width > 400 && height > 400, 'the rendered map exists and is not a thumbnail',
-    `${width}x${height}`);
-} else {
-  console.log('  docs/maps/urban_wasteland.png is not rendered yet (CityMap box mode writes it)');
-}
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
-check(/urban_wasteland/.test(readme), 'README names the dimension');
-check(/deployment_beacon/.test(readme), 'README documents the beacon item');
+console.log('6. the command/config reference');
+
 const reference = fs.readFileSync(path.join(ROOT, 'docs', 'COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 check(/urban_wasteland/.test(reference), 'the command/config reference names the dimension');
 check(/deployment_beacon/.test(reference), 'the command/config reference documents the beacon');

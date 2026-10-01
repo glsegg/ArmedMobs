@@ -23,7 +23,7 @@
 //      input can produce a unit of the other line-up.
 //   5. THE NATURAL-SPAWN MATRIX. Every (building faction x mob faction) pair, including the null (no
 //      faction) and SCAV cases - which must be allowed in BOTH city types, because the scav is the
-//      unaligned third party (the decision recorded in the README).
+//      unaligned third party (the decision recorded in the command/config reference).
 //   6. THE LEDGER. A faithful mirror of GarrisonData's rows, serialised with the field names read out of
 //      the Java, proves the rolls survive a save/reload, that recording is once-only, and that a city-wide
 //      or per-building override persists and changes the effective faction while "auto" restores the roll.
@@ -71,7 +71,6 @@ const spawnEvents = strip(read('world/CitySpawnEvents.java'));
 const gate = strip(read('world/CityGate.java'));
 const config = strip(read('Config.java'));
 const commands = strip(read('command/ModCommands.java'));
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
 const reference = fs.readFileSync(path.join(ROOT, 'docs', 'COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 // ------------------------------------------------------------------ 0. the facts
@@ -589,14 +588,9 @@ check(/describeFactions\(MinecraftServer server\)/.test(garrison)
 
 const DOC_KEYS = ['friendlyCityChance', 'cityDominantFactionChance', 'rewriteCitySpawners',
   'factionSpawnFilter'];
-for (const key of DOC_KEYS) {
-  check(readme.includes(key), `README documents garrison.${key}`);
-  check(reference.includes(key), `docs/COMMAND_AND_CONFIG_REFERENCE.md documents garrison.${key}`);
+for (const key of DOC_KEYS) {  check(reference.includes(key), `docs/COMMAND_AND_CONFIG_REFERENCE.md documents garrison.${key}`);
 }
-check(/city faction/.test(readme) && /city faction/.test(reference),
-  'both documents name the /armedmobs city faction command');
-check(/SCAV/.test(readme) && /SCAV/.test(reference),
-  'both documents state the SCAV third-party decision');
+
 check(/TODO/.test(ledgerRaw) && /strength/.test(ledgerRaw),
   'the ledger carries the TODO naming the follow-up faction-strength pool and its key shape');
 

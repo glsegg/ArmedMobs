@@ -1,4 +1,4 @@
-// README 5ab: lethal fire against an EXPOSED target, and the hurt -> retreat -> hold -> peek path.
+// command/config reference: lethal fire against an EXPOSED target, and the hurt -> retreat -> hold -> peek path.
 //
 //   node tools/selftest_ai_fire.js
 //
@@ -93,7 +93,7 @@ const accuracyRaw = read('gun/AccuracyProfile.java');
 const accuracy = strip(accuracyRaw);
 const gunUser = strip(read('gun/GunUser.java'));
 const config = read('Config.java');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 // ---------------------------------------------------------------------------------------------
 // The shipped per-tier switches, parsed out of Config.AiSettings.
@@ -487,21 +487,12 @@ check(Math.max(...TIERS.map((tier) => shipped.retreatHoldTicks[tier])) < giveUp,
 
 // ---------------------------------------------------------------------------------------------
 console.log('');
-console.log('8. the README documents the six keys and the priority rule');
-const README_KEYS = ['exposedBurstShots', 'exposedBurstCooldownTicks', 'warmupShotsWhenExposed',
+console.log('8. the command/config reference documents the six keys and the priority rule');
+const DOC_KEYS = ['exposedBurstShots', 'exposedBurstCooldownTicks', 'warmupShotsWhenExposed',
   'retreatHealthFraction', 'hurtRetreatChance', 'retreatHoldTicks'];
-const missing = README_KEYS.filter((key) => !readme.includes(key));
-check(missing.length === 0, 'every README 5ab key appears in README',
-  missing.length ? missing.join(', ') : `${README_KEYS.length} keys`);
-check(/### 5ab\./.test(readme), 'README has the 5ab section');
-check(/\[tiers/.test(readme) && /burstShots/.test(readme),
-  'and states the interaction with the per-gun [tiers] burstShots rule');
-check(/exposedBurstShots/.test(readme) && /-1/.test(readme) && /空弹匣|empty the magazine|打空/.test(readme),
-  'including what -1 means');
-check(/revert to dumb|REVERT TO DUMB|一键变笨/.test(readme),
-  'and the revert-to-dumb recipe is still documented');
-check(/gates\/selftest_ai_fire|selftest_ai_fire/.test(readme),
-  'and names this gate');
+const missing = DOC_KEYS.filter((key) => !referenceDoc.includes(key));
+check(missing.length === 0, 'every command/config reference key appears in command/config reference',
+  missing.length ? missing.join(', ') : `${DOC_KEYS.length} keys`);
 
 console.log('');
 if (failures > 0) {

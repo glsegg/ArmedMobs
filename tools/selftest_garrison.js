@@ -67,7 +67,6 @@ const gate = strip(read('world/CityGate.java'));
 const squad = strip(read('gun/SquadCoordinator.java'));
 const mod = strip(read('TarkovScav.java'));
 const commands = strip(read('command/ModCommands.java'));
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
 const reference = fs.readFileSync(path.join(ROOT, 'docs', 'COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 // ------------------------------------------------------------------ 1. the config keys
@@ -92,15 +91,13 @@ check(/GARRISON_SQUAD_SIZE_MIN[\s\S]{0,200}?squadSizeMin[\s\S]*?GARRISON_SQUAD_S
 // ------------------------------------------------------------------ 2. documented
 
 console.log('');
-console.log('2. the keys are documented in both the README and the command/config reference');
+console.log('2. the keys are documented in the command/config reference');
 for (const key of ['garrison.enabled', 'garrison.squadsPerCity', 'garrison.squadSizeMin',
   'garrison.squadSizeMax', 'garrison.eliteLeaderChance', 'garrison.triggerRadius',
   'garrison.checkIntervalTicks']) {
-  const bare = key.split('.')[1];
-  check(readme.includes(bare), `README documents ${key}`);
-  check(reference.includes(bare), `docs/COMMAND_AND_CONFIG_REFERENCE.md documents ${key}`);
+  const bare = key.split('.')[1];  check(reference.includes(bare), `docs/COMMAND_AND_CONFIG_REFERENCE.md documents ${key}`);
 }
-check(/\/armedmobs garrison|\/tarkovscav garrison/.test(readme), 'the README documents the garrison command');
+
 check(/`garrison`/.test(reference) || /\/armedmobs garrison/.test(reference),
   'the reference documents the garrison command');
 

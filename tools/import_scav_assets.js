@@ -3,7 +3,8 @@
 //   node tools/import_scav_assets.js [--force]
 //
 // Source (never modified):  assets_source/scav/
-//   models/main.json                     the third-person rig (70 bones)
+//   models/main.json                     the active third-person rig (47 bones)
+//   models/main_original.json            the preserved original rig (70 bones), NOT imported
 //   models/arm.json                      the YSM first-person arm rig - NOT imported (a mob never
 //                                        renders in first person)
 //   animations/{main,tac,...}.json       the clip library

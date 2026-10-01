@@ -1,4 +1,4 @@
-// The AI intelligence tiers (README 5aa): four per-tier profiles over nine entity types, plus the
+// The AI intelligence tiers: four per-tier profiles over nine entity types, plus the
 // squad layer (focus fire, bounding overwatch, flanking, cover exclusivity).
 //
 //   node tools/selftest_ai_profiles.js
@@ -21,7 +21,7 @@
 //      JS, compared with the Java text (so the mirror cannot drift) and then run over the real cases:
 //      two mobs cannot claim one cover block, the suppressor rotates, a squad picks one target,
 //      flankers are never the whole squad, and the overwatch role times out instead of parking a mob.
-//   5. THE README KEYS. AssetTest already demands "every config key is documented"; this gate demands
+//   5. THE command/config reference KEYS. AssetTest already demands "every config key is documented"; this gate demands
 //      the specific new ones, so a key cannot be added and forgotten in the same commit.
 //   6. THE REVERT-TO-DUMB RECIPE. The doc promises that copying [ai.scav] over the other three blocks
 //      makes every tier behave like a scav. That promise is executed here through a mirror of the
@@ -89,7 +89,7 @@ const tactics = strip(read('gun/CombatTactics.java'));
 const sniper = strip(read('gun/SniperBehavior.java'));
 const config = read('Config.java');
 const entities = read('registry/ModEntities.java');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 // ---------------------------------------------------------------------------------------------
 console.log('1. the four profiles, as shipped, against the requested table');
@@ -575,8 +575,8 @@ check(/Config\.AI_COORD_COVER_CLAIM_TICKS\.get\(\)/.test(squad),
 
 // ---------------------------------------------------------------------------------------------
 console.log('');
-console.log('5. the README documents every new key');
-const README_KEYS = [
+console.log('5. the command/config reference documents every new key');
+const DOC_KEYS = [
   'reactionMinTicks', 'reactionMaxTicks', 'accuracyScale', 'coverChance', 'coverRadiusScale',
   'coverCacheScale', 'suppressChanceScale', 'suppressTicksScale', 'suppressAccuracyScale',
   'suppressBurstScale', 'advanceCoverScale', 'coverSeekSpeedScale', 'repositionScale',
@@ -585,21 +585,9 @@ const README_KEYS = [
   'squadRadius', 'squadCacheTicks', 'overwatchWindowTicks', 'overwatchTimeoutTicks',
   'flankFraction', 'flankOffset', 'coverClaimTicks',
 ];
-const missing = README_KEYS.filter((key) => !readme.includes(key));
-check(missing.length === 0, 'every per-tier and coordination key appears in README',
-  missing.length ? missing.join(', ') : `${README_KEYS.length} keys`);
-check(/### 5aa\./.test(readme), 'README has the 5aa section');
-check(/\[ai\.scav\]/.test(readme) && /\[ai\.sniper\]/.test(readme)
-  && /\[ai\.troop\]/.test(readme) && /\[ai\.elite\]/.test(readme) && /\[ai\.coordination\]/.test(readme),
-  'README names the four tier sections and the coordination section');
-check(/\[ai\]/.test(readme) && /`enabled`/.test(readme),
-  'and documents the [ai] master switch');
-// The scaling rule has to be stated, not just the keys: that is the promise to a user who already
-// tuned [tactics].
-check(/suppressChance.*suppressChanceScale|suppressChanceScale.*suppressChance/s.test(readme),
-  'README states that the profile SCALES the global [tactics] key, not replaces it');
-check(/retreatSprint/.test(readme.slice(readme.indexOf('### 5aa.'), readme.indexOf('### 5aa.') + 20000)),
-  'README states the retreatSprint exception (profiles never turn the sprint back on)');
+const missing = DOC_KEYS.filter((key) => !referenceDoc.includes(key));
+check(missing.length === 0, 'every per-tier and coordination key appears in command/config reference',
+  missing.length ? missing.join(', ') : `${DOC_KEYS.length} keys`);
 
 // ---------------------------------------------------------------------------------------------
 console.log('');
@@ -665,12 +653,6 @@ check(dumb.suppressChance === 0 && dumb.usesCoverToAdvance === false && dumb.hol
   && dumb.coordination === false && dumb.minHitChance === 0,
   'the resulting "dumb" profile really has no suppression, no cover advance, no post, no squad',
   JSON.stringify(dumb));
-check(/revert to dumb|REVERT TO DUMB/i.test(readme) || /回退到最笨|一键变笨/.test(readme),
-  'README documents the revert-to-dumb recipe itself');
-check(/copy[\s\S]{0,30}\[ai\.scav\]/i.test(readme) || /把[\s\S]{0,10}\[ai\.scav\]/.test(readme),
-  'README says exactly which block to copy into the other three');
-check(/reactionMinTicks = reactionMaxTicks/.test(readme),
-  'README notes that the 0.6-1.2 s jitter needs pinning too for the exact pre-feature feel');
 
 // ---------------------------------------------------------------------------------------------
 console.log('');
@@ -695,7 +677,7 @@ check(/if \(this\.watchdogTicks <= 0\) \{/.test(brain),
 
 // The estimate must be the STEADY-STATE cone. Including the warm-up penalty would deadlock the rule,
 // because the warm-up only clears by firing: a mob that never fires never warms up, so it would never
-// clear its own floor. This is simulated on the same cone model as README 5o.
+// clear its own floor. This is simulated on the same cone model as command/config reference
 const estimated = methodBody(brain, 'private double estimatedHitChance(');
 check(estimated !== null && !/AccuracyProfile\.accuracyFor/.test(estimated),
   'the hold-fire estimate does NOT include the warm-up penalty (that would be self-deadlocking)');

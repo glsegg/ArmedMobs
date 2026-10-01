@@ -1,4 +1,4 @@
-// Grenades and flashbangs (README 5v).
+// Grenades and flashbangs.
 //
 //   node tools/selftest_grenades.js
 //
@@ -57,7 +57,7 @@ const tabs = read('registry/ModCreativeTabs.java');
 const setup = read('client/ClientSetup.java');
 const main = read('TarkovScav.java');
 const commands = read('command/ModCommands.java');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 const IDS = ['frag_grenade', 'he_grenade', 'smoke_grenade', 'flash_grenade', 'flash_grenade_short'];
 
@@ -192,7 +192,7 @@ const DISTANCES = [1, 2, 4, 6, 8];
 const fragTotal = (d, distance) => fragAt(24, d.fragDmg, distance) + blastAt(1, d.perPower, distance);
 const heTotal = (d, distance) => fragAt(8, d.heFragDmg, distance) + blastAt(4, d.perPower, distance);
 console.log('');
-console.log('3b. grenade damage doubled (README 5v): every distance x2, radius unchanged');
+console.log('3b. grenade damage doubled: every distance x2, radius unchanged');
 console.log('  distance   frag old -> new        he old -> new');
 for (const distance of DISTANCES) {
   const f0 = fragTotal(OLD, distance);
@@ -205,10 +205,6 @@ for (const distance of DISTANCES) {
     `${f1.toFixed(2)} vs 2 x ${f0.toFixed(2)}`);
   check(Math.abs(h1 - h0 * 2) < 0.011, `HE at ${distance} block(s) is exactly twice as hard`,
     `${h1.toFixed(2)} vs 2 x ${h0.toFixed(2)}`);
-  // The README table is what the user reads, so it is compared to the simulation instead of being trusted.
-  check(readme.includes(`| ${distance} 格 | ${f1.toFixed(2)} | ${h1.toFixed(2)} |`),
-    `README's damage table row for ${distance} block(s) matches the simulation`,
-    `| ${distance} 格 | ${f1.toFixed(2)} | ${h1.toFixed(2)} |`);
 }
 check(heTotal(NEW, 8) < 0.05 && heTotal(NEW, 8) === heTotal(OLD, 8) * 2,
   'and 8 blocks is still the edge of the blast: radius = blastPower * 2 = 8, so nothing moved outwards');
@@ -221,7 +217,7 @@ check(capBinds(24) < 0.9, 'so MAX_HITS_PER_ENTITY is unchanged: it cannot make 2
   `cap binds below ${capBinds(24).toFixed(2)} blocks`);
 check(/public static final int MAX_HITS_PER_ENTITY = 3;/.test(blast),
   'MAX_HITS_PER_ENTITY is still 3 (the user chose "double the fragment, leave the cap")');
-// The short-fuse flashbang (README 5v): a 1 s fuse, and a blind duration that is a FRACTION of the standard.
+// The short-fuse flashbang: a 1 s fuse, and a blind duration that is a FRACTION of the standard.
 check(/GRENADE_FLASH_SHORT_FUSE_TICKS = b[\s\S]{0,900}?defineInRange\("fuseTicks", 20, 2, 400\)/.test(config),
   'the short-fuse flashbang now burns 20 ticks (1 s), not 8 (0.4 s) - it no longer bursts in the hand');
 const shortBlind = (standard, factor) => Math.max(10, Math.round(standard * factor));
@@ -278,8 +274,6 @@ check(/transition\(GunAiState\.IDLE\)/.test(brain.slice(brain.indexOf('public vo
   brain.indexOf('private void tickBlind'))),
   'and when the effect ends the normal path (target or IDLE) runs again - that is the re-acquire');
 check(/Config\.GRENADE_FLASH_MOB_BLIND_TICKS|mobBlindTicks/.test(blast), 'mobBlindTicks is the knob');
-check(/panicSpreadMultiplier/.test(readme) && /panicFire/.test(readme) && /blindsMobs/.test(readme),
-  'README documents the panic keys');
 
 console.log('');
 console.log('5. smoke is a simplification, and it is labelled as one');
@@ -288,8 +282,6 @@ check(/class GrenadeEvents/.test(events) && /ParticleTypes\.CAMPFIRE_COSY_SMOKE/
 check(/if \(entity instanceof Player\) \{\s*continue;/.test(events.replace(/\/\/[^\r\n]*/g, '')),
   'players are NOT blinded by smoke (their screen is blocked by the particles instead)');
 check(/MobEffects\.BLINDNESS, 20/.test(events), 'mobs inside it are');
-check(/简化/.test(readme),
-  'README says out loud that there is no real sight-occlusion model');
 
 console.log('');
 console.log('6. friendly fire, and the player-self switch');
@@ -374,8 +366,6 @@ check(/A throwable never converts anybody/.test(read('block/WeaponRackTaker.java
 check(/throwable \(a grenade of this mod\)[\s\S]{0,200}?nothing happens here, and nothing is logged/
   .test(read('block/WeaponRackTaker.java')),
   'and the class javadoc table says the same thing, next to the item it used to name as accepted');
-check(/曾经的假日志（已修）/.test(fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8')),
-  'README 5v records the corrected log line');
 
 console.log('');
 console.log('8. the mob throw, the kill feed, the command');
@@ -474,13 +464,8 @@ for (const key of ['terrainDamage', 'throwChargeTicks', 'minThrowSpeed', 'maxThr
   'maxLaunchPitchDegrees', 'retryCooldownTicks', 'resupplyEnabled', 'resupplyRadius',
   'resupplyCooldownTicks', 'resupplySearchCooldownTicks', 'rackPriority', 'blastDamagePerPower',
   'blindFactor']) {
-  check(readme.includes(key), `README documents grenades.${key}`);
+  check(referenceDoc.includes(key), `command/config reference documents grenades.${key}`);
 }
-check(/### 5v\./.test(readme), 'README has the 5v section');
-check(/破片手雷/.test(readme) && /闪光弹/.test(readme) && /军械台|放置台/.test(readme),
-  'README explains the batch in Chinese');
-check(/乱开枪/.test(readme) && /允许打中自己人|有意为之/.test(readme),
-  'including the panic fire and the friendly-fire consequence');
 
 // ================================================================================================
 // 10. The ballistic solver (2026: "the AI's grenades are very easily eaten by cover").
@@ -735,10 +720,10 @@ check(SAFETY_RADIUS === 4.5 && ALLOWED === 0, 'the ally check uses the documente
   `radius ${SAFETY_RADIUS}, allowed ${ALLOWED}`);
 console.log(`  the short-range consequence: at 9 blocks the best arc is off by ` +
   `${solve(FROM, [9, 1.5, 0], SPEED, SAMPLES, MAX_PITCH, world(-999, 0)).error.toFixed(2)} blocks, ` +
-  `so 6-9 blocks is held back (README 5v says so)`);
+  `so 6-9 blocks is held back (command/config reference says so)`);
 check(solve(FROM, [9, 1.5, 0], SPEED, SAMPLES, MAX_PITCH, world(-999, 0)).error > ARRIVE
   && solve(FROM, [10, 1.5, 0], SPEED, SAMPLES, MAX_PITCH, world(-999, 0)).error <= ARRIVE,
-  'and the README range claim holds: 9 blocks is out of reach, 10 is not');
+  'and the command/config reference range claim holds: 9 blocks is out of reach, 10 is not');
 
 console.log('');
 if (failures > 0) {

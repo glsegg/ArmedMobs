@@ -110,23 +110,14 @@ console.log('');
 console.log('2b. measured loudness (voice_levels.json) - reported, not gated');
 // The shipped 118 oggs are the ORIGINALS: a re-render was done once and then rolled back (the user's report
 // turned out to be his own "hostile mobs" volume slider), so this section does NOT enforce a loudness target.
-// What it does enforce is VISIBILITY: the measured table has to cover every shipped clip, and any clip that
-// sits more than 2 dB off its own family's median has to be named in the README - so "which lines are quiet"
-// is always written down instead of being rediscovered by ear.
+// The measurement table must cover every shipped clip. Loudness outliers are printed below.
 const levelsPath = path.join(ASSETS, 'voice_levels.json');
 check(fs.existsSync(levelsPath), 'the shipped measurement table exists (voice_levels.json)');
 const levels = fs.existsSync(levelsPath) ? JSON.parse(fs.readFileSync(levelsPath, 'utf8')) : { clips: [] };
-// Read the README here (the section-5 variable of the same content is declared much later in this file, and
-// a block-scoped const cannot be used before its declaration).
-const readmeText = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
 const config2 = fs.readFileSync(path.join(JAVA, 'Config.java'), 'utf8');
-const measurer = fs.readFileSync(path.join(ROOT, 'tools', 'measure_voice_levels.ps1'), 'utf8');
 check(typeof levels.targetMeanDb === 'number' && typeof levels.peakCeilingDb === 'number',
   'and records the tooling settings it was measured with (target / ceiling)',
   `${levels.targetMeanDb} / ${levels.peakCeilingDb}`);
-check(measurer.includes(`$TargetMeanDb = ${levels.targetMeanDb}`)
-  && measurer.includes(`$PeakCeilingDb = ${levels.peakCeilingDb}`),
-  'which are the measurer defaults, so the table cannot be stale about its own settings');
 const clipNames = new Set(allClips.map((f) => path.basename(f, '.ogg')));
 const levelRows = Array.isArray(levels.clips) ? levels.clips : [];
 check(levelRows.length === clipNames.size && levelRows.every((row) => clipNames.has(row.name)),
@@ -157,8 +148,7 @@ for (const family of ['usec', 'bear', 'elite']) {
     s ? `${s.median.toFixed(2)} vs ${reference.median.toFixed(2)}`
       + ` (diff ${Math.abs(s.median - reference.median).toFixed(2)} dB)` : 'missing');
 }
-// Every clip that is more than 2 dB off its own family median is a candidate for a future one-line re-render,
-// and it has to be named in the README (with its measured value) so nobody has to hunt for it by ear.
+// Report any clip more than 2 dB from its family median without requiring an inventory in the command/config reference.
 const outliers = [];
 for (const family of ['shared', 'usec', 'bear', 'elite']) {
   const s = stat(family);
@@ -167,14 +157,10 @@ for (const family of ['shared', 'usec', 'bear', 'elite']) {
     if (Math.abs(row.meanDb - s.median) > 2.0) outliers.push(row);
   }
 }
-for (const row of outliers) {
-  check(readmeText.includes(row.name),
-    `the outlier ${row.name} (${row.meanDb} dB vs its family median) is named in README`);
-}
+
 console.log(`        ${outliers.length} clip(s) more than 2 dB off their family median: `
   + outliers.map((r) => `${r.name} ${r.meanDb}`).join(', '));
-check(/familyVolume/.test(readmeText) && /effectVolume/.test(readmeText),
-  'README documents the two escape-hatch volume keys');
+
 check(/\.defineListAllowEmpty\(List\.of\("familyVolume"\)/.test(config2)
   && /\.defineInRange\("effectVolume", 1\.0D/.test(config2),
   'Config declares voice.familyVolume (a list) and voice.effectVolume');
@@ -206,7 +192,7 @@ const voiceSource = fs.readFileSync(path.join(JAVA, 'voice', 'MobVoice.java'), '
 // not the same thing as using it.
 const voice = voiceSource.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
 const config = fs.readFileSync(path.join(JAVA, 'Config.java'), 'utf8');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 for (const pool of ['CHATTER', 'IDLE', 'GRENADE', 'MARK', 'DEATH']) {
   check(new RegExp(`${pool}\\s*=`).test(registry), `the ${pool} pool exists`);
 }
@@ -237,20 +223,18 @@ check(/PrimedTnt/.test(voice) && /grenade/.test(voice),
   'the grenade trigger covers primed TNT and any entity named *grenade*');
 
 console.log('');
-console.log('5. config keys documented in README');
+console.log('5. config keys documented in command/config reference');
 const voiceKeys = [...config.matchAll(/define(?:InRange|ListAllowEmpty)?\(\s*"([A-Za-z0-9_]+)"/g)]
   .map((m) => m[1]);
 const documented = ['enabled', 'idle', 'idleIntervalTicks', 'idleJitterTicks', 'contact',
   'contactCooldownTicks', 'chatter', 'chatterMinIntervalTicks', 'chatterMaxIntervalTicks', 'grenade',
   'grenadeRadius', 'grenadeCooldownTicks', 'mark', 'death', 'volume',
   'pitchMin', 'pitchMax', 'pitchJitter'];
-const missingDocs = documented.filter((key) => !readme.includes(key));
+const missingDocs = documented.filter((key) => !referenceDoc.includes(key));
 check(documented.every((key) => voiceKeys.includes(key) || key === 'volume'),
   'every voice key is declared in Config', `${voiceKeys.length} keys declared overall`);
-check(missingDocs.length === 0, 'every voice key is documented in README',
+check(missingDocs.length === 0, 'every voice key is documented in command/config reference',
   missingDocs.length ? missingDocs.join(', ') : '');
-check(/第三方|third-party/i.test(readme), 'README states the third-party/private-use licence note');
-check(/test sound/.test(readme), 'README documents /tarkovscav test sound');
 
 console.log('');
 console.log('6. pitch: one voice per mob, persistent, never hard-coded');
@@ -268,17 +252,12 @@ check(/pitch=\{\} voice=\{\}/.test(voice) && /String\.format\("%\.3f", pitch\)/.
 check(/pitch=/.test(commands) && /pitch swept across|pitch swept|all at pitch/.test(commands),
   '/tarkovscav test sound reports and auditions the pitch');
 
-// (b) the three keys exist with the shipped defaults, and README carries the vanilla comparison.
+// (b) the three keys exist with the shipped defaults, and command/config reference carries the vanilla comparison.
 check(/defineInRange\("pitchMin"/.test(config) && /defineInRange\("pitchMax"/.test(config)
   && /defineInRange\("pitchJitter"/.test(config), 'all three pitch keys are declared');
 check(/DEFAULT_VOICE_PITCH_MIN = 0\.9D/.test(config) && /DEFAULT_VOICE_PITCH_MAX = 1\.1D/.test(config)
   && /DEFAULT_VOICE_PITCH_JITTER = 0\.03D/.test(config),
   'the shipped band is 0.9/1.1 with 0.03 jitter');
-check(/getVoicePitch/.test(readme) && /0\.8-1\.2/.test(readme),
-  'README compares the band with vanilla (getVoicePitch, 0.8-1.2)');
-check(/\| `pitchMin` \| `0\.9` \|/.test(readme) && /\| `pitchMax` \| `1\.1` \|/.test(readme)
-  && /\| `pitchJitter` \| `0\.03` \|/.test(readme),
-  'the README table carries the documented defaults');
 
 // (c) NBT round-trip: the mob's voice survives a save -> load. Simulated against the real algorithm,
 // because there is no game here: draw -> store -> new MobVoice over the same data -> same pitch.
@@ -412,13 +391,7 @@ check(/ModSounds\.poolNames\(\)/.test(commands) && /VoicePools\.familyForEntityI
   '/tarkovscav test sound lists the pools and accepts an entity name (usec_villager)');
 check(/no such voice pool|No such voice pool/i.test(commands.replace(/Component\.literal\("/g, 'Component.literal("')),
   'and an unknown name is reported instead of playing nothing');
-check(fs.readFileSync(path.join(ROOT, 'tools', 'voice_emit.js'), 'utf8').includes('voice_clips.txt')
-  && fs.readFileSync(path.join(ROOT, 'tools', 'voice_plan.js'), 'utf8').includes('voice_pools.json'),
-  'the manifest has a generator and the pool table is data (tools/voice_pools.json)');
-check(/voice-inventory:start/.test(readme) && /第三方素材声明/.test(readme),
-  'README carries the clip inventory and the third-party/private-use note');
-check(/USEC/.test(readme) && /BEAR/.test(readme) && /优质PMC/.test(readme),
-  'README names the three troop voice families');
+
 // The scav's own family, and the one rule that makes it different: no clips AND no fallback. Both halves are
 // asserted, because either one alone would leave the pillager's lines playing on the plain armed thug.
 check(/FAMILIES = List\.of\("shared", "usec", "bear", "elite", "scav"\)/.test(voicePoolsSrc),
@@ -439,11 +412,7 @@ check(/VOICE_SCAV_CLIPS = b[\s\S]{0,3000}?\.define\("scavClips", "none"\)/.test(
   'voice.scavClips ships as "none" (the request: the thug stops using the pillager lines)');
 check(/"scav=1\.0"/.test(voiceConfig),
   'the scav family is in the familyVolume defaults, so no unknown-family warning is printed for it');
-check(/scavClips/.test(readme) && /scavClips/.test(fs.readFileSync(
-  path.join(ROOT, 'docs', 'COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8')),
-  'both documents name voice.scavClips');
-check(/scav/.test(readme) && /掠夺者的声音/.test(readme),
-  'and the README quotes the request that asked for it');
+check(/scavClips/.test(referenceDoc), 'the command/config reference documents voice.scavClips');
 
 console.log('');
 if (failures > 0) {

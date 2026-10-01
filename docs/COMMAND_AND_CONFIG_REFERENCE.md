@@ -198,7 +198,7 @@
 | `spawn.cityRegionPadding` | `4` | 结构周围多少格仍算城市（街道与外圈）。**这是城区刷怪率的线性旋钮**：`24 -> 4` 让单城区可刷怪面积约 −52.7%（原 `24`）。注意 Forge 不会重写已存在的 `config/tarkovscav-common.toml`，老存档会继续用 `24` 直到你手改 | 0..256 |
 | `spawn.logSpawnGate` | `true` | 把每次刷怪门的接受/拒绝写进服务端日志 | 接线城市模组时开，正常游玩偏吵 |
 | `spawn.foundationDepth` | `5` | `/armedmobs city district` 放置每块地皮时保证的地基深度（向上补足） | 0..16；与生成器 `--foundation N` 保持一致（内置件烘死为 5，街道 3，瓦砾 0） |
-| `spawn.cityFactionCapEnabled` | `true` | **城市刷怪上限总开关**：false = 完全回到不设上限的旧行为 | 见 5.29 与 README 7q |
+| `spawn.cityFactionCapEnabled` | `true` | **城市刷怪上限总开关**：false = 完全回到不设上限的旧行为 | 见 5.29 |
 | `spawn.cityFactionCap` | `12` | **一座城里同一阵容最多同时存活多少个持枪单位**（只数本模组的持枪单位，`GunUser`）。0 = 不设上限 | 0..128；第 12 个放行、第 13 个拒绝；手动放置与单位移入不受此生成检查阻止 |
 | `spawn.cityFactionCapCountTicks` | `20` | 重新数一次存活数的间隔（tick）。窗口内还会把「本窗口已放行」的数量算进去，避免同一窗口重复放行超过余量 | 1..200；调小会更快反映死亡或移入移出，但增加世界查询次数 |
 | `spawn.cityFactionCapIgnoreManual` | `false` | true = 连刷怪蛋与 `/summon` 也计入上限。默认 false：玩家手动放的单位永不被拒（需求原文「通常不是玩家手动放刷怪蛋的话」） | 建城/测试时保持 false |
@@ -211,7 +211,7 @@
 | `guns.gunWhitelist` | `[]` | 非空时**只允许**这些 id（黑名单仍然生效） | 做「只有 AK」的整合包时用 |
 | `guns.excludedGunTypes` | `["rpg"]` | 永不发放的 TaCZ gun `type` 值 | 火箭筒不是公平的怪物武器 |
 | `guns.pistolClipTypes` | `["pistol"]` | 使用模型 `*_pistol` 单手动画的 TaCZ gun type | 想给 SMG 用单手姿势就把 `"smg"` 加进来（YSM 只特判 `pistol` 与 `rpg`） |
-| `guns.excludeScriptedGuns` | `true` | 把带 Lua 脚本的枪挡在「脚本命名空间不可信」的怪之外 | 崩溃防护；详见 README §5p |
+| `guns.excludeScriptedGuns` | `true` | 把带 Lua 脚本的枪挡在「脚本命名空间不可信」的怪之外 | 崩溃防护；可信脚本命名空间见下一行 |
 | `guns.trustedScriptNamespaces` | `["tacz"]` | 即使开了上一条仍允许到达怪的脚本命名空间 | 信任的枪包命名空间 |
 | `guns.scriptedGunRescanTicks` | `40` | 怪每隔多少 tick 重新检查手上枪是否符合脚本枪规则 | 0..2400 |
 | `guns.respectDeclaredFireModes` | `false` | true = 让枪自己的数据文件决定发放弹匣的开火模式，而不是强制全自动 | 影响 `api:getFireMode()==AUTO` 分支的脚本枪（如 `hamster:win1894`） |
@@ -219,8 +219,8 @@
 | `guns.ammoDropChance` | `0.5` | 死亡掉落备用弹药的概率 | 0.0..1.0 |
 | `guns.ammoItemStacks` | `3` | 怪携带的匹配弹药堆数；打完会脱离接触 | 1..27 |
 | `guns.manualReloadFallback` | `true` | 当 TaCZ 自己的 `reload()` 对生物无动作时，由本模组补上换弹（仍走 TaCZ API、仍消耗真实弹药） | 关掉可观察 TaCZ 原始行为 |
-| `guns.fallbackWeapon` | `"crossbow"` | **没装 TaCZ 时**武装单位拿什么：`crossbow`（默认）或 `bow`；**认值不区分大小写，其它任何值都按弩处理**（写错不会静默变空手） | 只影响「手上武器」，不影响刷怪与 AI（详见 README §5ac）。没有「空手」选项 |
-| `guns.fallbackArrows` | `32` | **没装 TaCZ 时**副手放多少支箭（0..256）。**纯外观**：射击走原版 `ProjectileUtil.getMobArrow`（和骷髅同一条路），那条路不扣箭，所以这个数字只决定单位「看起来带了多少」，实际弹药无限（见 README §5ac 的说明） | TaCZ 已装时这两个键完全不生效 |
+| `guns.fallbackWeapon` | `"crossbow"` | **没装 TaCZ 时**武装单位拿什么：`crossbow`（默认）或 `bow`；**认值不区分大小写，其它任何值都按弩处理**（写错不会静默变空手） | 只影响「手上武器」，不影响刷怪与 AI。没有「空手」选项 |
+| `guns.fallbackArrows` | `32` | **没装 TaCZ 时**副手放多少支箭（0..256）。**纯外观**：射击走原版 `ProjectileUtil.getMobArrow`（和骷髅同一条路），那条路不扣箭，所以这个数字只决定单位「看起来带了多少」，实际弹药无限 | TaCZ 已装时这两个键完全不生效 |
 | `guns.manualReloadTicks` | `45` | 补位换弹耗时（tick），期间怪躲掩体并播放换弹姿势 | 5..400 |
 | `guns.reloadStallTicks` | `200` | TaCZ 报告「换弹中」多久后不再相信并脱离接触 | 20..2400；这是唯一由 TaCZ 驱动的状态的上界 |
 
@@ -453,7 +453,7 @@
 | `client.cullingBoxPadding` | `1.0` | 剔除盒外扩（方块） | 0.0..8.0 |
 | `client.modelLayering` | `"upperLower"` | 模型分层：`upperLower`（腿/上半身两层控制器，**源码默认**）或 `single`（单控制器） | 两种模式都是每帧一次几何提交 |
 | `client.logRenderStats` | `false` | 记录每帧渲染统计 |  |
-| `client.logGlState` | `false` | 记录 GL 状态（贴图状态泄露排查用）。`[gldebug]` 行还带 guard 恢复的四项：`backFunc`（背面模板 func）、`clear`（stencil clear 值）、`activeUnit`（活动纹理单元）、`shaderTex0`（RenderSystem 0 号 sampler），见 README 5k |  |
+| `client.logGlState` | `false` | 记录 GL 状态（贴图状态泄露排查用）。`[gldebug]` 行还带 guard 恢复的四项：`backFunc`（背面模板 func）、`clear`（stencil clear 值）、`activeUnit`（活动纹理单元）、`shaderTex0`（RenderSystem 0 号 sampler） |  |
 | `client.poseSource` | `"auto"` | 谁拥有瞄准姿势骨骼：`auto`（逐骨：作者关键帧跟随视角就归 clip，否则归代码）、`code`（代码写 `UpperBody`/`Head`，加 `molangVariables=off` 即旧行为）、`clips`（全归 clip） | 未识别值 WARN 并回退 `auto` |
 | `client.molangVariables` | `"pitch"` | 喂给 rig 自身 `ysm.*`/`query.*` 瞄准变量的范围：`off`/`pitch`/`all`（`all` 含 yaw） | 未识别值回退 `pitch` |
 | `client.torsoYawShare` | `0.25` | 代码把多少看向偏航放在胸腔上（其余给头，瞄准落点不变） | 0.0..1.0 |
@@ -479,7 +479,7 @@
 | 键名 | 默认值 | 作用 | 备注/推荐范围 |
 | --- | --- | --- | --- |
 | `killFeed.enabled` | `true` | HUD 元素总开关。false = 一行都不画（服务端也不再产生记录） |  |
-| `killFeed.mode` | `"involved"` | 谁能看到：`involved`（只有涉事玩家 / 附近的玩家，见 `radius`）等 | 取值集合见 README §5u（**未核对**：源码默认串为 `involved`，其余模式名未在本次阅读范围内逐个确认） |
+| `killFeed.mode` | `"involved"` | `involved`：击杀者、死者和 `radius` 内的玩家；`all`：同维度全部玩家；`global`：服务端全部玩家 | 未识别的值按 `involved` 处理 |
 | `killFeed.radius` | `64.0` | 玩家要多近才看到「别人之间」的击杀行（仅 `mode = involved` 使用） | 8.0..512.0 |
 | `killFeed.showMobKills` | `true` | 是否播报双方都不是玩家的击杀（含本模组单位互杀） |  |
 | `killFeed.showPlayerKills` | `true` | 是否播报有玩家参与的击杀 |  |
@@ -683,10 +683,9 @@
 * **豁免**：刷怪蛋与 `/summon`（也就是「玩家手动放的」）。`cityFactionCapIgnoreManual = true` 才会连它们一起限；此开关独立于 `gateCommandSpawns`，通过 `FinalizeSpawn` 检查刷怪蛋与普通 `/summon`。带实体 NBT、跳过 `finalizeSpawn` 的 `/summon` 不经过这条检查。
 * **两个维度都生效**：这是性能护栏，不是占领玩法的一部分，所以**不**判断 `Level.OVERWORLD`——废土正是刷怪笼堆人的地方。（占领战本身仍然只在主世界。）
 * **不碰世界**：被拒绝的刷新只是「不生成」，既不删怪也不改写/熄灭刷怪笼方块，整个功能可逆。类里没有任何 `setBlock` / `discard` / `kill` / `remove` 调用，门禁按「不存在」断言。
-* **三条刷怪路径**：自然刷怪与刷怪笼在 1.20.1 是**同一个** `MobSpawnEvent.PositionCheck`（见 5.1 与 README 7p 的反汇编证据），所以一条判定覆盖两条；第三条是驻军，它直接放单位，所以 `CityGarrison.spawn` 里逐单位问一次。
+* **三条刷怪路径**：自然刷怪与刷怪笼在 1.20.1 是**同一个** `MobSpawnEvent.PositionCheck`（见 5.1），所以一条判定覆盖两条；第三条是驻军，它直接放单位，所以 `CityGarrison.spawn` 里逐单位问一次。
 * **诊断**：`/armedmobs spawncap` 打印生效配置 + 每个「已测量过的城×阵营」的 `live` / `acceptedThisWindow` / 是否已到上限。它**只读缓存**（每次敲命令都扫一遍世界本身就是它要修的那种卡顿）；`/armedmobs spawncap reset` 只清掉测量结果，下一次刷怪尝试会重新数，不碰世界。
 * **读档隔离**：计数按实际服务端世界实例保存；世界卸载与服务器关闭会清除缓存，同维度、同名城市的新存档不会沿用旧存档的刷怪计数。
-* **一个真实踩到的坑（写进代码注释与测试里）**：第一版 `stale()` 直接做 `now - countedAt`，而缓存初值是 `Long.MIN_VALUE` → **溢出成负数** → 永远判「未过期」→ 首次计数永不发生、窗口的「已放行」永不归零 → 一旦到上限，那座城会**永久拒绝**所有刷新。`tools/spike/SpawnCapTest.java` 里「never counted: always stale」那一条直接抓到了它（现在显式判断 `countedAt == Long.MIN_VALUE` 与「时钟倒退」两种情况）。
 
 
 
@@ -780,7 +779,7 @@
 | `#tarkovscav:faction_scav` | `data/tarkovscav/tags/entity_types/faction_scav.json` | 定义「scav 阵营」：同阵营互不主动开战（除非有人先动手） | `tarkovscav:scav` |
 | `#tarkovscav:faction_illager` | `data/tarkovscav/tags/entity_types/faction_illager.json` | 定义「掠夺者阵营」 | 原版 `pillager`/`vindicator`/`evoker`/`illusioner`/`ravager` + `tarkovscav:gunner_pillager`/`sniper_pillager`/`bear_pillager`/`elite_pillager` |
 | `#tarkovscav:faction_village` | `data/tarkovscav/tags/entity_types/faction_village.json` | 定义「村民阵营」 | 原版 `villager`/`wandering_trader`/`iron_golem`/`snow_golem` + `tarkovscav:gunner_villager`/`sniper_villager`/`usec_villager`/`elite_villager` |
-| `#tarkovscav:faction_village_hostile` | `data/tarkovscav/tags/entity_types/faction_village_hostile.json` | 村民阵营**见即攻击**的名单（由 `faction.villagersAttackMonsters` 开关控制） | `#minecraft:raiders`、`#minecraft:undead`、`spider`、`cave_spider`、`silverfish`、`endermite`、`creeper`、`slime`、`magma_cube`、`blaze`、`ghast`、`guardian`、`elder_guardian`、`shulker`、`vex`、`hoglin`、`zoglin` |
+| `#tarkovscav:faction_village_hostile` | `data/tarkovscav/tags/entity_types/faction_village_hostile.json` | 村民阵营**见即攻击**的名单（由 `faction.villagersAttackMonsters` 开关控制） | `#minecraft:raiders`、`#minecraft:skeletons`、`zombie` / `husk` / `drowned` / `zombie_villager` / `zombified_piglin` / `zombie_horse` / `phantom` / `wither`、`spider`、`cave_spider`、`silverfish`、`endermite`、`creeper`、`slime`、`magma_cube`、`blaze`、`ghast`、`guardian`、`elder_guardian`、`shulker`、`vex`、`hoglin`、`zoglin` |
 | `#tarkovscav:hard_target` | `data/tarkovscav/tags/entity_types/hard_target.json` | 「硬目标」：枪械伤害减免与跳弹规则作用的实体类型（`[ricochet]`） | `minecraft:iron_golem` |
 
 > 标签文件都是标准 Forge `replace: false` 列表；数据包用同名文件 + `"replace": true` 或直接在 `values` 里追加即可。删除 shipped 文件会触发类内兜底表（与文件内容一致），行为不会更差。
@@ -793,11 +792,11 @@
 | --- | --- |
 | `data/tarkovscav/worldgen/structure/city_small.json`、`city_a.json`、`city_b.json`、`city_c.json` | 四个「整城」jigsaw 结构（单模板） |
 | `data/tarkovscav/worldgen/structure/city_district.json` | 「街区」jigsaw 结构（`size: 6`，`terrain_adaptation: none`） |
-| `data/tarkovscav/worldgen/structure/city_strongpoint.json` | 「18 栋据点」jigsaw 结构（单模板，`terrain_adaptation: beard_thin`，`max_distance_from_center: 116`）。**2026-09-23 修正**：原为 224，而原版 codec 既限制区间 `1..128`，又校验 `max_distance_from_center + 地形适配补偿 <= 128`，违反时报 `Structure size including terrain adaptation must not exceed 128`，导致客户端每次载入世界都报 `Failed to parse tarkovscav:worldgen/structure/city_strongpoint.json`。补偿值由服务端 jar 反汇编（`JigsawStructure$1`）确认：`none` = 0，`bury`/`beard_thin`/`beard_box` = 12，所以 `beard_thin` 的最大合法值是 **116**。单件（`size: 1`）结构不做任何扩展，这个字段不必覆盖 138 的占地；现在由 `tools/selftest_datapack.js` 按真实规则钉死 |
+| `data/tarkovscav/worldgen/structure/city_strongpoint.json` | 「18 栋据点」jigsaw 结构（单模板，`terrain_adaptation: beard_thin`，`max_distance_from_center: 116`）。地形适配补偿为 12，需满足 `max_distance_from_center + 12 <= 128` |
 | `data/tarkovscav/worldgen/structure_set/city_variants.json`、`city_district.json`、`city_strongpoint.json` | 结构集。**四个城市结构集现在都用 `tarkovscav:wasteland_spread` 放置**（见下一行）；据点 `spacing 192 / separation 48`，因为它的占地是 138×66 |
 | `data/tarkovscav/worldgen/structure_set/city_small.json`（以及上表三个） | **密度旋钮**：`"frequency": 0.25` —— 用户要求的「建筑刷率减少 75%」。`javap` 的 `StructurePlacement#isPlacementChunk` 证明判定顺序是「生物群系 → `if (frequency < 1.0F) shouldGenerate(seed, salt, x, z, frequency)` → 排斥区 → `isStructureChunk`」，所以 `frequency` 在放置逻辑之前生效，**同时作用于主世界和废土**；它保持网格/salt/separation 不变，只把每个候选点的接受概率乘 0.25（期望正好 25%）。另一条路是 spacing 加倍（密度 ~ 1/spacing²），但那会移动网格，所以选了 `frequency`。只影响**新生成**的区块：存档里已经生成的城区位置不变 |
-| `data/tarkovscav/dimension/urban_wasteland.json` | 废土维度：`type: tarkovscav:urban_wasteland`、`generator: {type: minecraft:noise, biome_source: {type: minecraft:fixed, biome: tarkovscav:urban_wasteland}, settings: tarkovscav:urban_wasteland}`。**注意：这里没有也不能有 `structures` 块** —— `javap` 的 `net.minecraft.world.level.dimension.LevelStem` 显示数据包用的 codec 只读 `type` 与 `generator` 两个字段，`DimensionStructuresSettings` 只在三个原版维度的 level.dat 路径上使用，所以写在数据包维度里的 `structures` 会被静默丢弃（实测：写进去时同一 512×512 采样区只有 2 个城区结构，正是主世界的稀疏间距）。废土的密度改由 `tarkovscav:wasteland_spread` 提供：`isStructureChunk` 检查该 chunk 生成器的 `BiomeSource` 是否为持有 `tarkovscav:urban_wasteland` 的 `FixedBiomeSource`，是则用 `dense_spacing/dense_separation`（4/1、5/2、16/5、192/48），否则用主世界的 `spacing/separation`，两条分支跑的是**同一段原版随机散布算式**（含带 salt 的 `setLargeFeatureWithSalt`）。因此主世界的生成与原版逐格一致（A/B 对照构建已验证）。`spacing()`/`separation()` 返回 dense 值，代价是主世界的 `/locate structure` 会走 dense 网格而找不到稀疏网格上的城区（这一现象此前已记录在 README 的 TODO 里） |
-| `data/tarkovscav/tags/entity_types/faction_village_hostile.json` | 「武装村民的敌对目标」标签（村庄防御逻辑读它）。**2026-09-25 修正**：原来引用了 `#minecraft:undead`，而 1.20.1 **没有**这个 entity_type 标签（客户端 jar 只有 13 个 entity_type 标签），`TagLoader` 会记 `Couldn't load tag tarkovscav:faction_village_hostile as it is missing following references: #minecraft:undead` 并把该部分静默置空——武装村民实际一个亡灵都不打。现在写成显式的 1.20.1 亡灵：`#minecraft:skeletons` + `zombie`/`husk`/`drowned`/`zombie_villager`/`zombified_piglin`/`zombie_horse`/`phantom`/`wither`。**这是行为变更**：村庄防御现在真的会打亡灵。`tools/selftest_datapack.js` 会把每个 `#minecraft:` entity_type 标签引用对照 1.20.1 的真实标签清单校验 |
+| `data/tarkovscav/dimension/urban_wasteland.json` | 废土维度：`type: tarkovscav:urban_wasteland`、`generator: {type: minecraft:noise, biome_source: {type: minecraft:fixed, biome: tarkovscav:urban_wasteland}, settings: tarkovscav:urban_wasteland}`。**注意：这里没有也不能有 `structures` 块** —— `javap` 的 `net.minecraft.world.level.dimension.LevelStem` 显示数据包用的 codec 只读 `type` 与 `generator` 两个字段，`DimensionStructuresSettings` 只在三个原版维度的 level.dat 路径上使用，所以写在数据包维度里的 `structures` 会被静默丢弃（实测：写进去时同一 512×512 采样区只有 2 个城区结构，正是主世界的稀疏间距）。废土的密度改由 `tarkovscav:wasteland_spread` 提供：`isStructureChunk` 检查该 chunk 生成器的 `BiomeSource` 是否为持有 `tarkovscav:urban_wasteland` 的 `FixedBiomeSource`，是则用 `dense_spacing/dense_separation`（4/1、5/2、16/5、192/48），否则用主世界的 `spacing/separation`，两条分支跑的是**同一段原版随机散布算式**（含带 salt 的 `setLargeFeatureWithSalt`）。因此主世界的生成与原版逐格一致（A/B 对照构建已验证）。`spacing()`/`separation()` 返回 dense 值，代价是主世界的 `/locate structure` 会走 dense 网格而找不到稀疏网格上的城区 |
+| `data/tarkovscav/tags/entity_types/faction_village_hostile.json` | 村庄防御读取的敌对目标标签。亡灵使用 `#minecraft:skeletons` 及显式实体 ID；Minecraft 1.20.1 不存在 `#minecraft:undead` 标签 |
 | `data/tarkovscav/worldgen/template_pool/city_small/start.json`、`city_a|b|c/start.json` | 整城模板池 |
 | `data/tarkovscav/worldgen/template_pool/city_strongpoint/start.json` | 据点模板池（单个 `single_pool_element` 指向 `tarkovscav:city_strongpoint`） |
 | `data/tarkovscav/worldgen/template_pool/city_district/start.json`、`street.json`、`building.json`、`decor.json` | 街区模板池（起始/街道/建筑/装饰） |
@@ -829,7 +828,7 @@
 | --- | --- |
 | 物品 id | `tarkovscav:deployment_beacon`（中文「部署信标」，`max_stack_size = 1`，稀有度 uncommon） |
 | 获取 | 工作台合成（有序配方 `data/tarkovscav/recipes/deployment_beacon.json`）：竖排 `I / ITI / E`，`I` = 铁锭 x3，`T` = 红石火把，`E` = 末影珍珠。创造模式物品栏也直接给 |
-| 贴图 | `assets/tarkovscav/textures/item/deployment_beacon.png`，16×16，由 `node tools/make_beacon_texture.js` **程序化生成**（无第三方素材）；模型 `models/item/deployment_beacon.json`（`item/generated`） |
+| 贴图 | `assets/tarkovscav/textures/item/deployment_beacon.png`，16×16；模型 `models/item/deployment_beacon.json`（`item/generated`） |
 | 用法（主世界） | 右键开始 **40 tick（2 秒）** 部署读条，结束时把玩家送进 `tarkovscav:urban_wasteland`。读条期间播放 `minecraft:block.beacon.activate` 与烟雾/云粒子 |
 | 用法（废土内） | 右键开始同样的读条，结束时把玩家送回**上次出发的主世界坐标**（`data/tarkovscav_retreat.dat`，按玩家 UUID 记录）；没有记录时送回主世界共享出生点并且**明确告知** |
 | 读条中断规则 | 受到任何伤害（`LivingHurtEvent`）、离开起点超过 **4 格**（每 tick 检查）、提前松开右键、切换维度或掉线 —— 每一种都有各自的提示 |
@@ -937,7 +936,7 @@ assets/tarkovscav/lang/en_us.json / zh_cn.json
 { "subtitles.tarkovscav.elite_contact_9": "..." }
 ```
 
-`tools/voice_plan.js` 使用的 `tools/voice_pools.json` 是**构建期**的池分配表（生成器用它挑选素材），**没有**打包进 jar；运行时唯一被读的清单是 `assets/tarkovscav/voice_clips.txt`（若该文件缺失，`ModSounds` 会 WARN 并只保留手写声明的基础 clip）。
+运行时只读取 `assets/tarkovscav/voice_clips.txt`；清单缺失时，`ModSounds` 会记录警告并保留代码声明的基础事件。
 
 ### 7.6 枪械池 / TaCZ 集成键
 
@@ -1015,26 +1014,3 @@ assets/tarkovscav/lang/en_us.json / zh_cn.json
 | `[sound]` | `ModCommands test sound` | 逐条播放的事件、序号、音高、音高带 |
 
 ---
-
-## 9. 未核对项与源码/README 不一致
-
-### 9.1 `（未核对）`
-
-1. `killFeed.mode` 除出厂值 `"involved"` 之外的**全部合法取值**——本次只读了 `Config` 中的默认串与 `ClientCommands` 对该键的读取，未逐个核对解析函数的取值集合。请以 README §5u 为准。
-2. TaCZ 枪包 / 配件包**自身的文件布局与 id 命名规则**（本模组只通过 TaCZ 公开 API 读取索引）。本文只确证了本模组读取的部分。
-3. 语音池 `tools/voice_pools.json` 中的中文分类名（该文件在仓库里以非 UTF-8 形式保存，读取呈乱码），因此本文**不引用**其中的分类名，只引用代码真正接受的 `<family>_<category>` 六类。
-Q/E 歪头功能已于本轮维护移除，对应十个客户端配置项不再注册。启动时会在备份原文件后清理旧键，其余自定义配置保留。
-
-### 9.2 撰写本文时发现并已修复的文档漂移（2026-09-25）
-
-下面 7 条是逐条核对源码时发现的**真实漂移**，**已全部修好**——README、配置注释与源码现在一致，所以你可以按本文的默认值表照抄：
-
-1. **`client.modelLayering`**：`Config#singleControllerMode()` 的 javadoc 曾写「`single`, the default」，与常量 `DEFAULT_MODEL_LAYERING = "upperLower"` 矛盾 → javadoc 已改为「`upperLower` 是出厂默认」，并写明 `single` 会冻结腿部（枪械 clip 没有腿部轨道）。
-2. **README `[spawn]` 表的 `cityStructureIds` 默认值过时**：曾写 `["tarkovscav:city_small"]` → 已改为源码 `defaultCityStructureIds()` 的四个预设（`city_small`、`city_a`、`city_b`、`city_c`）。
-3. **README `pistolClipTypes` 默认值过时**：曾写 `["pistol", "smg"]` → 已改为源码的 `["pistol"]`（想给 SMG 单手姿势就把 `smg` 加进来）；README `[guns]` 表也补上了 `excludeScriptedGuns`、`trustedScriptNamespaces`、`scriptedGunRescanTicks`、`respectDeclaredFireModes` 四行。
-4. **`foundationDepth` 的配置段**：README §7 曾写 `[city] foundationDepth` → 已改为 `[spawn] foundationDepth`（源码注册在 `[spawn]`），README `[spawn]` 表补了该行，`CityDistrictAssembler` 的告警文案从 `city.foundationDepth` 改为 `spawn.foundationDepth`，`安装说明.txt` 同步。
-5. **`spawn` 命令的「Unknown mob」提示串**曾漏写合法值 `sniper_pillager` → 已补上；现在提示串与本文第 1 节的九个 id 完全一致。
-6. **`gunnerVillagerGunRotation` 的注释与常量不一致**：常量与写进 toml 的默认值是 `["5","0","0"]`（本文第 5.15 节即按此写），但 `Config` 的 javadoc 与 toml 注释仍按历史的 `[-40,0,0]` 与 `-220 / -190 / -150` 描述 → 两处都已改写为「`5` 是 2026-09-25 起的发布基线，`-40` 是历史值」，并指向 README §5j 的四档表（**-185 / -130 / -128 / -128**）。`gunnerVillagerIdleGunRotation` 的注释同样从历史的 `-70/-220` 更正为出厂的 `-2`（闲置 -130）。
-7. **`ModSounds` 的 javadoc 计数措辞**：曾写「Twenty-seven mono Vorbis clips」→ 已改为「121 个 sound event（基础池 + `voice_clips.txt` 清单）」，与 `voice_levels.json` 的行数一致。
-
-> 这 7 条修的都是**文档与注释**，不是行为：`5`、`upperLower`、`spawn.foundationDepth` 本来就是编译进 jar 的出厂值，本次只是让文字追上它们。本文第 5 节的默认值表全部取自常量，因此不受这次修改影响。

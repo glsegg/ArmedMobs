@@ -55,7 +55,7 @@ const config = strip(read('Config.java'));
 const pillager = strip(read('entity/GunnerPillagerEntity.java'));
 const scav = strip(read('entity/ScavEntity.java'));
 const commands = strip(read('command/ModCommands.java'));
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 const tickFire = methodBody(brain, 'private void tickFire(');
 const tickReload = methodBody(brain, 'private void tickReload(');
@@ -133,7 +133,7 @@ check(/tactics\.invalidate\(\)/.test(progress), 'it drops the cached cover list,
 check(/transition\(GunAiState\.(REPOSITION|RETREAT)\)/.test(progress), 'and it ends in a state change, not in standing still');
 for (const key of ['moveProgressSampleTicks', 'moveProgressMinBlocks', 'moveProgressRetries']) {
   check(config.includes(`"${key}"`), `Config declares ${key}`);
-  check(readme.includes(key), `README documents ${key}`);
+  check(referenceDoc.includes(key), `command/config reference documents ${key}`);
 }
 // The walk animation is driven by measured displacement, not by intent.
 const walk = strip(read('entity/WalkTelemetry.java'));
@@ -201,7 +201,7 @@ if (fs.existsSync(mappedJar)) {
 
 console.log('');
 console.log('B. every moveTo speed site is accounted for');
-// The table the README documents. `coverSeekSpeed()` reads tactics.coverSeekSpeedModifier (default 1.0
+// The table the command/config reference documents. `coverSeekSpeed()` reads tactics.coverSeekSpeedModifier (default 1.0
 // after the user asked for "running away = normal 1x"), `escapeWithoutCoverSpeed()` its own key (1.0).
 const EXPECTED_SPEEDS = [
   { speed: '1.15D', count: 3, why: 'ADVANCE (towards cover / straight at the target) + the watchdog re-path straight at the target - deliberately unchanged' },
@@ -238,7 +238,7 @@ check(unknown.length === 0, 'no undocumented moveTo speed',
   unknown.length === 0 ? 'every call site is in the table' : `undocumented: ${unknown.join(' | ')}`);
 check(/private double coverSeekSpeed\(\)\s*\{\s*return Config\.COVER_SEEK_SPEED_MODIFIER\.get\(\) \* AiProfile\.coverSeekSpeedScale\(this\.mob\);\s*\}/.test(brain),
   'coverSeekSpeed() is the only reader of the multiplier',
-  'since README 5aa it is scaled by the tier profile (scale 1.0 for every tier except ELITE 1.15)');
+  'since command/config reference it is scaled by the tier profile (scale 1.0 for every tier except ELITE 1.15)');
 const multiplierReads = (brain.match(/Config\.COVER_SEEK_SPEED_MODIFIER\.get\(\)/g) || []).length;
 check(multiplierReads === 1, 'no other code path reads coverSeekSpeedModifier',
   `${multiplierReads} read site(s) in GunBrain`);
@@ -264,7 +264,7 @@ const keyDefaults = [
 for (const [key, re] of keyDefaults) {
   check(re.test(config), `Config defines ${key} with the documented default`);
   check(config.includes(`"${key}"`), `Config declares the ${key} spec value`);
-  check(readme.includes(key), `README documents ${key}`, 'AssetTest requires every config key to be documented');
+  check(referenceDoc.includes(key), `command/config reference documents ${key}`, 'AssetTest requires every config key to be documented');
 }
 
 console.log('');

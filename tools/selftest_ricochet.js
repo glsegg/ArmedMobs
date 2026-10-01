@@ -1,4 +1,4 @@
-// Hard targets / ricochet (README 5z): the iron golem's 80 % gunfire reduction and its chance to bounce a
+// Hard targets / ricochet: the iron golem's 80 % gunfire reduction and its chance to bounce a
 // bullet, with NO effect on any other damage type or any entity outside the tag.
 //
 //   node tools/selftest_ricochet.js
@@ -12,7 +12,7 @@
 //     type by type, because "the rule leaked into melee" is the failure mode that would matter;
 //   * the reflection arithmetic (normal component flipped, tangential component kept), the per-bullet bounce
 //     cap, and the "nothing to reflect" path (zero damage + effects still happen);
-//   * documentation: README says what it does, why, and how to add another mob.
+//   * documentation: command/config reference says what it does, why, and how to add another mob.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -33,7 +33,7 @@ const check = (ok, label, detail) => {
 const hard = strip(read('combat/HardTarget.java'));
 const hardRaw = read('combat/HardTarget.java');
 const config = strip(read('Config.java'));
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 const main = read('TarkovScav.java');
 
 console.log('1. "this is gunfire" = TaCZ\'s own damage-type tag');
@@ -201,19 +201,12 @@ for (const [key, pattern] of [
   ['log', /\.define\("log", false\)/],
 ]) {
   check(pattern.test(config), `Config declares ricochet.${key} with the documented default`);
-  check(readme.includes(key), `README documents ricochet.${key}`);
+  check(referenceDoc.includes(key), `command/config reference documents ricochet.${key}`);
 }
 check(/\.push\("ricochet"\)/.test(config), 'the keys live in their own [ricochet] section');
 check(/MinecraftForge\.EVENT_BUS\.register\(com\.gfl\.tarkovscav\.combat\.HardTarget\.class\)/.test(main),
   'and the handler is registered on the Forge event bus (an unregistered listener is a silent no-op)');
-check(/### 5z\./.test(readme), 'README has the 5z section');
-check(/TRIDENT_HIT_GROUND/.test(readme) && /hard_target/.test(readme) && /铁傀儡/.test(readme),
-  'which explains the sound, the tag and the mob in Chinese');
-check(/80\s?%/.test(readme) && /tacz:bullets|#tacz:bullets/.test(readme),
-  'and states the 80 % rule and the TaCZ damage tag it is based on');
-check(/hard_target\.json/.test(readme) && /怎么把别的生物也加进来|加进来/.test(readme),
-  'plus how to add another mob to the tag');
-check(/ricochet/i.test(readme) && /跳弹/.test(readme), 'and names the feature');
+
 check(!/hardcoded damage type|DamageType\./.test(hardRaw),
   'no damage type is constructed or hard-coded in the class (the tag is the only judgement)');
 

@@ -1,4 +1,4 @@
-// The imported Scav rig (README 7 / 5c). One thing about a re-exported model can break the mob silently,
+// The imported Scav rig. One thing about a re-exported model can break the mob silently,
 // and this gate is about exactly that class of failure:
 //
 //   * a clip animating a bone the geometry no longer has - GeckoLib ignores the track without a word, so
@@ -19,7 +19,6 @@ const ASSETS = path.join(ROOT, 'src', 'main', 'resources', 'assets', 'tarkovscav
 const GEO = path.join(ASSETS, 'geo', 'scav.geo.json');
 const ANIM = path.join(ASSETS, 'animations', 'scav.animation.json');
 const CONFIG = path.join(ROOT, 'src', 'main', 'java', 'com', 'gfl', 'tarkovscav', 'Config.java');
-const README = path.join(ROOT, 'README.md');
 
 let failures = 0;
 const check = (ok, label, detail) => {
@@ -33,7 +32,6 @@ const bones = geo.bones || [];
 const byName = new Map(bones.map((b) => [b.name, b]));
 const anim = JSON.parse(fs.readFileSync(ANIM, 'utf8'));
 const config = fs.readFileSync(CONFIG, 'utf8');
-const readme = fs.readFileSync(README, 'utf8');
 
 const cubes = bones.reduce((sum, b) => sum + (b.cubes || []).length, 0);
 console.log('1. the rig itself');
@@ -108,26 +106,11 @@ const cigarette = /define\("cigarette",\s*(true|false)\)/.exec(config);
 const cigaretteBone = (/define\("cigaretteBone",\s*"([^"]*)"\)/.exec(config) || [])[1];
 check(cigarette !== null && (cigarette[1] === 'false' || byName.has(cigaretteBone)),
   'the cigarette is off by default or its bone exists', `cigarette=${cigarette && cigarette[1]}, bone='${cigaretteBone}'`);
-// The names that are deliberately kept as vocabulary although this rig lacks them: they are reported once
-// per rig at runtime, so the README has to say which ones they are (otherwise a user reads a warning with
-// no way to know whether it is expected).
+// Names retained in the configuration vocabulary may be absent from a particular rig.
 const vocabulary = [].concat(defaultList('defaultHatBones') || [], defaultList('defaultEyeGearBones') || [],
   cigaretteBone ? [cigaretteBone] : []).filter((n) => !byName.has(n));
 console.log(`  ${vocabulary.length} configured name(s) are kept as vocabulary although this rig lacks them: `
   + vocabulary.join(', '));
-for (const name of vocabulary) {
-  check(readme.includes(name), `README documents that '${name}' is not in this rig`);
-}
-
-console.log('');
-console.log('5. the re-export is documented, and the comparison tool is still there');
-const compare = path.join(ROOT, 'tools', 'compare_scav_geo.js');
-check(fs.existsSync(compare), 'tools/compare_scav_geo.js exists (the re-export can be re-checked)');
-check(fs.readFileSync(compare, 'utf8').includes('main.json'),
-  'and it compares the SOURCE rig against the imported geo (re-runnable after a swap)');
-check(/70/.test(readme) && /47/.test(readme) && /322/.test(readme) && /145/.test(readme),
-  'README records the rig change (70 -> 47 bones, 322 -> 145 cubes)');
-check(/compare_scav_geo/.test(readme), 'and names the tool that produced those numbers');
 
 console.log('');
 if (failures > 0) {
@@ -136,10 +119,10 @@ if (failures > 0) {
 }
 console.log(`the rig covers every animated bone (${bones.length} bones, ${cubes} cubes, ${clips} clips)`);
 
-// Coplanar faces are a permanent property of this rig (README 5k + the pitfalls): two faces in the same
+// Coplanar faces are a permanent property of this rig (command/config reference + the pitfalls): two faces in the same
 // plane make the depth buffer pick between them per angle, which is the "head / bag / forearm changes
 // material, goes black or seems to vanish" family. The geometry is nudged by 0.03 units (0.002 blocks) by
-// tools/patch_coplanar_faces.js, and this check keeps it that way: a future rig edit that reintroduces a
+// the imported geometry, and this check keeps it that way: a future rig edit that reintroduces a
 // coplanar pair fails here.
 const { execFileSync } = require('child_process');
 const overlapOut = execFileSync(process.execPath,

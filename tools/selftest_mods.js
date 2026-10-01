@@ -1,4 +1,4 @@
-// The random attachment pool, "改枪王" (README 5p).
+// The random attachment pool, "改枪王".
 //
 //   node tools/selftest_mods.js
 //
@@ -34,7 +34,7 @@ const brain = strip(read('gun/GunBrain.java'));
 const loot = read('gun/GunLoot.java');
 const config = read('Config.java');
 const commands = read('command/ModCommands.java');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 
 console.log('1. legality is TaCZ\'s answer, not a table of ours');
 check(/igun\.allowAttachmentType\(gun, type\)/.test(modsCode),
@@ -214,12 +214,9 @@ for (const key of ['MODS_ENABLED', 'MODS_PER_SLOT_CHANCE', 'MODS_FULL_MOD_CHANCE
 }
 check(/\.push\("mods"\)/.test(config), 'the keys live in their own [mods] section');
 for (const key of ['perSlotChance', 'fullModChance', 'maxPerGun', 'allowExtendedMag', 'enabled']) {
-  check(readme.includes(key), `README documents mods.${key}`);
+  check(referenceDoc.includes(key), `command/config reference documents mods.${key}`);
 }
-check(/### 5p\./.test(readme), 'README has the 5p section');
-check(/allowAttachment/.test(readme) && /installAttachment/.test(readme),
-  'and documents that TaCZ answers the legality question');
-check(/capacityOf|重读/.test(readme), 'and the re-read capacity rule');
+
 check(/Commands\.literal\("mods"\)/.test(commands) && /testMods/.test(commands),
   '/tarkovscav test mods exists');
 check(/GunAttachments\.describe\(held\)/.test(commands), 'and it reports the attachments it finds');
@@ -330,12 +327,9 @@ check(/private static void logAvailability\(AttachmentType type, int count\)/.te
   'the six availability INFO lines are printed only when the number CHANGES (no log spam)');
 check(/if \(!Config\.MODS_ENABLED\.get\(\) \|\| gun\.isEmpty\(\)\) \{\s*return 0;/.test(modsCode),
   'mods.enabled = false stays inert: nothing is scanned and nothing is installed');
-check(/attachment index/.test(readme) && /test mods/.test(readme)
-  && /registry-scan/.test(readme),
-  'and README explains the pool, the index, the diagnostic command and its two numbers');
 
 console.log('');
-console.log('8. scripted-gun protection (README 5p, the hamster:win1894 crash)');
+console.log('8. scripted-gun protection (command/config reference, the hamster:win1894 crash)');
 // The crash: a gun pack's Lua runs inside TaCZ's own tick (ModernKineticGunItem.tickBolt), so a script that
 // throws takes the server down and we cannot catch it. The only structural defence is to keep such a gun out
 // of a mob's hands. This section pins the judgement, the pool filter, the runtime guard and the defaults.
@@ -351,7 +345,7 @@ check(/GunData data = index\.get\(\)\.getGunData\(\);/.test(safety) && /data\.ge
 check(/TimelessAPI\.getCommonGunIndex\(gunId\)/.test(safety),
   'looked up by gun id through TimelessAPI');
 // CommonGunIndex#getScript() returns org.luaj.vm2.LuaTable, and luaj is not a compile-time dependency here
-// (TaCZ is compileOnly) - so that call must NOT appear, or the build breaks. README says so out loud.
+// (TaCZ is compileOnly) - so that call must NOT appear, or the build breaks. command/config reference says so out loud.
 check(!/LuaTable/.test(safety),
   'the LuaTable-typed CommonGunIndex#getScript() is deliberately not called (luaj is not on our classpath)');
 check(/public static boolean isBlocked\(@Nullable ResourceLocation gunId\)/.test(safety)
@@ -426,17 +420,6 @@ check(/ScriptedGuns\.describe\(10\)/.test(commands) && /kept out of the pool/.te
   '/tarkovscav test mods prints the blocked list');
 check(/GunPool\.rejectedByScript\(\)/.test(commands) && /scripted-gun rule kept out/.test(commands),
   'and /tarkovscav gunpool says how many the rule removed and which');
-check(/excludeScriptedGuns/.test(readme) && /trustedScriptNamespaces/.test(readme)
-  && /scriptedGunRescanTicks/.test(readme),
-  'README documents all three keys');
-check(/LuaError/.test(readme) && /hamster/.test(readme) && /tickBolt/.test(readme),
-  'and records the crash it exists for (the LuaError, the script id, TaCZ\'s tick)');
-check(/230/.test(readme) && /105/.test(readme) && /79/.test(readme) && /20 /.test(readme),
-  'with the instance-level numbers (230 guns / 105 scripted / 79 blocked by default, 20 of the default 47)');
-check(/GunpowderRevolution|hamster/.test(readme) && /echoes_of_ruin/.test(readme),
-  'and the per-pack breakdown that came out of tools/gunpack_script_scan.ps1');
-check(/luaj/.test(readme) && /LuaTable/.test(readme),
-  'and the honest note about the LuaTable accessor we cannot call');
 
 console.log('');
 console.log('9. guns.respectDeclaredFireModes: the gun\'s own data file decides the fire mode');
@@ -489,14 +472,6 @@ check(/\.define\("respectDeclaredFireModes", false\)/.test(config),
   'guns.respectDeclaredFireModes ships false (flipping it would silently re-balance every world)');
 check(/public static boolean respectDeclaredFireModes\(\)/.test(config),
   'it has an accessor, like every other key');
-check(/respectDeclaredFireModes/.test(readme), 'README documents guns.respectDeclaredFireModes');
-check(/firemode_scan\.ps1/.test(readme), 'README names the instance audit that produced the numbers');
-check(/api:getFireMode\(\) == AUTO/.test(readme) && /rapid_bolt_time/.test(readme),
-  'and records the crash chain: the script\'s AUTO branch reading a field win1894 does not define');
-check(/win1894/.test(readme) && /fire_mode/.test(readme) && /\[semi\]/.test(readme),
-  'including what win1894 actually declares');
-check(/122/.test(readme) && /108/.test(readme) && /114/.test(readme) && /230/.test(readme),
-  'and the verified instance numbers (230 guns, 108 declare auto, 122 forced today, 114 -> SEMI)');
 
 console.log('');
 if (failures > 0) {

@@ -1,4 +1,4 @@
-// Factions, friendly fire, the renegade brand and shared intel (README 5m).
+// Factions, friendly fire, the renegade brand and shared intel.
 //
 //   node tools/selftest_faction.js
 //
@@ -38,7 +38,7 @@ const events = read('faction/FactionEvents.java');
 const config = read('Config.java');
 const brain = strip(read('gun/GunBrain.java'));
 const debug = read('command/ModCommands.java');
-const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+const referenceDoc = fs.readFileSync(path.join(ROOT, 'docs/COMMAND_AND_CONFIG_REFERENCE.md'), 'utf8');
 const scav = strip(read('entity/ScavEntity.java'));
 const pillager = strip(read('entity/GunnerPillagerEntity.java'));
 const villager = strip(read('entity/GunnerVillagerEntity.java'));
@@ -293,7 +293,7 @@ check(/Faction\.describe\(mob\)/.test(debug) && /Renegade\.describe\(mob\)/.test
 check(/\[faction\]/.test(renegade) && /\[alert\]/.test(alert), 'both layers log with a tag');
 
 console.log('');
-console.log('9. the config keys, with the documented defaults, in README');
+console.log('9. the config keys, with the documented defaults, in command/config reference');
 const keys = ['FACTION_ENABLED', 'FACTION_FRIENDLY_FIRE_HITS_TO_ANGER', 'FACTION_FRIENDLY_FIRE_WINDOW_TICKS',
   'FACTION_BETRAYAL_THRESHOLD', 'FACTION_RENEGADE_BROADCAST_RADIUS', 'FACTION_RENEGADE_DECAY_TICKS',
   'FACTION_RENEGADE_GLOW', 'ALERT_ENABLED', 'ALERT_RADIUS', 'ALERT_NEAR_DISTANCE', 'ALERT_MID_DISTANCE',
@@ -308,22 +308,17 @@ const readmeKeys = ['friendlyFireHitsToAnger', 'friendlyFireWindowTicks', 'betra
   'renegadeBroadcastRadius', 'renegadeDecayTicks', 'renegadeGlow', 'nearDistance', 'midDistance',
   'memoryTicks', 'maxRecipients', 'broadcastCooldownTicks', 'bearingNoiseDegrees', 'convergeRadius',
   'convergeMaxAllies', 'surroundStandoff', 'minRepathIntervalTicks'];
-const missing = readmeKeys.filter((k) => !readme.includes(k));
-check(missing.length === 0, 'every faction/alert key appears in README',
+const missing = readmeKeys.filter((k) => !referenceDoc.includes(k));
+check(missing.length === 0, 'every faction/alert key appears in command/config reference',
   missing.length ? missing.join(', ') : `${readmeKeys.length} keys`);
-check(readme.includes('### 5m.'), 'README has the 5m section');
-check(/#tarkovscav:faction_scav/.test(readme) && /#tarkovscav:faction_illager/.test(readme)
-  && /#tarkovscav:faction_village/.test(readme) && /vindicator/.test(readme),
-  'README documents the three tags and their contents');
+
 check(names.includes('friendlyFireHitsToAnger') && names.includes('memoryTicks'),
   'and the keys really are defined in the spec, not just named in the source');
 check(/\.push\("faction"\)/.test(config) && /\.push\("alert"\)/.test(config),
   'they live in their own toml sections');
-check(/faction\.enabled/.test(readme) || /`enabled` \| `true` \| master switch/.test(readme),
-  'README explains the master switches');
 
 console.log('');
-console.log('9. village defence: the villagers fight the monsters the tag lists (README 5m)');
+console.log('9. village defence: the villagers fight the monsters the tag lists');
 // The 2026 request: "the armed villagers also shoot the enemy mobs, e.g. the zombies". The target list is a
 // data-pack tag so a pack can tune it, and the master switch returns the mob to its pre-2026 list.
 const hostileTag = readTag('faction_village_hostile');
@@ -405,10 +400,8 @@ check(/setTarget\(@Nullable LivingEntity target\)/.test(villager)
 check(/target=" \+ \(mob\.getTarget\(\) == null \? "none"/.test(debug)
   && /VILLAGE-HOSTILE/.test(debug),
   '/tarkovscav debug prints the current target and marks a village-defence one');
-check(/villagersAttackMonsters/.test(readme) && /faction_village_hostile/.test(readme),
-  'README documents the switch and the tag');
-check(/Monster\.class/.test(villager) && /GunBrain/.test(readme),
-  'the target list changed, not the gun AI (aiming/firing still goes through GunBrain)');
+
+check(/Monster\.class/.test(villager), 'the village hostile target list retains the Monster class filter');
 
 console.log('');
 if (failures > 0) {

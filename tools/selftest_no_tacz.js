@@ -1,4 +1,4 @@
-// TaCZ is optional (README 5ac). The mod has to LOAD and FIGHT in a pack that does not have TaCZ installed,
+// TaCZ is optional. The mod has to LOAD and FIGHT in a pack that does not have TaCZ installed,
 // and the whole reason that is delicate is Java's lazy class resolution:
 //
 //   * a method that names a TaCZ type may never be EXECUTED without TaCZ, and
@@ -190,44 +190,17 @@ check(config.includes('vanilla skeletons never run out of arrows'),
   'Config.GUNS_FALLBACK_ARROWS says the shot does not consume the stack');
 check(fallback.includes('a vanilla skeleton never runs out of arrows either'),
   'FallbackEquipment says the same thing in the same words');
-const readme = readRoot('README.md');
-const heading = '### 5ac. ';
-const sectionStart = readme.indexOf(heading);
-check(sectionStart > 0, `README has the section "${heading.trim()}"`);
-const section = sectionStart < 0 ? '' : readme.slice(sectionStart, readme.indexOf('\n### ', sectionStart + 4));
-check(section.includes('fallbackWeapon') && section.includes('fallbackArrows'),
-  'that section documents both config keys');
-check(section.includes('getMobArrow'),
-  'that section states the cosmetic-arrow fact with the vanilla method name');
-check(section.includes('requireTacz') || section.includes('\u62d2\u7edd'),
-  'that section states that TaCZ-only commands refuse cleanly (Chinese for "refuse")');
-const intro = readRoot('docs/\u6a21\u7ec4\u4ecb\u7ecd.md');
-check(intro.includes('TaCZ') && intro.includes('\u53ef\u9009'),
-  'docs intro says TaCZ is optional (Chinese for "optional")');
+
 const wiki = readRoot('docs/COMMAND_AND_CONFIG_REFERENCE.md');
 check(wiki.includes('guns.fallbackWeapon') && wiki.includes('guns.fallbackArrows'),
   'the wiki reference documents both keys');
-
-// A stale section number is how a re-pointed reference rots, so the old one is pinned as gone.
-const staleRefs = [];
-for (const file of javaFiles(JAVA).concat([path.join(ROOT, 'src/main/resources/META-INF/mods.toml')])) {
-  const text = fs.readFileSync(file, 'utf8');
-  for (const old of ['No TaCZ (README 5x)', 'WHEN TaCZ IS NOT INSTALLED (README 5x)',
-    'bow/crossbow fallback (README 5x)', 'TaCZ is OPTIONAL since 2026-10 (README 5x)']) {
-    if (text.includes(old)) {
-      staleRefs.push(`${path.basename(file)}: ${old}`);
-    }
-  }
-}
-check(staleRefs.length === 0, 'no no-TaCZ reference still points at the old README section 5x',
-  staleRefs.join(' | '));
 
 // ---------------------------------------------------------------------------------------------
 console.log('');
 console.log('WHAT THIS FILE CANNOT CHECK (by design, so nothing here pretends otherwise):');
 console.log('  * that the game actually launches and plays without TaCZ. The dev classpath always has TaCZ,');
 console.log('    so TaczPresence.loaded() is true in every automated run; the only real test is a pack with');
-console.log('    the mod and no TaCZ on a client. That is user-verified, and README 5ac says so.');
+console.log('    the mod and no TaCZ on a client.');
 console.log('  * that a bow-armed unit aims well or that the fallback feels balanced. Not measurable here.');
 
 console.log('');
