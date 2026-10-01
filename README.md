@@ -6,17 +6,17 @@
 
 一个为 Minecraft 制作的武装生物与城市战斗模组。
 
-[![Build](https://github.com/EdDYON/Egg-ArmedMobs/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/EdDYON/Egg-ArmedMobs/actions/workflows/build.yml) ![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-62B47A) ![Forge](https://img.shields.io/badge/Forge-47.x-E04E14) ![Java](https://img.shields.io/badge/Java-17-ED8B00)
+[![Build](https://github.com/glsegg/ArmedMobs/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/glsegg/ArmedMobs/actions/workflows/build.yml) ![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-62B47A) ![Forge](https://img.shields.io/badge/Forge-47.x-E04E14) ![Java](https://img.shields.io/badge/Java-17-ED8B00)
 
 </div>
 
 Minecraft **1.20.1 / Forge 47.x** 模组，包含武装生物、城市结构、城市废土维度及阵营战斗。
-本仓库维护自 [glsegg/ArmedMobs](https://github.com/glsegg/ArmedMobs) 的 Fork。
+项目仓库：[glsegg/ArmedMobs](https://github.com/glsegg/ArmedMobs)。
 内部模组 ID 为 `tarkovscav`，保持现有存档与配置兼容。
 
 ## 安装
 
-使用 `armedmobs-0.1.0.jar`，并安装兼容 1.20.1 的 **GeckoLib 4.7+**。
+使用 `armedmobs-0.1.0.jar`，并安装兼容 1.20.1 的 **GeckoLib 4.8.4+**。
 **TaCZ 1.1.7+** 为可选运行依赖；未安装时，单位使用原版弓或弩。
 客户端与服务端使用相同的模组和依赖版本。
 第三方语音文件不随公开仓库提供，缺少的语音不会播放。
@@ -41,5 +41,5 @@ Minecraft **1.20.1 / Forge 47.x** 模组，包含武装生物、城市结构、�
 - `gradle/`、`gradlew*` 和 Gradle 配置：编译与开发启动所需文件。
 
 主命令 `/armedmobs`，兼容别名 `/tarkovscav`；配置文件为 `config/tarkovscav-common.toml`。
-问题反馈请使用本仓库的 [Issues](https://github.com/EdDYON/Egg-ArmedMobs/issues)。
+问题反馈请使用本仓库的 [Issues](https://github.com/glsegg/ArmedMobs/issues)。
 代码和素材的许可沿用原项目及各自权利人的授权，当前模组元数据为 `All Rights Reserved`。

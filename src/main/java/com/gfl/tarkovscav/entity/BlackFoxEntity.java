@@ -5,8 +5,6 @@ import com.gfl.tarkovscav.faction.Faction;
 import com.gfl.tarkovscav.grenade.GrenadeKind;
 import com.gfl.tarkovscav.grenade.MobGrenades;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -22,7 +20,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.core.animation.AnimatableManager;
 import software.bernie.geckolib.core.animation.AnimationController;
@@ -48,7 +45,6 @@ public class BlackFoxEntity extends ScavEntity {
     }
 
     private static final String TAG_VARIANT = "BlackFoxVariant";
-    private static final String TAG_AMMO = "BlackFoxAmmo";
     private static final EntityDataAccessor<Integer> VARIANT =
             SynchedEntityData.defineId(BlackFoxEntity.class, EntityDataSerializers.INT);
     private final Role role;
@@ -171,37 +167,12 @@ public class BlackFoxEntity extends ScavEntity {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putInt(TAG_VARIANT, getCosmeticVariant());
-        ListTag ammo = new ListTag();
-        for (int slot = 0; slot < this.ammoInventory().getContainerSize(); slot++) {
-            ItemStack stack = this.ammoInventory().getItem(slot);
-            if (!stack.isEmpty()) {
-                CompoundTag item = stack.save(new CompoundTag());
-                item.putInt("Slot", slot);
-                ammo.add(item);
-            }
-        }
-        tag.put(TAG_AMMO, ammo);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.entityData.set(VARIANT, Math.max(0, Math.min(1, tag.getInt(TAG_VARIANT))));
-        if (com.gfl.tarkovscav.gun.TaczPresence.loaded() && !this.level().isClientSide
-                && tag.contains(TAG_AMMO, Tag.TAG_LIST) && this.gunBrain().loadout() != null
-                && this.gunBrain().loadout().gunId().toString().equals(tag.getString(TAG_GUN))) {
-            // Restore after the inherited weapon initialization. If the gun pack disappeared and the
-            // brain issued a different gun, retain that gun's matching ammunition instead.
-            this.ammoInventory().clear();
-            ListTag ammo = tag.getList(TAG_AMMO, Tag.TAG_COMPOUND);
-            for (int i = 0; i < ammo.size(); i++) {
-                CompoundTag item = ammo.getCompound(i);
-                int slot = item.getInt("Slot");
-                if (slot >= 0 && slot < this.ammoInventory().getContainerSize()) {
-                    this.ammoInventory().setItem(slot, ItemStack.of(item));
-                }
-            }
-        }
     }
 
     @Override

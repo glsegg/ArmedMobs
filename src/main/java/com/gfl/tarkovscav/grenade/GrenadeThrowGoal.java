@@ -141,7 +141,11 @@ public class GrenadeThrowGoal extends Goal {
         // The old 3.0 spread made a straight-line throw feel organic; with it back, the solved direction is
         // only an average again and a lob can clip the very wall it was aimed over.
         grenade.shoot(direction.x, direction.y, direction.z, (float) speed, 0.0F);
-        this.mob.level().addFreshEntity(grenade);
+        if (!this.mob.level().addFreshEntity(grenade)) {
+            // Another mod can reject the projectile's join event; the grenade is still in the pouch.
+            this.retryCooldown = Config.MOB_GRENADE_RETRY_COOLDOWN_TICKS.get();
+            return;
+        }
         MobGrenades.take(this.mob, kind);
         this.cooldown = Config.MOB_GRENADE_COOLDOWN_TICKS.get();
         this.user.asMob().swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
@@ -232,6 +236,11 @@ public class GrenadeThrowGoal extends Goal {
             return false;
         }
         double radius = Config.MOB_GRENADE_ALLY_SAFETY_RADIUS.get();
+        // A best-effort arc can hit the wall beside its own thrower when requireClearArc is disabled.
+        // The thrower is excluded from the ally count below, but must still be safe from the landing.
+        if (this.mob.position().distanceToSqr(landing) <= radius * radius) {
+            return false;
+        }
         int allowed = Config.MOB_GRENADE_ALLY_SAFETY_MAX.get();
         List<LivingEntity> nearby = GrenadeEntity.candidates(level, landing, radius);
         int allies = 0;

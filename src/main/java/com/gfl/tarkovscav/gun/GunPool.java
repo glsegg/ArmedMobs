@@ -47,6 +47,12 @@ public final class GunPool {
     }
 
     public static synchronized void invalidate() {
+        // A pack can change a gun's declared script without changing its id.
+        ScriptedGuns.invalidate();
+        if (TaczPresence.loaded()) {
+            // Replacing attachments without changing the index size must also drop cached candidates.
+            GunAttachments.invalidate();
+        }
         built = false;
         BY_TIER.clear();
         TYPES.clear();
@@ -57,7 +63,7 @@ public final class GunPool {
 
     /** All gun ids TaCZ currently knows, keyed to their type, before any config filtering. */
     private static synchronized void build() {
-        if (built) {
+        if (built || !TaczPresence.loaded()) {
             return;
         }
         built = true;
@@ -117,6 +123,9 @@ public final class GunPool {
     }
 
     public static Optional<CommonGunIndex> index(ResourceLocation gunId) {
+        if (!TaczPresence.loaded()) {
+            return Optional.empty();
+        }
         return TimelessAPI.getCommonGunIndex(gunId);
     }
 
@@ -214,6 +223,9 @@ public final class GunPool {
      * no answer" and is never cached: TaCZ may not have loaded the pack yet.
      */
     public static List<FireMode> declaredFireModes(ResourceLocation gunId) {
+        if (!TaczPresence.loaded()) {
+            return List.of();
+        }
         return TimelessAPI.getCommonGunIndex(gunId)
                 .map(index -> index.getGunData().getFireModeSet())
                 .filter(list -> list != null && !list.isEmpty())
@@ -284,6 +296,10 @@ public final class GunPool {
 
     /** Logs what the pool looks like for this world - the first thing to read when a mob has no gun. */
     public static synchronized void logSummary() {
+        if (!TaczPresence.loaded()) {
+            TarkovScav.LOGGER.info(TaczPresence.describe());
+            return;
+        }
         build();
         if (TYPES.isEmpty() && rejectedByFilter == 0) {
             TarkovScav.LOGGER.warn("TaCZ gun index is empty - no guns available. Is the TaCZ gun pack loaded?");

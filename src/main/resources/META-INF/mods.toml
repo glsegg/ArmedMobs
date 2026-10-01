@@ -24,10 +24,7 @@ description='''${mod_description}'''
     ordering="NONE"
     side="BOTH"
 
-# GeckoLib is embedded into this jar, so this dependency is satisfied out of the box.
-# The range is intentionally wide (the sources are verified to compile against 4.7 - 4.8.4):
-# a modpack that ships a slightly older GeckoLib should NOT hard-crash the game at startup.
-# If the player's copy is older than the bundled one, Forge's jarJar uses the bundled copy.
+# The normal jar requires an installed GeckoLib. Only the optional jarJar build embeds it.
 [[dependencies.${mod_id}]]
     modId="geckolib"
     mandatory=true

@@ -41,6 +41,10 @@ final class PillagerAnimationFallback {
         }
 
         return switch (name) {
+            // The legacy rig has no authored death clip. Keep the normal renderer's death
+            // rotation for the entity's remaining 20 ticks without retrying a missing animation.
+            case "death" -> new Animation(name, 20.0D, Animation.LoopType.PLAY_ONCE,
+                    new BoneAnimation[0], NO_EVENTS);
             // The legacy "aiming" and "firing" clips rotate the arms and torso. Aliasing those here
             // would take ownership away from the already calibrated RigSupport code poses. An explicit
             // no-track clip lets that fallback keep owning the arms without Gecko retrying a missing clip

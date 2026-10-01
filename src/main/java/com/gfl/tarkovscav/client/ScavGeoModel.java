@@ -109,7 +109,7 @@ public class ScavGeoModel extends GeoModel<ScavEntity> {
      * {@link RigSupport#supplyMolangVariables}), so the author's Molang keyframes evaluate against the
      * look direction GeckoLib already computed for this frame rather than against 0.
      */
-    private void supplyMolang(ScavEntity animatable, AnimationState<ScavEntity> state) {
+    protected void supplyMolang(ScavEntity animatable, AnimationState<ScavEntity> state) {
         EntityModelData modelData = state == null ? null : state.getData(DataTickets.ENTITY_MODEL_DATA);
         RigSupport.supplyMolangVariables(animatable, modelData == null ? 0.0F : modelData.netHeadYaw(),
                 modelData == null ? 0.0F : modelData.headPitch());
@@ -133,6 +133,10 @@ public class ScavGeoModel extends GeoModel<ScavEntity> {
         if (modelData == null) {
             return;
         }
+        applyAimTracking(animatable, instanceId, modelData);
+    }
+
+    protected void applyAimTracking(ScavEntity animatable, long instanceId, EntityModelData modelData) {
         RigSupport.applyAimTracking(this, animatable, instanceId, modelData.netHeadYaw(), modelData.headPitch(),
                 RigSupport.isAiming(animatable), RigSupport.gunAiState(animatable));
     }

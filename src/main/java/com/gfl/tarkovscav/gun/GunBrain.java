@@ -698,9 +698,6 @@ public final class GunBrain {
             transition(GunAiState.IDLE);
             return;
         }
-        // Remembered only while it can actually see something: that memory is what a blinded mob sprays at.
-        this.lastKnownTargetPos = target.position();
-
         // README 5aa: a fresh target means a fresh reaction delay, and the state machine goes back to
         // ALERT - the existing "I have just seen you" state - so a SCAV cannot fire for 0.6-1.2 s and
         // "surprised" needs no state of its own.
@@ -715,6 +712,16 @@ public final class GunBrain {
         // no-ops for a tier whose profile does not coordinate (SCAV, SNIPER).
         this.squad.tick(level, target);
         applyFocusFire(level, target);
+        // Focus fire may have changed the actual target. Range, memory and this tick's aim must all
+        // describe that target rather than the entity selected before the squad decision.
+        target = this.mob.getTarget();
+        if (target == null || !target.isAlive()) {
+            transition(GunAiState.IDLE);
+            return;
+        }
+        if (seesTarget(target)) {
+            this.lastKnownTargetPos = target.position();
+        }
 
         this.stateTicks++;
         if (this.watchdogTicks > 0) {
@@ -900,6 +907,8 @@ public final class GunBrain {
                 ? this.mob.tickCount + AiProfile.retreatHoldTicks(this.mob)
                 : 0;
         this.shotsInBurst = 0;
+        this.aimTicks = next == GunAiState.AIM && this.loadout != null
+                ? AiProfile.aimTicks(this.mob, this.loadout.tier()) : 0;
         this.watchdogTicks = 0;
         this.suppressTicks = 0;
         this.peekTicks = 0;
@@ -1421,6 +1430,9 @@ public final class GunBrain {
             log("{} burst of {} done with the target EXPOSED, holding the trigger (pause {}, gun tier {})",
                     name(), this.shotsInBurst, this.burstPause, gunCooldown);
             transition(GunAiState.AIM);
+            // This is one continuous exposed-target burst; keep the trigger down through TaCZ's
+            // own shot cooldown instead of adding a fresh fairness window between its rounds.
+            this.aimTicks = 0;
             return;
         }
         if (this.magazine() <= 0) {
@@ -1451,7 +1463,7 @@ public final class GunBrain {
             decide(level, target);
             return;
         }
-        if (this.suppressTicks == 0) {
+        if (this.stateTicks == 1) {
             this.suppressTicks = AiProfile.suppressTicks(this.mob);
             this.burstTarget = burstSize(true);
             this.mob.getLookControl().setLookAt(
@@ -1460,7 +1472,9 @@ public final class GunBrain {
             log("{} suppressing {}", name(), fmt(this.tactics.lastKnownTarget()));
         }
         if (this.suppressTicks-- <= 0) {
-            decide(level, target);
+            // A rejected shot must not pin the suppressor here forever. decide() may choose
+            // SUPPRESS again, which neither resets the state nor yields a fresh firing position.
+            transition(GunAiState.REPOSITION);
             return;
         }
 

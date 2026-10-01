@@ -43,7 +43,10 @@ public final class TaczPresence {
     public static boolean loaded() {
         if (loaded == null) {
             ModList modList = ModList.get();
-            loaded = modList != null && modList.isLoaded("tacz");
+            if (modList == null) {
+                return false; // Startup has not supplied a mod list yet; do not cache this provisional answer.
+            }
+            loaded = modList.isLoaded("tacz");
         }
         return loaded;
     }

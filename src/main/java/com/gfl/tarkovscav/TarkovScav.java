@@ -41,8 +41,8 @@ import java.util.stream.Stream;
  *
  * <p>Two third-party mods matter here and they are treated very differently:</p>
  * <ul>
- *   <li><b>GeckoLib</b> is bundled into the jar with jarJar (see build.gradle), so players do not
- *       have to install it; if their own copy is older than the bundled one, Forge uses ours.</li>
+ *   <li><b>GeckoLib</b> is required separately by the normal jar. The optional jarJar build
+ *       embeds it (see build.gradle).</li>
  *   <li><b>TaCZ</b> is an optional dependency that is deliberately <em>not</em> bundled and <em>not</em>
  *       redistributed. It is a 57 MB third-party mod that supplies every gun, magazine and bullet
  *       this mod fires. Without it, units use the configured bow/crossbow fallback.</li>
@@ -56,8 +56,8 @@ public class TarkovScav {
     /** TaCZ's mod id - the mod we integrate with but never ship. */
     public static final String TACZ_MOD_ID = "tacz";
 
-    /** Must match geckolib_bundled_version in gradle.properties. */
-    public static final String BUNDLED_GECKOLIB_VERSION = "4.8.4";
+    /** Must match the compilation dependency in gradle.properties. */
+    public static final String COMPILED_GECKOLIB_VERSION = "4.8.4";
 
     public TarkovScav() {
         // GeckoLib must be initialised before any animatable is registered.
@@ -132,11 +132,11 @@ public class TarkovScav {
 
         ModList.get().getModContainerById("geckolib").ifPresent(container -> {
             ArtifactVersion loaded = container.getModInfo().getVersion();
-            ArtifactVersion bundled = new DefaultArtifactVersion(BUNDLED_GECKOLIB_VERSION);
-            if (loaded.compareTo(bundled) < 0) {
+            ArtifactVersion compiled = new DefaultArtifactVersion(COMPILED_GECKOLIB_VERSION);
+            if (loaded.compareTo(compiled) < 0) {
                 LOGGER.warn("GeckoLib {} is loaded, but this build was compiled against {}."
                                 + " It should still work - update GeckoLib if animations look wrong.",
-                        loaded, BUNDLED_GECKOLIB_VERSION);
+                        loaded, COMPILED_GECKOLIB_VERSION);
             } else {
                 LOGGER.info("GeckoLib {} detected", loaded);
             }
@@ -172,9 +172,7 @@ public class TarkovScav {
 
             if (geckoLibs.size() > 1) {
                 LOGGER.warn("Found {} GeckoLib jars in {}: {}", geckoLibs.size(), modsDir, geckoLibs);
-                LOGGER.warn("Forge keeps only one of them and it may not be the newest."
-                        + " Keep a single GeckoLib jar - or none at all, since this mod already bundles GeckoLib {}.",
-                        BUNDLED_GECKOLIB_VERSION);
+                LOGGER.warn("Keep a single GeckoLib jar that satisfies this mod's declared version range.");
             }
         } catch (IOException exception) {
             LOGGER.debug("Could not inspect the mods folder {}: {}", modsDir, exception.toString());

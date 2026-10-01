@@ -366,6 +366,7 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
             GunLoadout loadout = this.gunBrain().loadout();
             if (loadout != null) {
                 tag.putString(TAG_GUN, loadout.gunId().toString());
+                this.ammoInventory().saveTo(tag, loadout);
             }
         }
     }
@@ -394,11 +395,13 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
             GunLoadout loadout = gunId == null || !com.gfl.tarkovscav.gun.TaczPresence.loaded() ? null : GunPool.loadoutFor(this.tier, gunId);
             if (loadout != null) {
                 this.gunBrain().restoreLoadout(loadout);
+                this.ammoInventory().restoreFrom(tag, this.gunBrain().loadout());
                 return;
             }
         }
         if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
             this.gunBrain().equip(this.getRandom());
+            this.ammoInventory().restoreFrom(tag, this.gunBrain().loadout());
         } else if (!tag.contains("HandItems")
                 || (!this.getMainHandItem().is(net.minecraft.world.item.Items.BOW)
                 && !this.getMainHandItem().is(net.minecraft.world.item.Items.CROSSBOW))) {

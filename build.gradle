@@ -52,6 +52,8 @@ minecraft {
             // ---------------------------------------------------------------------------------
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+            // Loose development classes have no release manifest from which Mixin can read this.
+            args '--mixin.config', 'tarkovscav.mixins.json'
 
             mods {
                 "${mod_id}" {
@@ -79,7 +81,7 @@ minecraft {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
-    // GeckoLib's official maven (used both for compilation and for the bundled jar).
+    // GeckoLib's official maven (development dependency and optional jarJar task).
     maven {
         name = 'GeckoLib'
         url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
@@ -102,8 +104,8 @@ repositories {
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
-    // GeckoLib is compiled against AND embedded into the shipped jar (see jarJar below),
-    // so players do not have to install it separately.
+    // The normal jar requires a separately installed GeckoLib. The optional jarJar task
+    // can embed it; `jar` and the release build do not run that task.
     implementation fg.deobf("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_bundled_version}")
 
     jarJar(group: 'software.bernie.geckolib', name: "geckolib-forge-${minecraft_version}", version: "${geckolib_bundled_range}") {
@@ -125,8 +127,7 @@ dependencies {
     runtimeOnly fg.deobf("maven.modrinth:${tacz_project}:${tacz_artifact_version}")
 }
 
-// Embed the declared jarJar dependencies (GeckoLib) into the built jar. TaCZ is NOT a jarJar
-// dependency, so it is not embedded - by design.
+// Enable the optional jarJar task. The normal `jar` task stays unbundled; TaCZ is never embedded.
 jarJar.enable()
 
 tasks.named('processResources', ProcessResources).configure {
@@ -155,6 +156,7 @@ tasks.named('jar', Jar).configure {
                 'Implementation-Title'    : project.name,
                 'Implementation-Version'  : project.jar.archiveVersion,
                 'Implementation-Vendor'   : mod_authors,
+                'MixinConfigs'           : 'tarkovscav.mixins.json',
                 'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
