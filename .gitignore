@@ -62,3 +62,6 @@ tools/spike/work/citycopy/
 # (`assets/tarkovscav/sounds.json`, `assets/tarkovscav/voice_clips.txt`, `voice_levels.json`), so the
 # pack can be rebuilt as soon as the audio is supplied again. See `docs/素材说明.md`.
 *.ogg
+
+# ---------- run outputs: the suite's own comment warns that a test creates these here ----------
+/logs/
