@@ -65,3 +65,7 @@ tools/spike/work/citycopy/
 
 # ---------- run outputs: the suite's own comment warns that a test creates these here ----------
 /logs/
+
+# ---------- the development tooling, self-tests and spike rigs: kept on the dev machine, never published ----------
+# (2026-10-01: the published repository is the mod only; README still documents these paths for developers)
+tools/

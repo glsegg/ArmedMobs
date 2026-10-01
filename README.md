@@ -36,7 +36,8 @@ only spawn **inside city areas**. The Scav rig is the user's own YSM model, impo
 | City gate | `world/CityGate.java`, `world/CitySpawnEvents.java` | structure ids/tags + explicit boxes |
 | City preset | `data/tarkovscav/structures/city_small.nbt` | 48 × 26 × 48 ruined city block, 4 buildings, street, alley, roof access |
 | Commands | `command/ModCommands.java` | `/tarkovscav …`, including the head-less fight harness |
-| Tools | `tools/` | model importer, analysis, city generator, self-tests, RCON workflow |
+| Tools | `tools/` (not in this repository) | model importer, analysis, city generator, self-tests, RCON workflow. The repository ships the MOD only: every path this README names under `tools/` is a development-machine path, kept out of the published tree on purpose (2026-10-01) |
+| Published tree | `src/`, `assets_source/`, `Scav/`, `docs/`, `mods/`, `gradle*`, `build.gradle`, `settings.gradle` | what a clone of this repository actually contains |
 
 **TaCZ is optional and is never bundled.** Without it, units use the configured bow/crossbow fallback.
 The development jar lives in `libs/` (gitignored) and is pulled in as `compileOnly` + `runtimeOnly`.
