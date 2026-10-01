@@ -43,10 +43,9 @@ import java.util.stream.Stream;
  * <ul>
  *   <li><b>GeckoLib</b> is bundled into the jar with jarJar (see build.gradle), so players do not
  *       have to install it; if their own copy is older than the bundled one, Forge uses ours.</li>
- *   <li><b>TaCZ</b> is a hard dependency that is deliberately <em>not</em> bundled and <em>not</em>
+ *   <li><b>TaCZ</b> is an optional dependency that is deliberately <em>not</em> bundled and <em>not</em>
  *       redistributed. It is a 57 MB third-party mod that supplies every gun, magazine and bullet
- *       this mod fires. {@code mods.toml} declares it mandatory so a missing TaCZ fails loudly at
- *       load instead of at the first shot.</li>
+ *       this mod fires. Without it, units use the configured bow/crossbow fallback.</li>
  * </ul>
  */
 @Mod(TarkovScav.MOD_ID)
@@ -143,12 +142,12 @@ public class TarkovScav {
             }
         });
 
-        // TaCZ is mandatory, so by the time this runs it is present; log the version we integrate with
-        // because the gun-data format has changed between releases more than once.
+        // Log the integration version or the active fallback, since TaCZ is optional.
         ModList.get().getModContainerById(TACZ_MOD_ID).ifPresentOrElse(
                 container -> LOGGER.info("TaCZ {} detected - guns come from its index at runtime",
                         container.getModInfo().getVersion()),
-                () -> LOGGER.error("TaCZ is missing! mods.toml requires it; gun AI cannot work."));
+                () -> LOGGER.info("TaCZ is not installed - {}",
+                        com.gfl.tarkovscav.gun.FallbackEquipment.describe()));
 
         warnAboutDuplicateGeckoLibJars();
     }

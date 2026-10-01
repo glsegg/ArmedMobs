@@ -680,11 +680,12 @@
 * **按城 × 按阵营**：数的是「刷怪点所在城市盒」内的、与该单位同阵营的持枪单位。所以一座割据城市可以各容纳 N 个双方单位，拉锯才看得懂，而不是一面墙。
 * **计数方式与代价**：一次 `getEntitiesOfClass` 覆盖城市盒，结果按 `dimension|city|faction` 缓存 `cityFactionCapCountTicks`（默认 20 tick = 1 秒）。窗口内还会把**本窗口已经放行过**的数量加进去，这样一串刷怪笼不会各自看到同一个过期数字而一起穿过上限。代价：每个城×阵营每 20 tick 一次查询，热路径上一次哈希查找；关掉总开关就完全跳过。
   * 这个「已放行」计数会**略微多算**（放行后又在流水线后面失败的那些），方向是**更少**单位（正是这个键的目的），并在下一次重新计数时自动归零。
-* **豁免**：刷怪蛋与 `/summon`（也就是「玩家手动放的」）。`cityFactionCapIgnoreManual = true` 才会连它们一起限。
+* **豁免**：刷怪蛋与 `/summon`（也就是「玩家手动放的」）。`cityFactionCapIgnoreManual = true` 才会连它们一起限；此开关独立于 `gateCommandSpawns`，通过 `FinalizeSpawn` 检查刷怪蛋与普通 `/summon`。带实体 NBT、跳过 `finalizeSpawn` 的 `/summon` 不经过这条检查。
 * **两个维度都生效**：这是性能护栏，不是占领玩法的一部分，所以**不**判断 `Level.OVERWORLD`——废土正是刷怪笼堆人的地方。（占领战本身仍然只在主世界。）
 * **不碰世界**：被拒绝的刷新只是「不生成」，既不删怪也不改写/熄灭刷怪笼方块，整个功能可逆。类里没有任何 `setBlock` / `discard` / `kill` / `remove` 调用，门禁按「不存在」断言。
 * **三条刷怪路径**：自然刷怪与刷怪笼在 1.20.1 是**同一个** `MobSpawnEvent.PositionCheck`（见 5.1 与 README 7p 的反汇编证据），所以一条判定覆盖两条；第三条是驻军，它直接放单位，所以 `CityGarrison.spawn` 里逐单位问一次。
 * **诊断**：`/armedmobs spawncap` 打印生效配置 + 每个「已测量过的城×阵营」的 `live` / `acceptedThisWindow` / 是否已到上限。它**只读缓存**（每次敲命令都扫一遍世界本身就是它要修的那种卡顿）；`/armedmobs spawncap reset` 只清掉测量结果，下一次刷怪尝试会重新数，不碰世界。
+* **读档隔离**：计数按实际服务端世界实例保存；世界卸载与服务器关闭会清除缓存，同维度、同名城市的新存档不会沿用旧存档的刷怪计数。
 * **一个真实踩到的坑（写进代码注释与测试里）**：第一版 `stale()` 直接做 `now - countedAt`，而缓存初值是 `Long.MIN_VALUE` → **溢出成负数** → 永远判「未过期」→ 首次计数永不发生、窗口的「已放行」永不归零 → 一旦到上限，那座城会**永久拒绝**所有刷新。`tools/spike/SpawnCapTest.java` 里「never counted: always stale」那一条直接抓到了它（现在显式判断 `countedAt == Long.MIN_VALUE` 与「时钟倒退」两种情况）。
 
 

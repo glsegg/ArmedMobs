@@ -14,6 +14,10 @@ public final class ModItems {
     public static final DeferredRegister<Item> ITEMS =
             DeferredRegister.create(ForgeRegistries.ITEMS, TarkovScav.MOD_ID);
 
+    /** Display-only emblem: used by the creative tab, with no recipe, loot, or tab listing. */
+    public static final RegistryObject<Item> CREATIVE_TAB_ICON = ITEMS.register("creative_tab_icon",
+            () -> new Item(new Item.Properties().stacksTo(1)));
+
     public static final RegistryObject<Item> SCAV_SPAWN_EGG = ITEMS.register("scav_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.SCAV, 0x4B5D3A, 0x23261F, new Item.Properties()));
 

@@ -25,9 +25,8 @@ import org.jetbrains.annotations.Nullable;
  * spawns, spawners and structure spawns all take.</p>
  *
  * <p>{@link MobSpawnEvent.FinalizeSpawn} is only used for the manual cases ({@code /summon}, spawn
- * egg), and only when {@code spawn.gateCommandSpawns} asks for them to be gated too - by default a
- * server operator can always place one by hand to debug, which matters a lot while a city is being
- * built.</p>
+ * egg). City gating and the faction cap each have an independent manual-spawn switch; by default a
+ * server operator can always place one by hand to debug.</p>
  */
 public final class CitySpawnEvents {
     private CitySpawnEvents() {
@@ -81,8 +80,8 @@ public final class CitySpawnEvents {
         // unit (a spawn egg, /summon) is exempt unless spawn.cityFactionCapIgnoreManual says otherwise. Placed
         // after the capture veto so a spent faction is still refused by the decisive rule first, and before the
         // purity block because it is cheaper (a hash lookup, no ledger read).
-        if ((!manual || Config.CITY_FACTION_CAP_IGNORE_MANUAL.get())
-                && event.getLevel() instanceof ServerLevel capLevel) {
+        // Manual spawns use FinalizeSpawn below. Counting them in both callbacks would reserve twice.
+        if (!manual && event.getLevel() instanceof ServerLevel capLevel) {
             if (CitySpawnCap.vetoSpawn(capLevel,
                     BlockPos.containing(event.getX(), event.getY(), event.getZ()), mob, event.getSpawnType())) {
                 event.setResult(Event.Result.DENY);
@@ -144,21 +143,30 @@ public final class CitySpawnEvents {
 
     @SubscribeEvent
     public static void onFinalizeSpawn(MobSpawnEvent.FinalizeSpawn event) {
-        Mob mob = event.getEntity();
-        Boolean cityOnly = cityOnlyFor(mob);
-        if (cityOnly == null || !cityOnly || !Config.GATE_COMMAND_SPAWNS.get()) {
+        if (event.isSpawnCancelled()) {
             return;
         }
+        Mob mob = event.getEntity();
         if (!isManualSpawn(event.getSpawnType()) || !(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
 
         BlockPos pos = BlockPos.containing(event.getX(), event.getY(), event.getZ());
-        CityGate.Result result = CityGate.test(level, pos);
-        log(mob, event.getSpawnType(), pos, result);
-        if (!result.allowed()) {
+        Boolean cityOnly = cityOnlyFor(mob);
+        if (Boolean.TRUE.equals(cityOnly) && Config.GATE_COMMAND_SPAWNS.get()) {
+            CityGate.Result result = CityGate.test(level, pos);
+            log(mob, event.getSpawnType(), pos, result);
+            if (!result.allowed()) {
+                event.setSpawnCancelled(true);
+                mob.discard();
+                return;
+            }
+        }
+        // Spawn eggs and ordinary /summon call finalizeSpawn directly, without PositionCheck.
+        // Apply this switch independently of the city-only gate, after any gate refusal.
+        if (Config.CITY_FACTION_CAP_IGNORE_MANUAL.get()
+                && CitySpawnCap.vetoSpawn(level, pos, mob, event.getSpawnType())) {
             event.setSpawnCancelled(true);
-            // This event only skips Mob#finalizeSpawn; nothing downstream removes the entity, so do it.
             mob.discard();
         }
     }

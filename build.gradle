@@ -105,7 +105,7 @@ dependencies {
     }
 
     // ---------------------------------------------------------------------------------------
-    // TaCZ ("Timeless and Classics Zero") - a HARD dependency that is deliberately NOT bundled.
+    // TaCZ ("Timeless and Classics Zero") - an optional runtime dependency that is NOT bundled.
     //
     // The jar is the user's own download and lives in libs/ (which is .gitignore'd: it is a
     // 57 MB third-party mod, not our content). It is only needed to compile against the API

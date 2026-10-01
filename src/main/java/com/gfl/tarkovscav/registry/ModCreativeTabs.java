@@ -16,7 +16,7 @@ public final class ModCreativeTabs {
     public static final RegistryObject<CreativeModeTab> MAIN = TABS.register("main",
             () -> CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0)
                     .title(Component.translatable("itemGroup.tarkovscav"))
-                    .icon(() -> new ItemStack(ModItems.SCAV_SPAWN_EGG.get()))
+                    .icon(() -> new ItemStack(ModItems.CREATIVE_TAB_ICON.get()))
                     .displayItems((parameters, output) -> {
                         output.accept(ModItems.SCAV_SPAWN_EGG.get());
                         output.accept(ModItems.GUNNER_PILLAGER_SPAWN_EGG.get());

@@ -38,9 +38,9 @@ only spawn **inside city areas**. The Scav rig is the user's own YSM model, impo
 | Commands | `command/ModCommands.java` | `/tarkovscav …`, including the head-less fight harness |
 | Tools | `tools/` | model importer, analysis, city generator, self-tests, RCON workflow |
 
-**TaCZ is a hard dependency and is never bundled.** `mods.toml` declares `tacz` mandatory; the jar
-lives in `libs/` (gitignored) and is pulled in as `compileOnly` + `runtimeOnly`. GeckoLib *is*
-bundled through `jarJar`.
+**TaCZ is optional and is never bundled.** Without it, units use the configured bow/crossbow fallback.
+The development jar lives in `libs/` (gitignored) and is pulled in as `compileOnly` + `runtimeOnly`.
+GeckoLib *is* bundled through `jarJar` in the `-all.jar` artifact.
 
 **No third-party art or audio is shipped.** The YSM model's geometry, animation and texture are the
 user's; the author's `avatar/*.png` and `sounds/*.ogg` (some of which is audio from other games) stay
@@ -4175,7 +4175,7 @@ Build the city into the dev world block by block over RCON:
 
 ## 9. TaCZ version tolerance (1.1.7 and 1.1.8)
 
-`mods.toml` declares `tacz` as `mandatory=true` with `versionRange="[1.1.7,)"`, so **both the 1.1.7
+`mods.toml` declares `tacz` as `mandatory=false` with `versionRange="[1.1.7,)"`, so **both the 1.1.7
 release and the 1.1.8 hotfix satisfy it** (and so does anything newer). The build compiles against
 1.1.8 because that is the jar in `libs/`, but every API member this mod touches was checked with
 `javap` against the user's `tacz-1.20.1-1.1.7-release.jar` and found **byte-identical**:

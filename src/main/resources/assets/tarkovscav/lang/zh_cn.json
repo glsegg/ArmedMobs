@@ -1,8 +1,7 @@
 {
   "itemGroup.tarkovscav": "武装暴徒",
+  "item.tarkovscav.creative_tab_icon": "武装生物徽章",
   "key.categories.tarkovscav": "武装暴徒",
-  "key.tarkovscav.lean_left": "向左歪头（按住）",
-  "key.tarkovscav.lean_right": "向右歪头（按住）",
   "tarkovscav.killfeed.environment": "环境",
   "tarkovscav.killfeed.weapon.item": "武器",
   "tarkovscav.killfeed.weapon.fists": "赤手空拳",
