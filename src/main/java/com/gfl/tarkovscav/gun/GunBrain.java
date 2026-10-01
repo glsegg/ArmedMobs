@@ -420,7 +420,7 @@ public final class GunBrain {
             return;
         }
         ScavTier tier = this.user.scavTier();
-        GunLoadout rolled = GunPool.rollLoadout(tier, random);
+        GunLoadout rolled = GunPool.rollLoadout(tier, random, this.user.preferredGunTypes());
         if (rolled == null) {
             if (this.loadout != null) {
                 TarkovScav.LOGGER.warn("{}: no gun available for tier {} - TaCZ index empty or fully filtered",
@@ -1411,7 +1411,7 @@ public final class GunBrain {
      * hands the decision back to {@link #decide}.</p>
      */
     private void finishBurst() {
-        int gunCooldown = Config.tier(this.loadout.tier()).burstCooldownTicks.get();
+        int gunCooldown = AiProfile.burstCooldownTicks(this.mob, this.loadout.tier());
         boolean keepFiring = this.exposedNow
                 && this.magazine() > 0
                 && AiProfile.exposedRuleApplies(AiProfile.exposedBurstShots(this.mob),
@@ -1528,7 +1528,7 @@ public final class GunBrain {
         if (magazine > 0) {
             // Loaded (TaCZ finished, or the magazine was never actually empty).
             transition(GunAiState.AIM);
-            this.aimTicks = Config.tier(this.loadout.tier()).aimTicks.get() / 2;
+            this.aimTicks = AiProfile.aimTicks(this.mob, this.loadout.tier()) / 2;
             return;
         }
 
@@ -1647,7 +1647,7 @@ public final class GunBrain {
 
         if (this.stateTicks == 1) {
             this.relocateTicks = Math.max(AiProfile.repositionTicks(this.mob),
-                    Config.tier(this.loadout.tier()).burstCooldownTicks.get());
+                    AiProfile.burstCooldownTicks(this.mob, this.loadout.tier()));
             // If we are standing in the open, cover first; if we are already hidden, move laterally
             // until we can see the target again (the peek-out). README 5aa: a tier that rarely uses
             // cover (a scav) skips the cover-seeking half of this and just takes a new firing position.
@@ -1678,7 +1678,7 @@ public final class GunBrain {
                 transition(GunAiState.RETREAT);
             } else {
                 transition(GunAiState.AIM);
-                this.aimTicks = Config.tier(this.loadout.tier()).aimTicks.get() / 3;
+                this.aimTicks = AiProfile.aimTicks(this.mob, this.loadout.tier()) / 3;
             }
         }
     }

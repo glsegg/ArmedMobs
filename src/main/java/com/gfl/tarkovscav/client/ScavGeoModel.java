@@ -124,7 +124,7 @@ public class ScavGeoModel extends GeoModel<ScavEntity> {
         if (rebaked || this.configuredGeneration != RigSupport.configGeneration()) {
             this.hiddenOn = baked;
             this.configuredGeneration = RigSupport.configGeneration();
-            RigSupport.hideReferenceProps(this, animatable);
+            configureVisibility(animatable);
         }
 
         warnAboutMissingClips(animatable);
@@ -135,6 +135,10 @@ public class ScavGeoModel extends GeoModel<ScavEntity> {
         }
         RigSupport.applyAimTracking(this, animatable, instanceId, modelData.netHeadYaw(), modelData.headPitch(),
                 RigSupport.isAiming(animatable), RigSupport.gunAiState(animatable));
+    }
+
+    protected void configureVisibility(ScavEntity animatable) {
+        RigSupport.hideReferenceProps(this, animatable);
     }
 
     /**

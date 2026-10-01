@@ -3,6 +3,7 @@ package com.gfl.tarkovscav.faction;
 import com.gfl.tarkovscav.Config;
 import com.gfl.tarkovscav.TarkovScav;
 import com.gfl.tarkovscav.entity.ScavEntity;
+import com.gfl.tarkovscav.entity.BlackFoxEntity;
 import com.gfl.tarkovscav.gun.GunUser;
 import com.gfl.tarkovscav.registry.ModEntities;
 import net.minecraft.core.registries.Registries;
@@ -37,7 +38,8 @@ import org.jetbrains.annotations.Nullable;
 public enum Faction {
     SCAV("faction_scav"),
     ILLAGER("faction_illager"),
-    VILLAGE("faction_village");
+    VILLAGE("faction_village"),
+    BLACKFOX("faction_blackfox");
 
     private final ResourceLocation tagId;
 
@@ -65,6 +67,9 @@ public enum Faction {
             if (type.is(faction.tag())) {
                 return faction;
             }
+        }
+        if (entity instanceof BlackFoxEntity) {
+            return BLACKFOX;
         }
         return fallback(type);
     }
@@ -171,6 +176,6 @@ public enum Faction {
 
     /** True for this mod's scavs specifically (the only faction with the betrayal rules, README 5m). */
     public static boolean isScav(@Nullable Entity entity) {
-        return entity instanceof ScavEntity;
+        return entity instanceof ScavEntity && !(entity instanceof BlackFoxEntity);
     }
 }

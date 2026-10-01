@@ -71,7 +71,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 public class ScavEntity extends Monster implements GeoEntity, GunUser,
         net.minecraft.world.entity.monster.RangedAttackMob {
     private static final String TAG_TIER = "TarkovScavTier";
-    private static final String TAG_GUN = "TarkovScavGun";
+    protected static final String TAG_GUN = "TarkovScavGun";
 
     /** Scoreboard tag that marks a mob as a practice target for the RCON tests. */
     public static final String DUMMY_TAG = "tarkovscav_dummy";
@@ -214,6 +214,8 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
         this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, Mob.class, 10, true, false,
                 candidate -> candidate != this && com.gfl.tarkovscav.faction.Renegade.is(candidate)));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Mob.class, 10, true, false,
+                candidate -> candidate instanceof BlackFoxEntity && this.canAttack(candidate)));
         // Practice targets: anything tagged tarkovscav_dummy. This is what the RCON verification
         // spawns instead of a real player, so the fight can be driven and observed head-lessly.
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true,
@@ -228,7 +230,8 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
                                         @Nullable CompoundTag dataTag) {
         SpawnGroupData data = super.finalizeSpawn(level, difficulty, reason, spawnData, dataTag);
 
-        this.tier = ScavTier.pickWeighted(this.getRandom());
+        ScavTier forced = forcedSpawnTier();
+        this.tier = forced != null ? forced : ScavTier.pickWeighted(this.getRandom());
         applyTierAttributes(true);
         if (com.gfl.tarkovscav.gun.TaczPresence.loaded()) {
             this.gunBrain().equip(this.getRandom());
@@ -239,8 +242,14 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
         return data;
     }
 
+    /** An equipment role may pin its tier; null retains the normal weighted scav gear roll. */
+    @Nullable
+    protected ScavTier forcedSpawnTier() {
+        return null;
+    }
+
     /** Per-tier health and armour, applied the moment the tier is known. */
-    private void applyTierAttributes(boolean heal) {
+    protected void applyTierAttributes(boolean heal) {
         Config.TierSettings settings = Config.tier(this.tier);
         if (this.getAttribute(Attributes.MAX_HEALTH) != null) {
             this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(settings.health.get());
@@ -365,7 +374,8 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         ScavTier saved = ScavTier.byId(tag.getString(TAG_TIER));
-        this.tier = saved == null ? ScavTier.RIFLE : saved;
+        ScavTier forced = forcedSpawnTier();
+        this.tier = forced != null ? forced : saved == null ? ScavTier.RIFLE : saved;
         // Preserve saved wounds; a /summon tag without Health still needs the tier's full spawn health.
         applyTierAttributes(!tag.contains("Health", 99));
         if (this.level().isClientSide) {

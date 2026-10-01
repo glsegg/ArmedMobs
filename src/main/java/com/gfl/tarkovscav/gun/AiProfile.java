@@ -1,6 +1,8 @@
 package com.gfl.tarkovscav.gun;
 
 import com.gfl.tarkovscav.Config;
+import com.gfl.tarkovscav.entity.BlackFoxEntity;
+import com.gfl.tarkovscav.entity.ScavTier;
 import com.gfl.tarkovscav.entity.BearPillagerEntity;
 import com.gfl.tarkovscav.entity.ElitePillagerEntity;
 import com.gfl.tarkovscav.entity.EliteVillagerEntity;
@@ -56,7 +58,9 @@ public final class AiProfile {
         /** USEC/BEAR troops: fast, cover to cover, strong suppression, coordinated. */
         TROOP("troop"),
         /** The elite pair: fastest reaction, short rushes, closest engagement, coordinated. */
-        ELITE("elite");
+        ELITE("elite"),
+        /** Black Fox: fast reaction and coordinated cover, independent of the existing elite troops. */
+        BLACKFOX("blackfox");
 
         private final String id;
 
@@ -92,6 +96,9 @@ public final class AiProfile {
      * fire. Anything this class has never heard of is SCAV - the safe, dumb default.
      */
     public static Tier tierFor(Mob mob) {
+        if (mob instanceof BlackFoxEntity) {
+            return Tier.BLACKFOX;
+        }
         if (mob instanceof EliteVillagerEntity || mob instanceof ElitePillagerEntity) {
             return Tier.ELITE;
         }
@@ -111,6 +118,17 @@ public final class AiProfile {
 
     private static Config.AiSettings settings(Mob mob) {
         return Config.ai(tierFor(mob));
+    }
+
+    /** Extra AI aim/burst pauses; TaCZ continues to enforce the gun's actual fire/reload speed. */
+    public static int aimTicks(Mob mob, ScavTier gunTier) {
+        int ticks = Config.tier(gunTier).aimTicks.get();
+        return active() ? scaleTicks(ticks, settings(mob).aimTicksScale.get()) : ticks;
+    }
+
+    public static int burstCooldownTicks(Mob mob, ScavTier gunTier) {
+        int ticks = Config.tier(gunTier).burstCooldownTicks.get();
+        return active() ? scaleTicks(ticks, settings(mob).burstCooldownScale.get()) : ticks;
     }
 
     // ------------------------------------------------------------------ reaction

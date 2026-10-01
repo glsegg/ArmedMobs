@@ -71,6 +71,11 @@ public final class Renegade {
         if (Faction.of(attacker) == null || Faction.of(attacker) != Faction.of(victim) || is(victim)) {
             return false;
         }
+        // Black Fox is a disciplined enemy squad: accidental crossfire must not dissolve its intel
+        // network or replace its combat target with a teammate. Existing factions retain their rules.
+        if (Faction.of(attacker) == Faction.BLACKFOX) {
+            return false;
+        }
         // Rule 5: a single retaliation is free.
         if (attacker.getLastHurtByMob() == victim) {
             return false;

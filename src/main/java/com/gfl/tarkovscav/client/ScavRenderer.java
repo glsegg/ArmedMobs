@@ -9,11 +9,15 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 public class ScavRenderer extends GeoEntityRenderer<ScavEntity> {
     public ScavRenderer(EntityRendererProvider.Context context) {
-        super(context, new ScavGeoModel());
+        this(context, new ScavGeoModel());
+    }
+
+    protected ScavRenderer(EntityRendererProvider.Context context, ScavGeoModel model) {
+        super(context, model);
 
         // No withScale(...) on purpose: the size is read per render (see scale() below), so
         // /tarkovscav client scale applies on the next frame instead of needing a restart.
-        this.shadowRadius = 0.5F * Config.renderScale();
+        this.shadowRadius = 0.5F * modelScale();
 
         // shows the TaCZ gun it is holding in its RightHand bone
         this.addRenderLayer(new GunInHandGeoLayer<>(this));
@@ -27,10 +31,14 @@ public class ScavRenderer extends GeoEntityRenderer<ScavEntity> {
      * of needing a restart (the old code baked the scale in at construction).
      */
     private void applyLiveScale() {
-        float scale = Config.renderScale();
+        float scale = modelScale();
         this.scaleWidth = scale;
         this.scaleHeight = scale;
         this.shadowRadius = 0.5F * scale;
+    }
+
+    protected float modelScale() {
+        return Config.renderScale();
     }
 
     /**

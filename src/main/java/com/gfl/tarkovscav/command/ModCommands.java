@@ -927,6 +927,10 @@ public final class ModCommands {
                 .then(Commands.argument("type", StringArgumentType.word())
                         .suggests((context, builder) -> {
                             builder.suggest("scav");
+                            builder.suggest("blackfox_assault");
+                            builder.suggest("blackfox_heavy");
+                            builder.suggest("blackfox_demolition");
+                            builder.suggest("blackfox_commander");
                             builder.suggest("gunner_pillager");
                             builder.suggest("gunner_villager");
                             builder.suggest("sniper_pillager");
@@ -964,6 +968,10 @@ public final class ModCommands {
                 : TarkovScav.id(resolved);
         EntityType<?> type = id == null ? null : ForgeRegistries.ENTITY_TYPES.getValue(id);
         if (type == null || !(type.equals(ModEntities.SCAV.get())
+                || type.equals(ModEntities.BLACKFOX_ASSAULT.get())
+                || type.equals(ModEntities.BLACKFOX_HEAVY.get())
+                || type.equals(ModEntities.BLACKFOX_DEMOLITION.get())
+                || type.equals(ModEntities.BLACKFOX_COMMANDER.get())
                 || type.equals(ModEntities.GUNNER_PILLAGER.get())
                 || type.equals(ModEntities.GUNNER_VILLAGER.get())
                 || type.equals(ModEntities.SNIPER_PILLAGER.get())
@@ -975,7 +983,8 @@ public final class ModCommands {
             source.sendFailure(Component.literal("Unknown mob '" + typeName
                     + "'; use 'scav', 'gunner_pillager', 'gunner_villager', 'sniper_pillager', 'sniper',"
                     + " 'sniper_villager', 'usec_villager', 'bear_pillager', 'elite_villager' or"
-                    + " 'elite_pillager'."));
+                    + " 'elite_pillager', 'blackfox_assault', 'blackfox_heavy', 'blackfox_demolition' or"
+                    + " 'blackfox_commander'."));
             return 0;
         }
 

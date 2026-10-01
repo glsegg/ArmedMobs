@@ -83,6 +83,10 @@ public final class ClientSetup {
     /** The one place where "this entity type gets this renderer" is decided. */
     private static void registerAll(EntityRenderersEvent.RegisterRenderers event) {
         renderer(event, ModEntities.SCAV, ScavRenderer::new);
+        renderer(event, ModEntities.BLACKFOX_ASSAULT, BlackFoxRenderer::new);
+        renderer(event, ModEntities.BLACKFOX_HEAVY, BlackFoxRenderer::new);
+        renderer(event, ModEntities.BLACKFOX_DEMOLITION, BlackFoxRenderer::new);
+        renderer(event, ModEntities.BLACKFOX_COMMANDER, BlackFoxRenderer::new);
 
         // The villager-bodied types render with the vanilla villager model/texture (see
         // GunnerVillagerRenderer) - there is no GeckoLib variant for villagers, which is the point of the mob.
@@ -121,7 +125,7 @@ public final class ClientSetup {
      * whether any entity type was left out.
      */
     private static <T extends Entity> void renderer(EntityRenderersEvent.RegisterRenderers event,
-                                                    RegistryObject<EntityType<T>> type,
+                                                    RegistryObject<? extends EntityType<? extends T>> type,
                                                     EntityRendererProvider<T> provider) {
         event.registerEntityRenderer(type.get(), provider);
         RENDERED.add(type.getId());

@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "tarkovscav:blackfox_assault",
+    "tarkovscav:blackfox_heavy",
+    "tarkovscav:blackfox_demolition",
+    "tarkovscav:blackfox_commander"
+  ]
+}
