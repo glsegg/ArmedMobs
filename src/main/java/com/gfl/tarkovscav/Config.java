@@ -2,6 +2,7 @@ package com.gfl.tarkovscav;
 
 import com.gfl.tarkovscav.client.PoseSource;
 import com.gfl.tarkovscav.entity.ScavTier;
+import com.gfl.tarkovscav.entity.BlackFoxEntity;
 import com.gfl.tarkovscav.gun.AiProfile;
 import com.gfl.tarkovscav.gun.GunAiState;
 import net.minecraft.util.Mth;
@@ -421,6 +422,8 @@ public final class Config {
 
     /** The intelligence tier knobs, keyed by {@link AiProfile.Tier} (README 5aa). */
     private static final Map<AiProfile.Tier, AiSettings> AI_TIERS = new EnumMap<>(AiProfile.Tier.class);
+    private static final Map<BlackFoxEntity.Role, BlackFoxSettings> BLACKFOX_ROLES =
+            new EnumMap<>(BlackFoxEntity.Role.class);
 
     // ------------------------------------------------------------------ the shipped mount baseline
     // ONE source of truth for the defaults: the spec below builds its keys from these, and
@@ -2998,6 +3001,12 @@ public final class Config {
         b.pop();
 
         b.pop();
+        b.comment("Black Fox enemies: role equipment and attributes; AI is configured under [ai.blackfox].")
+                .push("blackfox");
+        for (BlackFoxEntity.Role role : BlackFoxEntity.Role.values()) {
+            BLACKFOX_ROLES.put(role, new BlackFoxSettings(b, role));
+        }
+        b.pop();
         SPEC = b.build();
     }
 
@@ -3011,6 +3020,47 @@ public final class Config {
     /** The intelligence-tier knobs (README 5aa). Never null: every tier is built in the static block. */
     public static AiSettings ai(AiProfile.Tier tier) {
         return AI_TIERS.get(tier);
+    }
+
+    public static BlackFoxSettings blackFox(BlackFoxEntity.Role role) {
+        return BLACKFOX_ROLES.get(role);
+    }
+
+    public static final class BlackFoxSettings {
+        public final ForgeConfigSpec.DoubleValue health;
+        public final ForgeConfigSpec.DoubleValue armor;
+        public final ForgeConfigSpec.DoubleValue movementSpeed;
+        public final ForgeConfigSpec.IntValue grenades;
+
+        private BlackFoxSettings(ForgeConfigSpec.Builder b, BlackFoxEntity.Role role) {
+            b.push(role.id());
+            this.health = b.comment("Maximum health. Saved wounds are preserved on world reload.")
+                    .defineInRange("health", switch (role) {
+                        case ASSAULT -> 40.0D;
+                        case HEAVY -> 60.0D;
+                        case DEMOLITION -> 36.0D;
+                        case COMMANDER -> 44.0D;
+                    }, 1.0D, 1000.0D);
+            this.armor = b.comment("Vanilla armor points, without a second armor-class multiplier.")
+                    .defineInRange("armor", switch (role) {
+                        case ASSAULT -> 8.0D;
+                        case HEAVY -> 16.0D;
+                        case DEMOLITION -> 6.0D;
+                        case COMMANDER -> 10.0D;
+                    }, 0.0D, 30.0D);
+            this.movementSpeed = b.comment("Base walking speed attribute.")
+                    .defineInRange("movementSpeed", role == BlackFoxEntity.Role.HEAVY ? 0.25D : 0.31D,
+                            0.05D, 1.0D);
+            this.grenades = b.comment("Starting grenades, still limited by grenades.mob.maxPerMob.",
+                            "Demolition carries HE; the commander's first grenade is a flashbang.",
+                            "Issued once on spawn, not refilled by loading a saved entity.")
+                    .defineInRange("grenades", switch (role) {
+                        case ASSAULT, HEAVY -> 1;
+                        case DEMOLITION -> 2;
+                        case COMMANDER -> 2;
+                    }, 0, 16);
+            b.pop();
+        }
     }
 
     /**
@@ -3054,6 +3104,8 @@ public final class Config {
         public final ForgeConfigSpec.IntValue reactionMinTicks;
         public final ForgeConfigSpec.IntValue reactionMaxTicks;
         public final ForgeConfigSpec.DoubleValue accuracyScale;
+        public final ForgeConfigSpec.DoubleValue aimTicksScale;
+        public final ForgeConfigSpec.DoubleValue burstCooldownScale;
         public final ForgeConfigSpec.DoubleValue coverChance;
         public final ForgeConfigSpec.DoubleValue coverRadiusScale;
         public final ForgeConfigSpec.DoubleValue coverCacheScale;
@@ -3081,6 +3133,11 @@ public final class Config {
 
         private AiSettings(ForgeConfigSpec.Builder b, AiProfile.Tier tier) {
             b.comment("--- " + tier.id() + " tier ---").push(tier.id());
+            this.aimTicksScale = b.comment("Multiplies the gun tier's extra AI aim delay; gun mechanics stay unchanged.")
+                    .defineInRange("aimTicksScale", tier == AiProfile.Tier.BLACKFOX ? 0.35D : 1.0D, 0.0D, 3.0D);
+            this.burstCooldownScale = b.comment("Multiplies AI burst pauses, without bypassing TaCZ's gun RPM or reload.")
+                    .defineInRange("burstCooldownScale", tier == AiProfile.Tier.BLACKFOX ? 0.35D : 1.0D,
+                            0.0D, 3.0D);
             this.reactionMinTicks = b
                     .comment("Reaction time lower bound, in ticks (20 = 1 s). ABSOLUTE: while [ai]",
                             "enabled is true this replaces [combat] reactionTicks. The mob rolls a fresh",
@@ -3091,6 +3148,7 @@ public final class Config {
                         case SNIPER -> 16;
                         case TROOP -> 6;
                         case ELITE -> 4;
+                        case BLACKFOX -> 3;
                     }, 0, 200);
             this.reactionMaxTicks = b
                     .comment("Reaction time upper bound, in ticks. Set it equal to reactionMinTicks to",
@@ -3101,6 +3159,7 @@ public final class Config {
                         case SNIPER -> 30;
                         case TROOP -> 10;
                         case ELITE -> 8;
+                        case BLACKFOX -> 6;
                     }, 0, 400);
             this.accuracyScale = b
                     .comment("Multiplies the gun tier's accuracy before the accuracy profile clamps the",
@@ -3112,6 +3171,7 @@ public final class Config {
                         case SNIPER -> 1.0D;
                         case TROOP -> 1.0D;
                         case ELITE -> 1.05D;
+                        case BLACKFOX -> 1.4D;
                     }, 0.0D, 2.0D);
             this.coverChance = b
                     .comment("0..1. Chance that a cover decision (advancing, repositioning) actually",
@@ -3122,6 +3182,7 @@ public final class Config {
                         case SNIPER -> 1.0D;
                         case TROOP -> 0.90D;
                         case ELITE -> 0.75D;
+                        case BLACKFOX -> 0.95D;
                     }, 0.0D, 1.0D);
             this.coverRadiusScale = b
                     .comment("Multiplies tactics.coverSearchRadius. Scav 0.45 = a small radius (it only",
@@ -3132,6 +3193,7 @@ public final class Config {
                         case SNIPER -> 1.0D;
                         case TROOP -> 1.0D;
                         case ELITE -> 0.85D;
+                        case BLACKFOX -> 1.0D;
                     }, 0.1D, 3.0D);
             this.coverCacheScale = b
                     .comment("Multiplies tactics.coverCacheTicks. Scav 1.5 reuses a stale list longer (it",
@@ -3141,6 +3203,7 @@ public final class Config {
                         case SNIPER -> 1.0D;
                         case TROOP -> 1.0D;
                         case ELITE -> 0.75D;
+                        case BLACKFOX -> 0.75D;
                     }, 0.1D, 5.0D);
             this.suppressChanceScale = b
                     .comment("Multiplies tactics.suppressChance, clamped 0..1. Scav and sniper 0.0 = no",
@@ -3152,6 +3215,7 @@ public final class Config {
                         case SNIPER -> 0.0D;
                         case TROOP -> 1.6D;
                         case ELITE -> 1.0D;
+                        case BLACKFOX -> 1.4D;
                     }, 0.0D, 3.0D);
             this.suppressTicksScale = b
                     .comment("Multiplies tactics.suppressTicks. Troop 1.5 x 60 = 90 ticks = a long",
@@ -3161,6 +3225,7 @@ public final class Config {
                         case SNIPER -> 0.0D;
                         case TROOP -> 1.5D;
                         case ELITE -> 1.0D;
+                        case BLACKFOX -> 1.2D;
                     }, 0.0D, 5.0D);
             this.suppressAccuracyScale = b
                     .comment("Multiplies tactics.suppressAccuracyMultiplier (blind fire is inaccurate",
@@ -3171,6 +3236,7 @@ public final class Config {
                         case SNIPER -> 1.0D;
                         case TROOP -> 0.80D;
                         case ELITE -> 1.0D;
+                        case BLACKFOX -> 1.0D;
                     }, 0.05D, 2.0D);
             this.suppressBurstScale = b
                     .comment("Multiplies tactics.suppressBurstMultiplier. Scav 0.5 = short bursts only.",
@@ -3180,6 +3246,7 @@ public final class Config {
                         case SNIPER -> 1.0D;
                         case TROOP -> 1.2D;
                         case ELITE -> 1.0D;
+                        case BLACKFOX -> 1.25D;
                     }, 0.1D, 5.0D);
             this.advanceCoverScale = b
                     .comment("Multiplies tactics.advanceCoverStep (the minimum gain a cover spot must",
@@ -3191,6 +3258,7 @@ public final class Config {
                         case SNIPER -> 1.0D;
                         case TROOP -> 0.6D;
                         case ELITE -> 1.5D;
+                        case BLACKFOX -> 0.7D;
                     }, 0.0D, 5.0D);
             this.coverSeekSpeedScale = b
                     .comment("Multiplies tactics.coverSeekSpeedModifier. Elite 1.15 makes its rushes",
@@ -3201,6 +3269,7 @@ public final class Config {
                         case SNIPER -> 1.0D;
                         case TROOP -> 1.0D;
                         case ELITE -> 1.15D;
+                        case BLACKFOX -> 1.05D;
                     }, 0.5D, 3.0D);
             this.repositionScale = b
                     .comment("Multiplies combat.repositionTicks (how long a mob spends moving to a new",
@@ -3210,6 +3279,7 @@ public final class Config {
                         case SNIPER -> 1.0D;
                         case TROOP -> 0.6D;
                         case ELITE -> 0.5D;
+                        case BLACKFOX -> 0.45D;
                     }, 0.1D, 3.0D);
             this.retreatHealthScale = b
                     .comment("Multiplies combat.retreatHealthFraction (below it a mob breaks contact).",
@@ -3220,6 +3290,7 @@ public final class Config {
                         case SNIPER -> 0.6D;
                         case TROOP -> 1.0D;
                         case ELITE -> 0.7D;
+                        case BLACKFOX -> 1.0D;
                     }, 0.1D, 2.0D);
             this.engageRangeScale = b
                     .comment("Multiplies the gun tier's engageRange. Elite 0.6 = it closes to about",
@@ -3230,6 +3301,7 @@ public final class Config {
                         case SNIPER -> 1.0D;
                         case TROOP -> 1.0D;
                         case ELITE -> 0.6D;
+                        case BLACKFOX -> 1.0D;
                     }, 0.2D, 2.0D);
             this.holdPost = b
                     .comment("true = this tier holds its firing position instead of advancing when the",
@@ -3262,7 +3334,8 @@ public final class Config {
                     .comment("true = this tier takes part in the squad layer (focus fire, overwatch,",
                             "flanking, cover claims). Troop and elite ship true; scav and sniper",
                             "false - a sniper works alone and a scav cannot cooperate.")
-                    .define("coordination", tier == AiProfile.Tier.TROOP || tier == AiProfile.Tier.ELITE);
+                    .define("coordination", tier == AiProfile.Tier.TROOP || tier == AiProfile.Tier.ELITE
+                            || tier == AiProfile.Tier.BLACKFOX);
             this.partialCoverBonus = b
                     .comment("Extra score for a sniper post that is only PARTIALLY concealed (one of",
                             "eye/feet has line of sight blocked but not both) or that sits at least",
@@ -3311,6 +3384,7 @@ public final class Config {
                         case SNIPER -> 1;
                         case TROOP -> -1;
                         case ELITE -> -1;
+                        case BLACKFOX -> -1;
                     }, -1, 200);
             this.exposedBurstCooldownTicks = b
                     .comment("README 5ab. The pause AFTER a burst, while the target is exposed and in",
@@ -3333,6 +3407,7 @@ public final class Config {
                         case SNIPER -> -1;
                         case TROOP -> 0;
                         case ELITE -> 0;
+                        case BLACKFOX -> 0;
                     }, -1, 400);
             this.warmupShotsWhenExposed = b
                     .comment("README 5ab. The accuracy.warmupShots value that applies while the target is",
@@ -3356,6 +3431,7 @@ public final class Config {
                         case SNIPER -> -1;
                         case TROOP -> 0;
                         case ELITE -> 0;
+                        case BLACKFOX -> 0;
                     }, -1, 200);
             this.retreatHealthFraction = b
                     .comment("README 5ab. An ABSOLUTE health fraction (of max health) below which this",
@@ -3381,6 +3457,7 @@ public final class Config {
                         case SNIPER -> -1.0D;
                         case TROOP -> 0.5D;
                         case ELITE -> 0.55D;
+                        case BLACKFOX -> 0.35D;
                     }, -1.0D, 1.0D);
             this.hurtRetreatChance = b
                     .comment("README 5ab. The chance that ONE hit sends this tier into RETREAT, overriding",
@@ -3402,6 +3479,7 @@ public final class Config {
                         case SNIPER -> -1.0D;
                         case TROOP -> 0.8D;
                         case ELITE -> 0.85D;
+                        case BLACKFOX -> 0.65D;
                     }, -1.0D, 1.0D);
             this.retreatHoldTicks = b
                     .comment("README 5ab. Once this tier has broken contact and reached cover it stays",
@@ -3431,6 +3509,7 @@ public final class Config {
                         case SNIPER -> 60;
                         case TROOP -> 80;
                         case ELITE -> 60;
+                        case BLACKFOX -> 40;
                     }, 0, 600);
             b.pop();
         }

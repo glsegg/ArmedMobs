@@ -19,6 +19,10 @@ public final class ModCreativeTabs {
                     .icon(() -> new ItemStack(ModItems.CREATIVE_TAB_ICON.get()))
                     .displayItems((parameters, output) -> {
                         output.accept(ModItems.SCAV_SPAWN_EGG.get());
+                        output.accept(ModItems.BLACKFOX_ASSAULT_SPAWN_EGG.get());
+                        output.accept(ModItems.BLACKFOX_HEAVY_SPAWN_EGG.get());
+                        output.accept(ModItems.BLACKFOX_DEMOLITION_SPAWN_EGG.get());
+                        output.accept(ModItems.BLACKFOX_COMMANDER_SPAWN_EGG.get());
                         output.accept(ModItems.GUNNER_PILLAGER_SPAWN_EGG.get());
                         output.accept(ModItems.GUNNER_VILLAGER_SPAWN_EGG.get());
                         output.accept(ModItems.SNIPER_PILLAGER_SPAWN_EGG.get());

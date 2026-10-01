@@ -7,6 +7,7 @@ import com.gfl.tarkovscav.entity.BearPillagerEntity;
 import com.gfl.tarkovscav.entity.ElitePillagerEntity;
 import com.gfl.tarkovscav.entity.EliteVillagerEntity;
 import com.gfl.tarkovscav.entity.ScavEntity;
+import com.gfl.tarkovscav.entity.BlackFoxEntity;
 import com.gfl.tarkovscav.entity.UsecVillagerEntity;
 import com.gfl.tarkovscav.entity.SniperPillagerEntity;
 import com.gfl.tarkovscav.entity.SniperVillagerEntity;
@@ -40,6 +41,25 @@ public final class ModEntities {
                     .sized(0.6F, 1.9F)
                     .clientTrackingRange(12)
                     .build(TarkovScav.id("scav").toString()));
+
+    public static final RegistryObject<EntityType<BlackFoxEntity>> BLACKFOX_ASSAULT =
+            blackFox("blackfox_assault", BlackFoxEntity.Role.ASSAULT);
+    public static final RegistryObject<EntityType<BlackFoxEntity>> BLACKFOX_HEAVY =
+            blackFox("blackfox_heavy", BlackFoxEntity.Role.HEAVY);
+    public static final RegistryObject<EntityType<BlackFoxEntity>> BLACKFOX_DEMOLITION =
+            blackFox("blackfox_demolition", BlackFoxEntity.Role.DEMOLITION);
+    public static final RegistryObject<EntityType<BlackFoxEntity>> BLACKFOX_COMMANDER =
+            blackFox("blackfox_commander", BlackFoxEntity.Role.COMMANDER);
+
+    private static RegistryObject<EntityType<BlackFoxEntity>> blackFox(String id, BlackFoxEntity.Role role) {
+        return ENTITY_TYPES.register(id,
+                () -> EntityType.Builder.<BlackFoxEntity>of(
+                                (type, level) -> new BlackFoxEntity(type, level, role), MobCategory.MONSTER)
+                        // The helmet extends past the body; the body must still fit city doorways.
+                        .sized(0.75F, 1.95F)
+                        .clientTrackingRange(12)
+                        .build(TarkovScav.id(id).toString()));
+    }
 
     public static final RegistryObject<EntityType<GunnerPillagerEntity>> GUNNER_PILLAGER =
             ENTITY_TYPES.register("gunner_pillager",
@@ -166,6 +186,10 @@ public final class ModEntities {
     }
     private static void onEntityAttributes(EntityAttributeCreationEvent event) {
         event.put(SCAV.get(), ScavEntity.createScavAttributes().build());
+        event.put(BLACKFOX_ASSAULT.get(), ScavEntity.createScavAttributes().build());
+        event.put(BLACKFOX_HEAVY.get(), ScavEntity.createScavAttributes().build());
+        event.put(BLACKFOX_DEMOLITION.get(), ScavEntity.createScavAttributes().build());
+        event.put(BLACKFOX_COMMANDER.get(), ScavEntity.createScavAttributes().build());
         // The gunner keeps the vanilla pillager's attribute set; the tier only overwrites
         // health and armour at spawn time (see GunnerPillagerEntity#applyTierAttributes).
         event.put(GUNNER_PILLAGER.get(), Pillager.createAttributes().build());
@@ -202,6 +226,14 @@ public final class ModEntities {
 
     public static void registerSpawnPlacements() {
         SpawnPlacements.register(SCAV.get(), SpawnPlacements.Type.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkAnyLightMonsterSpawnRules);
+        SpawnPlacements.register(BLACKFOX_ASSAULT.get(), SpawnPlacements.Type.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkAnyLightMonsterSpawnRules);
+        SpawnPlacements.register(BLACKFOX_HEAVY.get(), SpawnPlacements.Type.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkAnyLightMonsterSpawnRules);
+        SpawnPlacements.register(BLACKFOX_DEMOLITION.get(), SpawnPlacements.Type.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkAnyLightMonsterSpawnRules);
+        SpawnPlacements.register(BLACKFOX_COMMANDER.get(), SpawnPlacements.Type.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkAnyLightMonsterSpawnRules);
         SpawnPlacements.register(GUNNER_PILLAGER.get(), SpawnPlacements.Type.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkAnyLightMonsterSpawnRules);

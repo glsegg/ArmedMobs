@@ -250,7 +250,7 @@ public final class KillFeedHud implements IGuiOverlay {
             return GREY;
         }
         return switch (faction) {
-            case SCAV, ILLAGER -> 0xFF6B6B;
+            case SCAV, ILLAGER, BLACKFOX -> 0xFF6B6B;
             case VILLAGE -> 0x7BE07B;
         };
     }

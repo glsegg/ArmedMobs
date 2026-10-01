@@ -19,7 +19,7 @@ public final class FactionTierProfile {
     /** The profile override for a mob, or null when the normal by-type rule should decide. */
     @Nullable
     public static AccuracyProfile.Profile profileFor(Mob mob) {
-        if (mob instanceof EliteVillagerEntity || mob instanceof ElitePillagerEntity) {
+        if (mob instanceof BlackFoxEntity || mob instanceof EliteVillagerEntity || mob instanceof ElitePillagerEntity) {
             return AccuracyProfile.Profile.ELITE;
         }
         if (mob instanceof UsecVillagerEntity || mob instanceof BearPillagerEntity) {

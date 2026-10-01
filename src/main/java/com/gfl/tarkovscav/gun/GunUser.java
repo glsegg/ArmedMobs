@@ -37,6 +37,11 @@ public interface GunUser {
     /** Assigns the tier. Called from {@code finalizeSpawn}; re-rolls the gear on the next tick. */
     void setScavTier(ScavTier tier);
 
+    /** Optional role preference within the tier pool; an empty set keeps the whole pool. */
+    default java.util.Set<String> preferredGunTypes() {
+        return java.util.Set.of();
+    }
+
     /**
      * Pushes the current gun pose to the client so the animation controllers can pick a clip. Every
      * implementation backs this with the {@link GunPose.Keys} it created for its own class.

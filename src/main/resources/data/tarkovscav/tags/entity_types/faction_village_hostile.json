@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
+    "#tarkovscav:faction_blackfox",
     "#minecraft:raiders",
     "#minecraft:skeletons",
     "minecraft:zombie",

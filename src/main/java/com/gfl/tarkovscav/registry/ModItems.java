@@ -21,6 +21,19 @@ public final class ModItems {
     public static final RegistryObject<Item> SCAV_SPAWN_EGG = ITEMS.register("scav_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.SCAV, 0x4B5D3A, 0x23261F, new Item.Properties()));
 
+    public static final RegistryObject<Item> BLACKFOX_ASSAULT_SPAWN_EGG = ITEMS.register("blackfox_assault_spawn_egg",
+            () -> new com.gfl.tarkovscav.item.FactionSpawnEggItem(ModEntities.BLACKFOX_ASSAULT,
+                    0x222830, 0x8A967C, new Item.Properties()));
+    public static final RegistryObject<Item> BLACKFOX_HEAVY_SPAWN_EGG = ITEMS.register("blackfox_heavy_spawn_egg",
+            () -> new com.gfl.tarkovscav.item.FactionSpawnEggItem(ModEntities.BLACKFOX_HEAVY,
+                    0x222830, 0x747C85, new Item.Properties()));
+    public static final RegistryObject<Item> BLACKFOX_DEMOLITION_SPAWN_EGG = ITEMS.register("blackfox_demolition_spawn_egg",
+            () -> new com.gfl.tarkovscav.item.FactionSpawnEggItem(ModEntities.BLACKFOX_DEMOLITION,
+                    0x222830, 0xB07848, new Item.Properties()));
+    public static final RegistryObject<Item> BLACKFOX_COMMANDER_SPAWN_EGG = ITEMS.register("blackfox_commander_spawn_egg",
+            () -> new com.gfl.tarkovscav.item.FactionSpawnEggItem(ModEntities.BLACKFOX_COMMANDER,
+                    0x222830, 0xC4AD68, new Item.Properties()));
+
     public static final RegistryObject<Item> GUNNER_PILLAGER_SPAWN_EGG = ITEMS.register("gunner_pillager_spawn_egg",
             () -> new ForgeSpawnEggItem(ModEntities.GUNNER_PILLAGER, 0x5A5F6B, 0x8C2F2F, new Item.Properties()));
 

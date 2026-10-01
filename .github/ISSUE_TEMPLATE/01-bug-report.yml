@@ -1,0 +1,68 @@
+name: Bug 报告
+description: 报告武装生物的崩溃、行为错误或兼容性问题。
+title: "[Bug] "
+body:
+  - type: input
+    id: mod_version
+    attributes:
+      label: 模组版本
+      placeholder: 例如 armedmobs-0.1.0.jar 或 commit SHA
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Minecraft / Forge / Java
+      placeholder: 例如 Minecraft 1.20.1、Forge 47.4.23、Java 17
+    validations:
+      required: true
+  - type: input
+    id: dependencies
+    attributes:
+      label: GeckoLib / TaCZ 版本
+      placeholder: 例如 GeckoLib 4.8.4、TaCZ 1.1.8-hotfix；未安装 TaCZ 请注明
+    validations:
+      required: true
+  - type: input
+    id: render_environment
+    attributes:
+      label: Embeddium / Oculus / 光影包
+      placeholder: 填写版本及光影是否启用；未安装请注明
+  - type: dropdown
+    id: side
+    attributes:
+      label: 发生环境
+      options:
+        - 单人游戏
+        - 局域网联机
+        - 独立服务端
+        - 客户端启动或渲染
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题描述
+      description: 说明预期结果和实际结果。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |-
+        1. 进入……
+        2. 生成或装备……
+        3. 观察到……
+    validations:
+      required: true
+  - type: textarea
+    id: entity_and_weapon
+    attributes:
+      label: 涉及的生物、枪械和枪包
+      description: 渲染或持枪问题请填写实体名称或 ID、枪械 ID、枪包版本和左右手；可附截图。
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志、崩溃报告和其他模组
+      description: 可拖入 latest.log、完整崩溃报告或截图，并说明关闭光影后的结果。上传前移除敏感信息。

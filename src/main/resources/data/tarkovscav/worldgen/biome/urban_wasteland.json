@@ -39,6 +39,30 @@
   "spawners": {
     "monster": [
       {
+        "type": "tarkovscav:blackfox_assault",
+        "weight": 1,
+        "minCount": 2,
+        "maxCount": 3
+      },
+      {
+        "type": "tarkovscav:blackfox_heavy",
+        "weight": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "tarkovscav:blackfox_demolition",
+        "weight": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
+        "type": "tarkovscav:blackfox_commander",
+        "weight": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      {
         "type": "tarkovscav:scav",
         "weight": 5,
         "minCount": 1,
@@ -102,6 +126,22 @@
     "misc": []
   },
   "spawn_costs": {
+    "tarkovscav:blackfox_assault": {
+      "energy_budget": 0.05,
+      "charge": 1.6
+    },
+    "tarkovscav:blackfox_heavy": {
+      "energy_budget": 0.05,
+      "charge": 1.6
+    },
+    "tarkovscav:blackfox_demolition": {
+      "energy_budget": 0.05,
+      "charge": 1.6
+    },
+    "tarkovscav:blackfox_commander": {
+      "energy_budget": 0.05,
+      "charge": 1.6
+    },
     "tarkovscav:scav": {
       "energy_budget": 0.12,
       "charge": 0.7

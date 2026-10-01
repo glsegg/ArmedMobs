@@ -1,6 +1,7 @@
 package com.gfl.tarkovscav.gun;
 
 import com.gfl.tarkovscav.Config;
+import com.gfl.tarkovscav.entity.BlackFoxEntity;
 import com.gfl.tarkovscav.TarkovScav;
 import com.gfl.tarkovscav.faction.AlertNetwork;
 import com.gfl.tarkovscav.faction.Faction;
@@ -156,11 +157,12 @@ public final class SquadCoordinator {
                 this.members.add(candidate);
             }
         }
-        this.members.sort(Comparator.comparingInt(Mob::getId));
+        this.members.sort(Comparator.comparingInt(SquadCoordinator::roleOrder).thenComparingInt(Mob::getId));
         this.refreshedAt = now;
         int index = this.members.indexOf(this.mob);
         int size = this.members.size();
-        this.flankSide = isFlanker(index, size, Config.AI_COORD_FLANK_FRACTION.get())
+        boolean heavy = this.mob instanceof BlackFoxEntity fox && fox.role() == BlackFoxEntity.Role.HEAVY;
+        this.flankSide = !heavy && isFlanker(index, size, Config.AI_COORD_FLANK_FRACTION.get())
                 ? (index % 2 == 0 ? 1 : -1) : 0;
         pruneClaims(level, now);
     }
@@ -246,6 +248,16 @@ public final class SquadCoordinator {
         if (!hasSquad() || !Config.AI_COORD_FOCUS_FIRE.get()) {
             return null;
         }
+        // A visible commander's contact leads the Black Fox squad. GunBrain still checks each member's
+        // own line of sight before adopting it; an unseen radio contact cannot start a shot through walls.
+        for (Mob member : this.members) {
+            if (member instanceof BlackFoxEntity fox && fox.role() == BlackFoxEntity.Role.COMMANDER) {
+                LivingEntity target = member.getTarget();
+                if (target != null && target.isAlive() && member.canAttack(target)) {
+                    return target;
+                }
+            }
+        }
         int[] ids = new int[this.members.size()];
         for (int i = 0; i < ids.length; i++) {
             LivingEntity target = this.members.get(i).getTarget();
@@ -257,6 +269,17 @@ public final class SquadCoordinator {
         }
         Entity entity = level.getEntity(chosen);
         return entity instanceof LivingEntity living && living.isAlive() ? living : null;
+    }
+
+    private static int roleOrder(Mob mob) {
+        if (mob instanceof BlackFoxEntity fox) {
+            return switch (fox.role()) {
+                case HEAVY -> 0;
+                case COMMANDER -> 1;
+                case ASSAULT, DEMOLITION -> 2;
+            };
+        }
+        return 0;
     }
 
     // ------------------------------------------------------------------ flanking

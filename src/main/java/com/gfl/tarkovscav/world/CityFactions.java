@@ -84,6 +84,9 @@ public final class CityFactions {
         if (faction == Faction.ILLAGER) {
             return ILLAGER_NAME;
         }
+        if (faction == Faction.BLACKFOX) {
+            return "blackfox";
+        }
         return "scav";
     }
 
@@ -196,7 +199,7 @@ public final class CityFactions {
         if (buildingFaction == null || mobFaction == null) {
             return true;
         }
-        if (mobFaction == Faction.SCAV) {
+        if (mobFaction == Faction.SCAV || mobFaction == Faction.BLACKFOX) {
             return true;
         }
         return mobFaction == buildingFaction;

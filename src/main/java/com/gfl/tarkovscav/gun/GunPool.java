@@ -126,9 +126,22 @@ public final class GunPool {
      * then falls back to plain melee, which is a lot better than an invisible broken gun.
      */
     public static GunLoadout rollLoadout(ScavTier tier, RandomSource random) {
+        return rollLoadout(tier, random, java.util.Set.of());
+    }
+
+    /** Prefers a role's weapon types, retaining the normal tier pool if a gun pack has none. */
+    public static GunLoadout rollLoadout(ScavTier tier, RandomSource random,
+                                         java.util.Set<String> preferredTypes) {
         List<ResourceLocation> pool = forTier(tier);
         if (pool.isEmpty()) {
             return null;
+        }
+        if (!preferredTypes.isEmpty()) {
+            List<ResourceLocation> preferred = pool.stream()
+                    .filter(id -> preferredTypes.contains(typeOf(id))).toList();
+            if (!preferred.isEmpty()) {
+                pool = preferred;
+            }
         }
 
         // Try a few candidates in case one has no usable index entry (a broken gun pack).

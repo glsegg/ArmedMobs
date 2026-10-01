@@ -84,12 +84,18 @@ repositories {
         name = 'GeckoLib'
         url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
     }
-    // Where the user's own TaCZ jar lives. A flatDir repo (not `files(...)`) is required: ForgeGradle
-    // can only deobfuscate a resolvable module dependency, and it says so out loud when handed a
-    // FileCollection ("files(...) dependencies are not deobfuscated ... using obfuscated version!").
-    flatDir {
-        name = 'TarkovScavLibs'
-        dirs 'libs'
+    // Resolve the official TaCZ release without a local libs directory.
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Modrinth'
+                url = 'https://api.modrinth.com/maven'
+            }
+        }
+        forRepositories(fg.repository)
+        filter {
+            includeGroup 'maven.modrinth'
+        }
     }
 }
 
@@ -107,18 +113,16 @@ dependencies {
     // ---------------------------------------------------------------------------------------
     // TaCZ ("Timeless and Classics Zero") - an optional runtime dependency that is NOT bundled.
     //
-    // The jar is the user's own download and lives in libs/ (which is .gitignore'd: it is a
-    // 57 MB third-party mod, not our content). It is only needed to compile against the API
-    // and to run the dev server, so it goes in as compileOnly + runtimeOnly and never reaches
+    // The official Modrinth release supplies the development API and runtime.
+    // It goes in as compileOnly + runtimeOnly and never reaches
     // `jarJar`, never reaches the shipped jar, and is never redistributed.
     //
     // fg.deobf matters: a production mod jar carries SRG member names (m_41720_ ...) while the
     // ForgeGradle dev workspace uses official names, so the raw jar compiles fine but explodes
     // with NoSuchMethodError at dev runtime. The deobfuscated copy is what both the compiler
-    // and `runServer` see. Module notation (group is ignored by flatDir) because fg.deobf cannot
-    // deobfuscate a raw FileCollection.
-    compileOnly fg.deobf("tarkovscav.libs:${tacz_module}:${tacz_version}")
-    runtimeOnly fg.deobf("tarkovscav.libs:${tacz_module}:${tacz_version}")
+    // and `runServer` see. Module notation lets ForgeGradle remap the release JAR.
+    compileOnly fg.deobf("maven.modrinth:${tacz_project}:${tacz_artifact_version}")
+    runtimeOnly fg.deobf("maven.modrinth:${tacz_project}:${tacz_artifact_version}")
 }
 
 // Embed the declared jarJar dependencies (GeckoLib) into the built jar. TaCZ is NOT a jarJar
