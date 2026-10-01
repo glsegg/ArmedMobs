@@ -1,7 +1,8 @@
-// The published Word document (docs/指令与配置参考.docx) is what a tester or a wiki reader actually
+// The optional Word export (build/docs/指令与配置参考.docx) is what a tester or a wiki reader actually
 // opens, so it has to carry the same promises as the markdown source it is generated from:
 //
-//   node tools/selftest_docx.js
+//   node tools/selftest_docx.js [--docx <file.docx>]
+//   With no default export, report SKIP; an explicitly requested missing file is a failure.
 //
 // What is asserted:
 //   1. THE PACKAGE. The .docx exists, is a readable OOXML zip and carries the parts Word needs
@@ -24,7 +25,14 @@ const zlib = require('zlib');
 
 const ROOT = path.join(__dirname, '..');
 const JAVA = path.join(ROOT, 'src', 'main', 'java', 'com', 'gfl', 'tarkovscav');
-const DOCX = path.join(ROOT, 'docs', '指令与配置参考.docx');
+const args = process.argv.slice(2);
+const docxArg = args.indexOf('--docx');
+if (docxArg >= 0 && !args[docxArg + 1]) {
+  console.error('missing path after --docx');
+  process.exit(1);
+}
+const DOCX = docxArg >= 0 ? path.resolve(args[docxArg + 1])
+  : path.join(ROOT, 'build', 'docs', '指令与配置参考.docx');
 const read = (rel) => fs.readFileSync(path.join(JAVA, rel), 'utf8');
 
 let failures = 0;
@@ -72,11 +80,12 @@ function entryData(buf, entry) {
 // ------------------------------------------------------------------ 1. the package
 console.log('1. the docx package is readable OOXML');
 const exists = fs.existsSync(DOCX);
-check(exists, 'docs/指令与配置参考.docx exists', exists ? `${fs.statSync(DOCX).size} bytes` : 'missing');
 if (!exists) {
-  console.log('\nthe Word document is missing: run node tools/make_reference_docx.js');
-  process.exit(1);
+  console.log(`${docxArg >= 0 ? 'FAIL' : 'SKIP'}: Word export not found: ${path.relative(ROOT, DOCX)}`);
+  console.log('Generate it with node tools/make_reference_docx.js before checking the Word export.');
+  process.exit(docxArg >= 0 ? 1 : 0);
 }
+check(true, `${path.relative(ROOT, DOCX)} exists`, `${fs.statSync(DOCX).size} bytes`);
 const buf = fs.readFileSync(DOCX);
 const entries = zipEntries(buf);
 check(Array.isArray(entries) && entries.length > 0, 'the file is a zip archive',

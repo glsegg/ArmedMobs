@@ -4,7 +4,7 @@
 #
 # Why every path is DISCOVERED instead of written down: Windows PowerShell 5.1 parses a .ps1 in the ANSI code
 # page unless it carries a UTF-8 BOM, and the real names here are Chinese (mods/<name>-<version>-<suffix>,
-# docs/<reference>.docx). An earlier version of this script hard-coded them and simply would not parse
+# build/docs/<reference>.docx). An earlier version of this script hard-coded them and simply would not parse
 # ("Missing closing ')' in expression" on an innocent if-statement). So this file is pure ASCII and finds the
 # existing names by globbing, which also means a renamed package keeps working.
 #
@@ -13,33 +13,39 @@
 # markdown it was made from is exactly how a tester ends up reading a table that no longer matches the jar, so
 # this script refuses instead of copying a stale one.
 param(
-    [string]$Root = 'D:\deepseek\ArmedMobs',
+    [string]$Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path,
     [string]$Version = '0.1.0',
     [string]$JarName = '',
+    [string]$PackageName = '',
+    [switch]$IncludeGeckoLib,
     [switch]$SkipDocxFreshnessCheck
 )
 $ErrorActionPreference = 'Stop'
+$Root = (Resolve-Path -LiteralPath $Root).Path
 
 $mods = Join-Path $Root 'mods'
-if (-not $JarName) { $JarName = "armedmobs-$Version-all.jar" }
+if (-not $JarName) {
+    $JarName = if ($IncludeGeckoLib) { "armedmobs-$Version-all.jar" } else { "armedmobs-$Version.jar" }
+}
 $jar = Join-Path $Root "build\libs\$JarName"
 $referenceMd = Join-Path $Root 'docs\COMMAND_AND_CONFIG_REFERENCE.md'
 
 # ---- the Chinese names, discovered
-$referenceDocx = (Get-ChildItem -LiteralPath (Join-Path $Root 'docs') -Filter '*.docx' |
+$referenceDocx = (Get-ChildItem -LiteralPath (Join-Path $Root 'build\docs') -Filter '*.docx' -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
 $install = (Get-ChildItem -LiteralPath $mods -Filter '*.txt' | Select-Object -First 1).FullName
-$modsMd = (Get-ChildItem -LiteralPath $mods -Filter '*.md' | Select-Object -First 1).FullName
-$existing = Get-ChildItem -LiteralPath $mods -Directory | Where-Object { $_.Name -like "*$Version*" } |
-    Select-Object -First 1
-if (-not $existing) {
-    throw "cannot find an existing mods/<name>-$Version-<suffix> folder to take the package name from"
+if (-not $PackageName) { $PackageName = "armedmobs-$Version-test" }
+$packageRoot = [IO.Path]::GetFullPath((Join-Path $Root 'build\packages')).TrimEnd('\', '/')
+$packageDir = [IO.Path]::GetFullPath((Join-Path $packageRoot $PackageName))
+$zip = [IO.Path]::GetFullPath((Join-Path $packageRoot "$PackageName.zip"))
+foreach ($outputPath in @($packageDir, $zip)) {
+    if (-not $outputPath.StartsWith($packageRoot + [IO.Path]::DirectorySeparatorChar,
+            [StringComparison]::OrdinalIgnoreCase)) {
+        throw "package output must stay within $packageRoot : $outputPath"
+    }
 }
-$packageName = $existing.Name
-$packageDir = Join-Path $mods $packageName
-$zip = Join-Path $mods "$packageName.zip"
 
-foreach ($required in @($jar, $referenceMd, $referenceDocx, $install, $modsMd)) {
+foreach ($required in @($jar, $referenceMd, $referenceDocx, $install)) {
     if (-not $required -or -not (Test-Path -LiteralPath $required)) { throw "missing: $required" }
 }
 
@@ -61,16 +67,28 @@ if ($docxTime -lt $mdTime -and -not $SkipDocxFreshnessCheck) {
 # ---------------------------------------------------------------- 2. the sha, written down
 $sha = (Get-FileHash -LiteralPath $jar -Algorithm SHA256).Hash.ToLower()
 $size = (Get-Item -LiteralPath $jar).Length
-Set-Content -Path (Join-Path $mods 'SHA256SUMS') -Value "$sha  $JarName`n" -NoNewline -Encoding ascii
+New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
+$checksumFile = Join-Path $packageRoot 'SHA256SUMS'
+Set-Content -LiteralPath $checksumFile -Value "$sha  $JarName`n" -NoNewline -Encoding ascii
 
 # ---------------------------------------------------------------- 3. the folder
 if (Test-Path -LiteralPath $packageDir) { Remove-Item -LiteralPath $packageDir -Recurse -Force }
 New-Item -ItemType Directory -Path $packageDir | Out-Null
 Copy-Item -LiteralPath $jar -Destination (Join-Path $packageDir $JarName)
-Copy-Item -LiteralPath (Join-Path $mods 'SHA256SUMS') -Destination $packageDir
+Copy-Item -LiteralPath $checksumFile -Destination $packageDir
 Copy-Item -LiteralPath $install -Destination $packageDir
 Copy-Item -LiteralPath $referenceDocx -Destination $packageDir
-Copy-Item -LiteralPath $referenceMd -Destination (Join-Path $packageDir (Split-Path $modsMd -Leaf))
+Copy-Item -LiteralPath $referenceMd -Destination (Join-Path $packageDir (([IO.Path]::GetFileNameWithoutExtension($referenceDocx)) + '.md'))
+$dependencyNote = if ($JarName -like '*-all.jar') {
+    'This JAR includes GeckoLib; do not also install the ordinary Armed Mobs JAR.'
+} else {
+    'This JAR does not include GeckoLib. Install GeckoLib for Forge 1.20.1 separately (development uses 4.8.4). Do not also install the Armed Mobs -all JAR.'
+}
+Set-Content -LiteralPath (Join-Path $packageDir 'DEPENDENCIES.txt') -Encoding ascii -Value @(
+    'Minecraft 1.20.1 / Forge 47.x',
+    $dependencyNote,
+    'TaCZ 1.1.7+ is optional. Install it on both sides for firearms; without it, units use vanilla bows/crossbows.'
+)
 Get-ChildItem -LiteralPath $packageDir | ForEach-Object {
     Write-Host ("  {0,-40} {1,10} bytes" -f $_.Name, $_.Length)
 }

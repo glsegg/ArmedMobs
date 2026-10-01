@@ -4,8 +4,8 @@ Armed Mobs（武装暴徒）0.1.0  —— 测试版安装说明
 【文件】
   两种 jar，**只能放一个**（同一个 modId `tarkovscav`，两个同时放 Forge 会拒绝启动）：
 
-  A) armedmobs-0.1.0.jar       ← **你实例里现在用的就是这个**（普通版，不含内嵌 GeckoLib）
-     需要另外装 GeckoLib（你实例里已有 `geckolib-forge-1.20.1-4.8.2.jar`）
+  A) armedmobs-0.1.0.jar       （普通版，不含内嵌 GeckoLib；测试包默认提供此版）
+     需要另外装 Forge 1.20.1 版 GeckoLib（开发环境使用 4.8.4）
   B) armedmobs-0.1.0-all.jar   （jarJar 版，**已内嵌 GeckoLib 4.8.4**，不需要另装）
 
   两者功能完全一样，只有依赖打包方式不同。**每份 jar 的 sha256 见同目录的 `SHA256SUMS`**
@@ -14,12 +14,12 @@ Armed Mobs（武装暴徒）0.1.0  —— 测试版安装说明
   （显示名是 Armed Mobs，但内部 mod id 仍是 tarkovscav —— 老存档/结构/配置照常可用；
     /armedmobs 与 /tarkovscav 是同一个指令树的两个名字。）
 
-【运行环境（缺一不可）】
+【运行环境】
   1) Minecraft 1.20.1 + Forge 47.x（47.3.0 以上即可）
-  2) TaCZ（Timeless and Classics Zero）>= 1.1.7
-     *** 本模组不打包 TaCZ ***，请自行安装，并至少装一个 TaCZ 枪包；
-         没有 TaCZ 时游戏会在启动阶段直接报"缺少依赖"，这是有意的。
-  3) GeckoLib：已内嵌 4.8.4，无需另装；若你已经装了 4.8.2 以上也能正常共存。
+  2) TaCZ（Timeless and Classics Zero）>= 1.1.7 为可选依赖。
+     本模组不打包 TaCZ；需要枪械时自行安装，并至少装一个 TaCZ 枪包。
+     没有 TaCZ 时单位使用原版弓弩，不会因缺少 TaCZ 拒绝启动。
+  3) GeckoLib 为必需依赖：普通版需要另装；-all 版已内嵌 4.8.4。
 
 【安装】
   把 jar 放进 mods/ 目录（客户端与服务端都要放）。
@@ -150,7 +150,10 @@ Armed Mobs（武装暴徒）0.1.0  —— 测试版安装说明
         四档 AI 的行为数值表，以及第三方内容接口（实体 tag、自定义 `tarkovscav/city/*.nbt` 城区、
         语音包 `<family>_<category>`、枪池与 TaCZ 配件）。两份同源，由 `tools/selftest_wiki_doc.js`
         与 `tools/selftest_docx.js` 对着源码核对（少一条指令或一个配置键即报红）；
-        改了 md 之后跑 `node tools/make_reference_docx.js` 即可重新生成 Word 版。
+        仓库仅保留 docs/COMMAND_AND_CONFIG_REFERENCE.md 作为参考表源文件；
+        改了 md 之后跑 `node tools/make_reference_docx.js`，Word 版会生成到 build/docs/。
+        PDF 可由 tools/spike/work/docx_finalize.ps1 按需导出到 build/docs/；
+        tools/spike/work/make_tester_package.ps1 生成的测试包位于 build/packages/。
       * 顺带修正一批**纯文字**的文档漂移（不改任何行为）：`cityStructureIds` / `pistolClipTypes` 的默认值、
         `foundationDepth` 其实在 `[spawn]` 段（不是 `[city]`）、`modelLayering` 的默认值、
         `gunnerVillagerGunRotation` 注释里遗留的历史值、`spawn` 报错提示里漏掉的 `sniper_pillager`。

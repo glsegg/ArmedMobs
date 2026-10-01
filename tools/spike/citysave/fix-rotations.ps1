@@ -61,5 +61,6 @@ Add '# ---- leave no forced chunks behind in the delivered save ----'
 Add 'forceload remove all'
 
 $batch = Join-Path $WorkDir 'batches\18-fix-rotations.txt'
+New-Item -ItemType Directory -Force -Path (Split-Path $batch -Parent) | Out-Null
 [System.IO.File]::WriteAllLines($batch, $lines, (New-Object System.Text.UTF8Encoding($false)))
 Write-Output "wrote $($lines.Count) commands to $batch"

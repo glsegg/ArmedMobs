@@ -62,5 +62,6 @@ foreach ($p in $pages) {
 }
 
 $batch = Join-Path $WorkDir 'batches\13-world.txt'
+New-Item -ItemType Directory -Force -Path (Split-Path $batch -Parent) | Out-Null
 [System.IO.File]::WriteAllLines($batch, $lines, (New-Object System.Text.UTF8Encoding($false)))
 Write-Output "wrote $($lines.Count) commands to $batch"

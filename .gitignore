@@ -22,7 +22,7 @@ libs/*.jar
 !gradle/wrapper/gradle-wrapper.jar
 tools/spike/citysave/backup/
 
-# ---------- scratch: keep the tooling scripts, drop the artifacts ----------
+# ---------- scratch: keep reusable tooling, drop one-off scripts and artifacts ----------
 _recon/
 _friendfix/
 tools/spike/out/
@@ -35,13 +35,27 @@ tools/spike/work/citymap/*
 !tools/spike/work/citymap/*.js
 !tools/spike/work/citymap/*.java
 !tools/spike/work/citymap/*.ps1
-!tools/spike/work/citymap/*.txt
+!tools/spike/work/citymap/boxes.txt
+
+tools/spike/work/patch*.js
+tools/spike/work/dbg*.js
+tools/spike/work/dbg*.ps1
+tools/spike/work/fix_voice_gate_encoding.js
+tools/spike/work/migrate_paths.js
 
 # dev-server install (a second TaCZ jar + generated worlds)
 tools/spike/citysave/server/
 tools/spike/citysave/jar/
 tools/spike/citysave/tmp/
 tools/spike/citysave/*.log
+tools/spike/citysave/batches/*.txt
+tools/spike/citysave/antistall-evidence.txt
+tools/spike/citysave/speed-1.0.txt
+tools/spike/citysave/speed-1.5.txt
+
+# Generated reference exports belong in build/docs; keep the Markdown source in docs/.
+docs/指令与配置参考.docx
+docs/指令与配置参考.pdf
 
 # ---------- delivery folder: keep the human-readable notes, drop the binaries ----------
 mods/*.jar

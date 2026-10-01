@@ -21,7 +21,7 @@ function argOf(name, fallback) {
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
 }
 const MD = argOf('--md', path.join(ROOT, 'docs', 'COMMAND_AND_CONFIG_REFERENCE.md'));
-const OUT = argOf('--out', path.join(ROOT, 'docs', '指令与配置参考.docx'));
+const OUT = argOf('--out', path.join(ROOT, 'build', 'docs', '指令与配置参考.docx'));
 const TOC_MODE = argOf('--toc', 'field'); // field = Word inserts a real TOC with page numbers, static = plain list
 
 // ------------------------------------------------------------------ content geometry
@@ -682,7 +682,7 @@ function main() {
     info: [
       ['项', '值'],
       ['显示名 / 内部 id', 'Armed Mobs（武装暴徒） / tarkovscav（**不变**，存档与配置兼容）'],
-      ['构建产物', 'armedmobs-0.1.0-all.jar'],
+      ['构建产物', 'armedmobs-0.1.0.jar（普通版）；armedmobs-0.1.0-all.jar（内嵌 GeckoLib）'],
       ['主命令根 / 别名', '`/armedmobs ...` / `/tarkovscav ...`（同一棵树注册两次）'],
       ['权限', '服务端命令需权限等级 2；客户端命令无权限要求'],
       ['配置文件', '`config/tarkovscav-common.toml`'],

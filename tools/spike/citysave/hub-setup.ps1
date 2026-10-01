@@ -50,6 +50,7 @@ foreach ($page in $b.pages) {
 }
 
 $batch = Join-Path $WorkDir 'batches\13b-hub.txt'
+New-Item -ItemType Directory -Force -Path (Split-Path $batch -Parent) | Out-Null
 [System.IO.File]::WriteAllLines($batch, $lines, (New-Object System.Text.UTF8Encoding($false)))
 Write-Output "wrote $($lines.Count) commands to $batch"
 

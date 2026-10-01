@@ -66,5 +66,6 @@ $lines.Add('# worldgen route: origin lands somewhere inside chunk x 384..399, z 
 $lines.Add('place structure tarkovscav:city_small 384 63 336')
 
 $batch = Join-Path $WorkDir 'batches\10-build.txt'
+New-Item -ItemType Directory -Force -Path (Split-Path $batch -Parent) | Out-Null
 [System.IO.File]::WriteAllLines($batch, $lines, (New-Object System.Text.UTF8Encoding($false)))
 Write-Output "wrote $($lines.Count) commands to $batch"

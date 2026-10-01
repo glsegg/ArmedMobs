@@ -1,3 +1,0 @@
-﻿forceload remove all
-save-all flush
-stop

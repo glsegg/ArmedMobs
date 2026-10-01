@@ -3,14 +3,26 @@
 # and print the statistics so the result can be checked without opening Word by hand.
 #
 #   powershell -ExecutionPolicy Bypass -File .\tools\spike\work\docx_finalize.ps1 `
-#       -Docx 'D:\deepseek\ArmedMobs\docs\指令与配置参考.docx'
+#       -Pdf '.\build\docs\reference.pdf'
 param(
-    [Parameter(Mandatory = $true)][string]$Docx,
+    [string]$Docx = '',
     [string]$Pdf = ''
 )
 $ErrorActionPreference = 'Stop'
-if (-not (Test-Path $Docx)) { throw "docx not found: $Docx" }
-$Docx = (Resolve-Path $Docx).Path
+if (-not $Docx) {
+    $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
+    $exportDir = Join-Path $repoRoot 'build\docs'
+    $Docx = (Get-ChildItem -LiteralPath $exportDir -Filter '*.docx' -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
+}
+if (-not $Docx -or -not (Test-Path -LiteralPath $Docx)) {
+    throw 'docx not found: run node tools/make_reference_docx.js or pass -Docx <file>'
+}
+$Docx = (Resolve-Path -LiteralPath $Docx).Path
+if ($Pdf) {
+    $Pdf = [IO.Path]::GetFullPath($Pdf)
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Pdf) | Out-Null
+}
 
 $word = New-Object -ComObject Word.Application
 $word.Visible = $false

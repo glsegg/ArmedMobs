@@ -20,6 +20,10 @@ only spawn **inside city areas**. The Scav rig is the user's own YSM model, impo
 > checked against the source by `tools/selftest_wiki_doc.js`, which fails if a command or a key is missing
 > from it. This README remains the long-form design record.
 
+Word / PDF 导出按需生成，不再重复提交到仓库。运行 `node tools/make_reference_docx.js` 会输出到
+`build/docs/`；Word 目录更新及 PDF 导出使用 `tools/spike/work/docx_finalize.ps1`，导出检查使用
+`node tools/selftest_docx.js`。测试包生成工具输出到 `build/packages/`。
+
 ---
 
 ## 1. What is in here
