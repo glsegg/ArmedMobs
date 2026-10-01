@@ -1,4 +1,4 @@
-# Build, game directories and caches
+# Build and local game data
 build/
 .gradle/
 .gradle-home/
@@ -7,33 +7,36 @@ run-data*/
 out/
 bin/
 logs/
+crash-reports/
 mcmodsrepo/
 __pycache__/
 *.class
 *.log
+*.hprof
+*.heapdump
+javac.*.args
 
 # IDE settings
 .idea/
+.vscode/
 *.iml
+*.ipr
+*.iws
 .classpath
 .project
 .settings/
 
-# Local third-party dependencies and private audio
+# Local dependencies, private audio and development files
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
 *.ogg
-
-# Local delivery files and scratch work
+**/AGENTS.md
+tools/
+libs/
+docs/
 mods/
 _recon/
 _friendfix/
-tools/parked/
-tools/spike/citysave/
-tools/spike/work/*
-!tools/spike/work/citymap/
-tools/spike/work/citymap/*
-!tools/spike/work/citymap/verify_*.js
 
 # World copies and archives
 *.mca
