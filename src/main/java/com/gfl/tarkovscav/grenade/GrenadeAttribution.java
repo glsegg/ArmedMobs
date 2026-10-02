@@ -50,7 +50,7 @@ public final class GrenadeAttribution {
     @Nullable
     public static KillFeedWeapons.Armament resolve(@Nullable LivingEntity killer, LivingEntity victim,
                                                    DamageSource source) {
-        GrenadeKind kind = of(victim);
+        GrenadeKind kind = source instanceof GrenadeDamageSource grenade ? grenade.kind() : of(victim);
         if (kind == null) {
             return null;
         }

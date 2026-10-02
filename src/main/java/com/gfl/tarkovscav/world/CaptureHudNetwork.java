@@ -12,6 +12,8 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
 
 /**
@@ -71,6 +73,21 @@ public final class CaptureHudNetwork {
 
     /** The message: which city, what to call it, one bar per faction, and whether to hide now. */
     public record CaptureHudMessage(String cityKey, String cityName, List<Bar> bars, boolean hide) {
+        public CaptureHudMessage {
+            // Preserve the full SavedData key; only its stable wire identity needs to fit this packet.
+            if (cityKey.length() > MAX_KEY) {
+                cityKey = "hud/" + UUID.nameUUIDFromBytes(cityKey.getBytes(StandardCharsets.UTF_8));
+            }
+            if (cityName.length() > MAX_NAME) {
+                int end = MAX_NAME;
+                if (Character.isHighSurrogate(cityName.charAt(end - 1))) {
+                    end--;
+                }
+                cityName = cityName.substring(0, end);
+            }
+            bars = List.copyOf(bars);
+        }
+
         static void encode(CaptureHudMessage message, FriendlyByteBuf buffer) {
             if (message.bars().size() > MAX_BARS) {
                 throw new IllegalArgumentException("Too many capture HUD bars: " + message.bars().size());

@@ -85,6 +85,11 @@ public final class ClipPose {
         Object manager = MolangAccess.managerOf(animatable, instanceId);
         if (manager instanceof AnimatableManager<?> animatableManager) {
             for (AnimationController<?> controller : animatableManager.getAnimationControllers().values()) {
+                // GeckoLib retains currentAnimation when a predicate returns STOP. That clip no
+                // longer writes any bones and must not suppress the live fallback after disarming.
+                if (controller.getAnimationState() == AnimationController.State.STOPPED) {
+                    continue;
+                }
                 Animation animation = MolangAccess.currentAnimation(controller);
                 if (animation == null) {
                     continue;

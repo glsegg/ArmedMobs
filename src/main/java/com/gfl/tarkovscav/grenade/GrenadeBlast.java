@@ -3,6 +3,8 @@ package com.gfl.tarkovscav.grenade;
 import com.gfl.tarkovscav.Config;
 import com.gfl.tarkovscav.TarkovScav;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,6 +13,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -54,12 +58,19 @@ public final class GrenadeBlast {
     public static final int MAX_HITS_PER_ENTITY = 3;
     /** How close a fragment sample point has to be to an entity to count as a hit, in blocks. */
     private static final double FRAGMENT_HIT_RADIUS = 0.6D;
+    private static final ResourceKey<DamageType> FRAGMENT_DAMAGE = ResourceKey.create(Registries.DAMAGE_TYPE,
+            TarkovScav.id("grenade_fragment"));
 
     private GrenadeBlast() {
     }
 
     /** The entry point: one grenade just reached the end of its fuse. */
     public static void detonate(ServerLevel level, Vec3 centre, GrenadeKind kind, @Nullable LivingEntity thrower) {
+        detonate(level, centre, kind, thrower, null);
+    }
+
+    public static void detonate(ServerLevel level, Vec3 centre, GrenadeKind kind, @Nullable LivingEntity thrower,
+                                @Nullable GrenadeEntity projectile) {
         if (!Config.GRENADES_ENABLED.get()) {
             return;
         }
@@ -73,8 +84,16 @@ public final class GrenadeBlast {
         }
         if (Config.GRENADES_TERRAIN_DAMAGE.get()) {
             // The opt-in path: the vanilla explosion breaks blocks AND damages entities.
-            level.explode(thrower, centre.x, centre.y, centre.z, (float) kind.blastPower(),
-                    net.minecraft.world.level.Level.ExplosionInteraction.BLOCK);
+            // The projectile, not its owner, is excluded from the explosion query. Excluding the owner
+            // made playerSelfDamage=true ineffective on this path. The source retains the actual killer.
+            GrenadeDamageSource source = new GrenadeDamageSource(
+                    level.damageSources().explosion(projectile, thrower).typeHolder(), projectile, thrower,
+                    centre, kind);
+            level.explode(projectile, source, null, centre.x, centre.y, centre.z, (float) kind.blastPower(),
+                    false, net.minecraft.world.level.Level.ExplosionInteraction.BLOCK);
+            if (source.explosionCancelled()) {
+                return; // A protection mod cancelling the explosion also cancels its fragment fan.
+            }
         } else {
             GrenadeEntity.visualExplosion(level, centre, kind.blastPower());
             blastDamage(level, centre, kind, thrower);
@@ -99,11 +118,12 @@ public final class GrenadeBlast {
             }
             double distance = victim.getEyePosition().distanceTo(centre);
             double falloff = 1.0D - Math.min(1.0D, distance / radius);
-            double damage = kind.blastPower() * Config.GRENADE_BLAST_DAMAGE_PER_POWER.get() * falloff;
+            double exposure = Explosion.getSeenPercent(centre, victim);
+            double damage = kind.blastPower() * Config.GRENADE_BLAST_DAMAGE_PER_POWER.get() * falloff * exposure;
             if (damage <= 0.05D) {
                 continue;
             }
-            hurt(level, victim, thrower, kind, damage, 1.0D);
+            hurt(level, centre, victim, thrower, kind, damage, 1.0D, false);
         }
     }
 
@@ -127,30 +147,32 @@ public final class GrenadeBlast {
             HitResult block = level.clip(new ClipContext(centre, end, ClipContext.Block.COLLIDER,
                     ClipContext.Fluid.NONE, null));
             double reach = block.getType() == HitResult.Type.MISS ? radius : centre.distanceTo(block.getLocation());
+            fragmentFlight:
             for (double travelled = step; travelled <= reach; travelled += step) {
                 Vec3 sample = centre.add(direction.scale(travelled));
                 List<LivingEntity> found = GrenadeEntity.candidates(level, sample, FRAGMENT_HIT_RADIUS);
                 if (found.isEmpty()) {
                     continue;
                 }
+                found.sort(java.util.Comparator.comparingDouble(victim -> victim.distanceToSqr(sample)));
                 for (LivingEntity victim : found) {
                     if (!GrenadeEntity.mayHurt(thrower, victim)) {
                         continue;
                     }
                     int soFar = hits.getOrDefault(victim.getUUID(), 0);
                     if (soFar >= MAX_HITS_PER_ENTITY) {
-                        continue;
+                        break fragmentFlight; // Even a body that already took its capped hits stops this ray.
                     }
                     hits.put(victim.getUUID(), soFar + 1);
                     double falloff = 1.0D - Math.min(1.0D, travelled / radius);
                     double damage = kind.fragmentDamage() * falloff;
-                    hurt(level, victim, thrower, kind, damage, Config.GRENADE_FRAG_ARMOR_PIERCE.get());
+                    hurt(level, centre, victim, thrower, kind, damage, Config.GRENADE_FRAG_ARMOR_PIERCE.get(), true);
                     if (logged.add(victim.getUUID())) {
                         TarkovScav.LOGGER.debug("[grenade] fragment hit {} at {} block(s) for {}",
                                 victim.getName().getString(), String.format(java.util.Locale.ROOT, "%.1f", travelled),
                                 String.format(java.util.Locale.ROOT, "%.1f", damage));
                     }
-                    break;
+                    break fragmentFlight;
                 }
             }
         }
@@ -170,8 +192,8 @@ public final class GrenadeBlast {
     }
 
     /** The shared damage path: the faction rule, armour piercing, and the kill-feed attribution. */
-    private static void hurt(ServerLevel level, LivingEntity victim, @Nullable LivingEntity thrower,
-                             GrenadeKind kind, double damage, double armorPierce) {
+    private static void hurt(ServerLevel level, Vec3 centre, LivingEntity victim, @Nullable LivingEntity thrower,
+                             GrenadeKind kind, double damage, double armorPierce, boolean fragment) {
         if (damage <= 0.0D) {
             return;
         }
@@ -180,14 +202,12 @@ public final class GrenadeBlast {
         if (finalDamage <= 0.0D) {
             return;
         }
-        // Which grenade was it? The kill feed asks this map when the death event fires (same call, below), and
-        // it is cleared immediately afterwards so a later death cannot inherit it.
-        GrenadeAttribution.remember(victim, kind);
-        try {
-            victim.hurt(level.damageSources().explosion(thrower, thrower), (float) finalDamage);
-        } finally {
-            GrenadeAttribution.forget(victim);
-        }
+        // Grenade identity belongs to this damage call, so later and nested deaths cannot inherit it.
+        // Fragment armour was already accounted for above. A tagged damage type prevents vanilla
+        // applying a second armour reduction; ordinary blast damage still uses normal explosion armour.
+        var type = fragment ? level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
+                .getHolderOrThrow(FRAGMENT_DAMAGE) : level.damageSources().explosion(thrower, thrower).typeHolder();
+        victim.hurt(new GrenadeDamageSource(type, null, thrower, centre, kind), (float) finalDamage);
     }
 
     // ------------------------------------------------------------------ the flash

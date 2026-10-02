@@ -167,12 +167,16 @@ public final class CityGarrison {
             return;
         }
         MinecraftServer server = event.getServer();
-        if (server == null || !Config.SPEC.isLoaded() || !Config.GARRISON_ENABLED.get()) {
+        if (server == null || !Config.SPEC.isLoaded()
+                || (!Config.GARRISON_ENABLED.get() && !Config.CAPTURE_ENABLED.get())) {
             return;
         }
         long now = server.overworld().getGameTime();
         int interval = Config.GARRISON_CHECK_INTERVAL_TICKS.get();
         for (ServerLevel level : server.getAllLevels()) {
+            if (!Config.GARRISON_ENABLED.get() && !CityCapture.isOverworld(level)) {
+                continue;
+            }
             ResourceLocation dimension = level.dimension().location();
             long last = LAST_CHECK.getOrDefault(dimension, Long.MIN_VALUE);
             if (!due(now, last, interval)) {
@@ -213,6 +217,10 @@ public final class CityGarrison {
     public static void applyCity(ServerLevel level, CityGate.Area city, GarrisonData data, long now) {
         ResourceLocation dimension = level.dimension().location();
         GarrisonData.CityRow row = factionFor(level, city, data);
+        if (!Config.GARRISON_ENABLED.get()) {
+            // Capture has its own master switch. Disabling the one-time force does not disable pools/HUD.
+            return;
+        }
         rewriteSpawners(level, city, data, dimension, row);
         if (!data.hasSpawned(dimension, city.key())) {
             spawn(level, city, data, now, dimension);

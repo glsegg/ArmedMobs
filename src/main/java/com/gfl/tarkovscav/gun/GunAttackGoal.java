@@ -29,7 +29,7 @@ public class GunAttackGoal extends Goal {
     @Override
     public boolean canUse() {
         LivingEntity target = this.mob.getTarget();
-        if (target == null || !target.isAlive() || !this.mob.canAttack(target)) {
+        if (!panicFiring() && (target == null || !target.isAlive() || !this.mob.canAttack(target))) {
             return false;
         }
         return this.brain.ensureEquipped();
@@ -38,7 +38,13 @@ public class GunAttackGoal extends Goal {
     @Override
     public boolean canContinueToUse() {
         LivingEntity target = this.mob.getTarget();
-        return target != null && target.isAlive() && this.mob.canAttack(target) && this.brain.hasGun();
+        return (panicFiring() || target != null && target.isAlive() && this.mob.canAttack(target))
+                && this.brain.hasGun();
+    }
+
+    private boolean panicFiring() {
+        return Config.GRENADES_ENABLED.get() && Config.GRENADE_FLASH_PANIC_FIRE.get()
+                && this.mob.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS);
     }
 
     @Override

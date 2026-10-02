@@ -73,7 +73,7 @@ public final class VoicePools {
             case "usec_villager" -> "usec";
             case "bear_pillager" -> "bear";
             case "elite_villager", "elite_pillager" -> "elite";
-            case "scav" -> "scav";
+            case "scav", "blackfox_assault", "blackfox_heavy", "blackfox_demolition", "blackfox_commander" -> "scav";
             default -> "shared";
         };
     }

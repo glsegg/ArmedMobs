@@ -2,15 +2,18 @@ package com.gfl.tarkovscav.client;
 
 import com.gfl.tarkovscav.Config;
 import com.gfl.tarkovscav.TarkovScav;
+import com.gfl.tarkovscav.entity.GunnerPillagerEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
@@ -47,6 +50,9 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
     private static final List<String> OFFHAND_FALLBACKS = List.of(
             RigSupport.DEFAULT_OFFHAND_ANCHOR, "LeftHand");
 
+    private static final Set<String> LEGACY_PILLAGER_BONES = Set.of("Root", "Body", "Head",
+            "RightArm", "RightHand", "RightHandLocator", "LeftArm", "RightLeg", "LeftLeg");
+
     /** Bones whose mount decision has been logged, with the config generation it was logged for. */
     private static final java.util.Map<String, Integer> LOGGED = new java.util.HashMap<>();
 
@@ -73,6 +79,9 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
 
     /** The bone of the current model the offhand item is mounted on, or null when the rig has none. */
     private String offhandAnchorBone = RigSupport.DEFAULT_OFFHAND_ANCHOR;
+
+    /** The legacy rig has a left arm but no hand; this offset reaches its mirrored right palm. */
+    private Vec3 virtualOffhandOffset;
 
     private final DeferredItemPass itemPass = new DeferredItemPass();
 
@@ -126,7 +135,11 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
             // Return to its pivot without multiplying its animated rotation a second time.
             RenderUtils.translateToPivotPoint(poseStack, bone);
             boolean offhand = this.offhandAnchorBone != null && bone.getName().equals(this.offhandAnchorBone);
-            if (Config.normalisedHandMode() || (!offhand && !isGun(stack))) {
+            if (offhand && this.virtualOffhandOffset != null) {
+                poseStack.translate(this.virtualOffhandOffset.x, this.virtualOffhandOffset.y,
+                        this.virtualOffhandOffset.z);
+            }
+            if (Config.normalisedHandMode() || !isGun(stack)) {
                 if (isGun(stack)) {
                     applyPalmGunFrame(poseStack);
                 } else {
@@ -165,13 +178,48 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
 
     @Nullable
     private String resolveOffhandAnchor(T animatable, BakedGeoModel bakedModel) {
+        this.virtualOffhandOffset = null;
         if (Config.SPEC.isLoaded() && !Config.RENDER_OFFHAND_ITEM.get()
                 && !Config.GUN_TWO_HANDED_SUPPORT.get()) {
             // Nothing will be drawn on it, so there is nothing to resolve or warn about.
             return null;
         }
-        return resolveBone(animatable, bakedModel, Config.gunOffhandAnchorBone(), OFFHAND_FALLBACKS,
+        Vec3 legacyOffset = legacyOffhandOffset(animatable, bakedModel);
+        List<String> candidates = legacyOffset == null ? OFFHAND_FALLBACKS
+                : List.of(RigSupport.DEFAULT_OFFHAND_ANCHOR, "LeftHand", "LeftArm");
+        String chosen = resolveBone(animatable, bakedModel, Config.gunOffhandAnchorBone(), candidates,
                 "gunOffhandAnchorBone", "the offhand item");
+        if ("LeftArm".equals(chosen)) this.virtualOffhandOffset = legacyOffset;
+        return chosen;
+    }
+
+    /** Only the shipped symmetric nine-bone placeholder needs a virtual offhand locator. */
+    @Nullable
+    static Vec3 legacyOffhandOffset(Entity entity, BakedGeoModel model) {
+        if (!(entity instanceof GunnerPillagerEntity)) return null;
+        List<String> names = boneNames(model);
+        if (names.size() != LEGACY_PILLAGER_BONES.size()
+                || !new HashSet<>(names).equals(LEGACY_PILLAGER_BONES)) return null;
+        GeoBone left = model.getBone("LeftArm").orElseThrow();
+        GeoBone right = model.getBone("RightArm").orElseThrow();
+        GeoBone hand = model.getBone("RightHand").orElseThrow();
+        GeoBone palm = model.getBone("RightHandLocator").orElseThrow();
+        if (left.getParent() != right.getParent() || hand.getParent() != right || palm.getParent() != hand
+                || !neutralInitialRotation(hand) || !neutralInitialRotation(palm)
+                || Math.abs(left.getPivotX() + right.getPivotX()) > 0.0001F
+                || Math.abs(left.getPivotY() - right.getPivotY()) > 0.0001F
+                || Math.abs(left.getPivotZ() - right.getPivotZ()) > 0.0001F) return null;
+        // Gecko's baked pivots already contain the Bedrock X-axis conversion. Reflect the actual
+        // right palm across that rig's center, then express it relative to the animated left arm.
+        return new Vec3((-palm.getPivotX() - left.getPivotX()) / 16.0D,
+                (palm.getPivotY() - left.getPivotY()) / 16.0D,
+                (palm.getPivotZ() - left.getPivotZ()) / 16.0D);
+    }
+
+    private static boolean neutralInitialRotation(GeoBone bone) {
+        var initial = bone.getInitialSnapshot();
+        return initial != null && Math.abs(initial.getRotX()) < 0.0001F
+                && Math.abs(initial.getRotY()) < 0.0001F && Math.abs(initial.getRotZ()) < 0.0001F;
     }
 
     @Nullable
@@ -421,7 +469,6 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
                                       MultiBufferSource bufferSource, float partialTick, int packedLight,
                                       int packedOverlay) {
         boolean offhand = this.offhandAnchorBone != null && bone.getName().equals(this.offhandAnchorBone);
-        boolean normalised = Config.normalisedHandMode();
 
         // The animated anchor/hand frame was captured during traversal. Apply only the extra mount
         // transform here; another render layer may have changed the shared bone rotations by now.
@@ -469,8 +516,16 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
             }
             RenderStateGuard guard = RenderStateGuard.snapshot("item draw (" + bone.getName() + ")");
             try {
-                super.renderStackForBone(poseStack, bone, stack, animatable, bufferSource, partialTick,
-                        packedLight, packedOverlay);
+                if (animatable instanceof LivingEntity living) {
+                    // GeckoLib's base layer always supplies leftHand=false. The left display
+                    // context alone does not mirror the item's own third-person transform.
+                    Minecraft.getInstance().getItemRenderer().renderStatic(living, stack,
+                            getTransformTypeForStack(bone, stack, animatable), offhand, poseStack,
+                            bufferSource, living.level(), packedLight, packedOverlay, living.getId());
+                } else {
+                    super.renderStackForBone(poseStack, bone, stack, animatable, bufferSource, partialTick,
+                            packedLight, packedOverlay);
+                }
             } finally {
                 guard.restore();
                 RenderStateGuard.rebindTexture(this.renderer.getTextureLocation(animatable));
@@ -481,45 +536,6 @@ public class GunInHandGeoLayer<T extends Entity & GeoAnimatable> extends BlockAn
             }
         } finally {
             poseStack.popPose();
-        }
-
-        // 3. the optional two-handed support copy of the main-hand gun, on the offhand anchor and only
-        //    when the offhand itself is not carrying something (otherwise it would be drawn under it).
-        if (offhand && Config.SPEC.isLoaded() && Config.GUN_TWO_HANDED_SUPPORT.get()
-                && animatable instanceof LivingEntity living) {
-            ItemStack main = living.getMainHandItem();
-            if (living.getOffhandItem().isEmpty() && isGun(main) && main != stack) {
-                poseStack.pushPose();
-                try {
-                    if (normalised) {
-                        // The bone rotation was already cancelled and the hand frame already applied
-                        // before step 2, so only the extra transform has to be repeated here.
-                        float[] mount = Config.offhandMount();
-                        if (mount[0] != 0.0F) {
-                            poseStack.mulPose(Axis.XP.rotationDegrees(mount[0]));
-                        }
-                        if (mount[1] != 0.0F) {
-                            poseStack.mulPose(Axis.YP.rotationDegrees(mount[1]));
-                        }
-                        if (mount[2] != 0.0F) {
-                            poseStack.mulPose(Axis.ZP.rotationDegrees(mount[2]));
-                        }
-                    }
-                    // The same guard for the support copy: it is the same foreign renderer (README 5w).
-                    RenderStateGuard supportGuard = RenderStateGuard.snapshot("offhand item draw ("
-                            + bone.getName() + ")");
-                    try {
-                        super.renderStackForBone(poseStack, bone, main, animatable, bufferSource, partialTick,
-                                packedLight, packedOverlay);
-                    } finally {
-                        supportGuard.restore();
-                        RenderStateGuard.rebindTexture(this.renderer.getTextureLocation(animatable));
-                        RenderStateGuard.forceAlwaysPassStencil();
-                    }
-                } finally {
-                    poseStack.popPose();
-                }
-            }
         }
     }
 

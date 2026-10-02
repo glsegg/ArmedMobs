@@ -20,6 +20,7 @@ import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnGroupData;
@@ -139,7 +140,7 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
             // No TaCZ: the inherited RangedCrossbowAttackGoal shoots the fallback crossbow, and this is the
             // melee it never had (a vanilla Pillager has no melee goal at all).
             this.goalSelector.addGoal(2,
-                    new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(this, 1.1D, false));
+                    new com.gfl.tarkovscav.gun.NoGunMeleeGoal(this, 1.1D, false));
         }
         // Grenades (README 5v), behind shooting and melee: thrown only when the target is out of sight. The
         // ladder gate (README 7o) is required because this goal carries no goal flags of its own.
@@ -173,6 +174,20 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
     @Override
     protected void populateDefaultEquipmentEnchantments(RandomSource random, DifficultyInstance difficulty) {
         // intentionally empty
+    }
+
+    @Override
+    public void performRangedAttack(LivingEntity target, float drawPower) {
+        if (this.getMainHandItem().is(net.minecraft.world.item.Items.BOW)
+                || this.getOffhandItem().is(net.minecraft.world.item.Items.BOW)) {
+            com.gfl.tarkovscav.gun.ArmedRangedGoal.shootArrow(this, target, drawPower);
+        } else {
+            super.performRangedAttack(target, drawPower);
+            if (this instanceof com.gfl.tarkovscav.gun.SniperMob
+                    && com.gfl.tarkovscav.gun.SniperPost.holdingPost(this)) {
+                com.gfl.tarkovscav.gun.SniperPost.noteShot(this, this.level().getGameTime());
+            }
+        }
     }
 
     // ------------------------------------------------------------------ spawning
@@ -339,7 +354,7 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
     @Override
     public void die(DamageSource source) {
         this.voice.sayDeath();
-        this.triggerAnim("movement", "death");
+        this.triggerAnim(Config.SPEC.isLoaded() && Config.singleControllerMode() ? "model" : "movement", "death");
         super.die(source);
     }
 
@@ -435,18 +450,19 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
         if (Config.SPEC.isLoaded() && Config.singleControllerMode()) {
             // See ScavEntity#registerControllers: one controller, one clip, one geometry submission.
             controllers.add(new AnimationController<>(this, "model", 3, this::singleController)
-                    .triggerableAnim("death", RawAnimation.begin().thenPlay(GunClips.DEATH))
-                    .receiveTriggeredAnimations());
+                    .triggerableAnim("death", RawAnimation.begin().thenPlay(GunClips.DEATH)));
             return;
         }
         controllers.add(new AnimationController<>(this, "movement", 4, this::movementController)
-                .triggerableAnim("death", RawAnimation.begin().thenPlay(GunClips.DEATH))
-                .receiveTriggeredAnimations());
+                .triggerableAnim("death", RawAnimation.begin().thenPlay(GunClips.DEATH)));
         controllers.add(new AnimationController<>(this, "gun", 2, this::gunController));
     }
 
     /** The single-controller variant; same clip choice as {@code ScavEntity}'s. */
     private PlayState singleController(AnimationState<GunnerPillagerEntity> state) {
+        if (isDeadOrDying()) {
+            return state.setAndContinue(RawAnimation.begin().thenPlay(GunClips.DEATH));
+        }
         if (isArmed()) {
             String family = usesPistolClips() ? GunClips.FAMILY_PISTOL : GunClips.FAMILY_RIFLE;
             String action = GunClips.actionFor(isGunAiming(), isGunFiring(), isGunReloading(), gunAiState());
@@ -458,6 +474,9 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
     }
 
     private PlayState movementController(AnimationState<GunnerPillagerEntity> state) {
+        if (isDeadOrDying()) {
+            return state.setAndContinue(RawAnimation.begin().thenPlay(GunClips.DEATH));
+        }
         boolean armed = isArmed();
         boolean moving = this.walk.isMoving();
         boolean running = this.walk.isRunning();
@@ -465,7 +484,7 @@ public class GunnerPillagerEntity extends Pillager implements GunUser, GeoEntity
     }
 
     private PlayState gunController(AnimationState<GunnerPillagerEntity> state) {
-        if (!isArmed()) {
+        if (isDeadOrDying() || !isArmed()) {
             return PlayState.STOP;
         }
         String family = usesPistolClips() ? GunClips.FAMILY_PISTOL : GunClips.FAMILY_RIFLE;

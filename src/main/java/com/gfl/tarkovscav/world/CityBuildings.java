@@ -1,5 +1,6 @@
 package com.gfl.tarkovscav.world;
 
+import com.gfl.tarkovscav.TarkovScav;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -127,14 +128,14 @@ public final class CityBuildings {
 
     /** The baked map of one structure id, or null when the pack ships none (or it cannot be read). */
     private static Map2 load(ServerLevel level, ResourceLocation structureId) {
-        Map2 cached = CACHE.get(structureId);
-        if (cached != null) {
-            return cached;
+        if (CACHE.containsKey(structureId)) {
+            return CACHE.get(structureId);
         }
         ResourceLocation file = new ResourceLocation(structureId.getNamespace(),
                 "city_buildings/" + structureId.getPath() + ".json");
         List<Resource> stack = level.getServer().getResourceManager().getResourceStack(file);
         if (stack.isEmpty()) {
+            CACHE.put(structureId, null);
             return null;
         }
         Map2 parsed = null;
@@ -144,11 +145,15 @@ public final class CityBuildings {
                 parsed = parse(root.getAsJsonObject());
             }
         } catch (Exception exception) {
+            CACHE.put(structureId, null);
+            TarkovScav.LOGGER.warn("[city] could not read building map {}: {}; using one whole-city footprint",
+                    file, exception.toString());
             return null;
         }
-        if (parsed != null) {
-            CACHE.put(structureId, parsed);
+        if (parsed == null) {
+            TarkovScav.LOGGER.warn("[city] building map {} has an invalid layout; using one whole-city footprint", file);
         }
+        CACHE.put(structureId, parsed);
         return parsed;
     }
 
@@ -160,6 +165,9 @@ public final class CityBuildings {
         int sizeX = size.get(0).getAsInt();
         int sizeY = size.get(1).getAsInt();
         int sizeZ = size.get(2).getAsInt();
+        if (sizeX <= 0 || sizeY <= 0 || sizeZ <= 0) {
+            return null;
+        }
         JsonArray buildings = json.getAsJsonArray("buildings");
         if (buildings == null) {
             return null;
@@ -172,9 +180,14 @@ public final class CityBuildings {
             JsonObject building = raw.getAsJsonObject();
             String id = building.has("id") ? building.get("id").getAsString()
                     : Integer.toString(entries.size());
-            entries.add(new Entry(id,
-                    building.get("x").getAsInt(), building.get("z").getAsInt(),
-                    building.get("w").getAsInt(), building.get("d").getAsInt()));
+            Entry entry = new Entry(id, building.get("x").getAsInt(), building.get("z").getAsInt(),
+                    building.get("w").getAsInt(), building.get("d").getAsInt());
+            if (id.isEmpty() || entries.stream().anyMatch(existing -> existing.id().equals(id))
+                    || entry.x() < 0 || entry.z() < 0 || entry.w() <= 0 || entry.d() <= 0
+                    || (long) entry.x() + entry.w() > sizeX || (long) entry.z() + entry.d() > sizeZ) {
+                return null;
+            }
+            entries.add(entry);
         }
         return new Map2(sizeX, sizeY, sizeZ, entries);
     }

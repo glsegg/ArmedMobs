@@ -3,6 +3,7 @@ package com.gfl.tarkovscav.faction;
 import com.gfl.tarkovscav.Config;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 
 /**
  * The damage hook for {@link Renegade} (README 5m).
@@ -20,9 +21,10 @@ public final class FactionEvents {
     private FactionEvents() {
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLivingHurt(LivingHurtEvent event) {
-        if (!Config.FACTION_ENABLED.get()) {
+        if (!Config.FACTION_ENABLED.get() || !(event.getAmount() > 0.0F)
+                || !Float.isFinite(event.getAmount())) {
             return;
         }
         if (!(event.getSource().getEntity() instanceof net.minecraft.world.entity.Mob attacker)) {

@@ -150,7 +150,7 @@ public final class ModCommands {
         }
         ResourceLocation target = name == null
                 ? com.gfl.tarkovscav.world.WastelandTravel.WASTELAND
-                : (name.contains(":") ? ResourceLocation.tryParse(name) : TarkovScav.id(name));
+                : ResourceLocation.tryParse(name.contains(":") ? name : TarkovScav.MOD_ID + ":" + name);
         if (target == null || com.gfl.tarkovscav.world.WastelandTravel.resolveLevel(source.getServer(),
                 target) == null) {
             source.sendFailure(Component.translatable("tarkovscav.command.dimension.unknown",
@@ -304,6 +304,8 @@ public final class ModCommands {
                 + " set to " + (override == null ? "auto (the recorded roll)" : CityFactions.name(override))
                 + "; the spawners are rewritten on the next garrison trigger.").withStyle(ChatFormatting.GREEN),
                 true);
+        source.sendSuccess(() -> Component.literal("Capture progress is preserved; rebuild for the new lineup with"
+                + " /armedmobs capture reset " + cityKey).withStyle(ChatFormatting.GRAY), false);
         for (com.gfl.tarkovscav.world.GarrisonData.BuildingRow row
                 : data.buildingsOf(dimension, cityKey)) {
             source.sendSuccess(() -> Component.literal("  " + row.describe()), false);
@@ -342,6 +344,8 @@ public final class ModCommands {
         source.sendSuccess(() -> Component.literal("City " + city.name() + " (" + city.key() + ") faction "
                 + (override == null ? "auto (the recorded roll)" : CityFactions.name(override))
                 + " applied now.").withStyle(ChatFormatting.GREEN), true);
+        source.sendSuccess(() -> Component.literal("Capture progress is preserved; rebuild for the new lineup with"
+                + " /armedmobs capture reset " + city.key()).withStyle(ChatFormatting.GRAY), false);
         source.sendSuccess(() -> Component.literal("  dominant=" + CityFactions.name(
                 com.gfl.tarkovscav.world.CityGarrison.buildingFaction(data, dimension, city.key(),
                         com.gfl.tarkovscav.world.CityGarrison.WHOLE_CITY))
@@ -744,13 +748,23 @@ public final class ModCommands {
         ServerLevel level = source.getLevel();
         String name = StringArgumentType.getString(context, "name");
         BlockPos target = pos != null ? pos : BlockPos.containing(source.getPosition());
+        if (rotation % 90 != 0) {
+            source.sendFailure(Component.literal("Rotation must be 0, 90, 180 or 270 degrees."));
+            return 0;
+        }
+        String mirrorId = mirrorName == null ? "none" : mirrorName.toLowerCase(java.util.Locale.ROOT);
+        if (!List.of("none", "left_right", "leftright", "x", "front_back", "frontback", "z").contains(mirrorId)) {
+            source.sendFailure(Component.literal("Unknown mirror '" + mirrorName
+                    + "'; use none, left_right or front_back."));
+            return 0;
+        }
         Rotation rotationValue = switch (((rotation % 360) + 360) % 360) {
             case 90 -> Rotation.CLOCKWISE_90;
             case 180 -> Rotation.CLOCKWISE_180;
             case 270 -> Rotation.COUNTERCLOCKWISE_90;
             default -> Rotation.NONE;
         };
-        Mirror mirror = switch (mirrorName == null ? "none" : mirrorName.toLowerCase(java.util.Locale.ROOT)) {
+        Mirror mirror = switch (mirrorId) {
             case "left_right", "leftright", "x" -> Mirror.LEFT_RIGHT;
             case "front_back", "frontback", "z" -> Mirror.FRONT_BACK;
             default -> Mirror.NONE;
@@ -963,9 +977,8 @@ public final class ModCommands {
 
         // 'sniper' is the short alias the user asked for (README 5q).
         String resolved = typeName.equalsIgnoreCase("sniper") ? "sniper_pillager" : typeName;
-        ResourceLocation id = resolved.contains(":")
-                ? ResourceLocation.tryParse(resolved)
-                : TarkovScav.id(resolved);
+        ResourceLocation id = ResourceLocation.tryParse(resolved.contains(":")
+                ? resolved : TarkovScav.MOD_ID + ":" + resolved);
         EntityType<?> type = id == null ? null : ForgeRegistries.ENTITY_TYPES.getValue(id);
         if (type == null || !(type.equals(ModEntities.SCAV.get())
                 || type.equals(ModEntities.BLACKFOX_ASSAULT.get())
@@ -1042,6 +1055,10 @@ public final class ModCommands {
         mob.finalizeSpawn(level, level.getCurrentDifficultyAt(BlockPos.containing(position)),
                 MobSpawnType.COMMAND, null, null);
         level.addFreshEntityWithPassengers(mob);
+        if (!mob.isAddedToWorld()) {
+            mob.discard();
+            return null;
+        }
         return mob;
     }
 
@@ -1591,6 +1608,7 @@ public final class ModCommands {
         Vec3 dummyPos = Vec3.atBottomCenterOf(origin.offset((int) Math.round(distance), 0, 0));
         Mob dummy = create(level, EntityType.ZOMBIE, dummyPos);
         if (dummy == null) {
+            scav.discard();
             source.sendFailure(Component.literal("Could not create the practice dummy"));
             return null;
         }

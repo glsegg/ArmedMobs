@@ -166,7 +166,7 @@ public class GrenadeEntity extends ThrowableItemProjectile {
         }
         this.detonated = true;
         GrenadeBlast.detonate(level, this.position(), this.kind, this.getOwner() instanceof LivingEntity living
-                ? living : null);
+                ? living : null, this);
         this.discard();
     }
 

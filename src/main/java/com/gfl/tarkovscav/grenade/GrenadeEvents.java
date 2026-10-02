@@ -11,8 +11,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.event.level.ExplosionEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -51,6 +53,24 @@ public final class GrenadeEvents {
     /** How many clouds are alive, for the test command and the gate. */
     public static int cloudCount() {
         return CLOUDS.size();
+    }
+
+    /** Apply the same friendly-fire rules to the optional vanilla block-breaking explosion. */
+    @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
+    public static void onExplosionStart(ExplosionEvent.Start event) {
+        if (event.getExplosion().getDamageSource() instanceof GrenadeDamageSource source) {
+            source.setExplosionCancelled(event.isCanceled());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onExplosionDetonate(ExplosionEvent.Detonate event) {
+        if (!(event.getExplosion().getDamageSource() instanceof GrenadeDamageSource source)) {
+            return;
+        }
+        LivingEntity thrower = source.getEntity() instanceof LivingEntity living ? living : null;
+        event.getAffectedEntities().removeIf(entity -> entity instanceof LivingEntity living
+                && !GrenadeEntity.mayHurt(thrower, living));
     }
 
     @SubscribeEvent

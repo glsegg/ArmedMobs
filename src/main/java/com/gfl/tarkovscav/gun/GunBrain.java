@@ -8,6 +8,7 @@ import com.tacz.guns.api.entity.ReloadState;
 import com.tacz.guns.api.entity.ShootResult;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.api.item.gun.AbstractGunItem;
+import com.tacz.guns.resource.pojo.data.gun.Bolt;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
@@ -1614,10 +1615,16 @@ public final class GunBrain {
             taken = gunItem.findAndExtractInventoryAmmo(
                     new InvWrapper(this.user.ammoInventory()), held, needed);
         }
-        if (taken > 0) {
-            gun.setCurrentAmmoCount(held, gun.getCurrentAmmoCount(held) + taken);
+        int magazine = gun.getCurrentAmmoCount(held) + taken;
+        Bolt bolt = GunPool.index(gun.getGunId(held))
+                .map(index -> index.getGunData().getBolt()).orElse(Bolt.OPEN_BOLT);
+        if (bolt != Bolt.OPEN_BOLT && !gun.hasBulletInBarrel(held) && magazine > 0) {
+            // TaCZ counts the chamber separately. Feeding an empty chamber moves one existing round;
+            // setting the flag without removing it from the magazine created a round on every reload.
+            magazine--;
             gun.setBulletInBarrel(held, true);
         }
+        gun.setCurrentAmmoCount(held, magazine);
         log("{} reloaded from its ammo items: took {} round(s), magazine {}/{}, reserve items left {}",
                 name(), taken, gun.getCurrentAmmoCount(held), capacity,
                 countAmmoItems());
@@ -1818,7 +1825,17 @@ public final class GunBrain {
         Vec3 aim = panicAimPoint();
         this.panicSpread = Config.GRENADE_FLASH_PANIC_SPREAD_MULTIPLIER.get();
         try {
-            shootAt(aim, 1.0D, true);
+            ShootResult result = shootAt(aim, 1.0D, true);
+            if (result == ShootResult.SUCCESS) {
+                handleShootResult(result);
+                if (Config.ACCURACY_ENABLED.get()) {
+                    AccuracyProfile.noteShot(this.mob, level.getGameTime());
+                }
+            } else if (result == ShootResult.NOT_DRAW || result == ShootResult.IS_DRAWING) {
+                operator().draw(this.mob::getMainHandItem);
+            } else if (result == ShootResult.NEED_BOLT || result == ShootResult.IS_BOLTING) {
+                operator().bolt();
+            }
         } finally {
             this.panicSpread = 1.0D;
         }
@@ -1884,6 +1901,9 @@ public final class GunBrain {
             case SUCCESS -> {
                 this.shotsInBurst++;
                 this.shotsFired++;
+                if (this.mob instanceof SniperMob && SniperPost.holdingPost(this.mob)) {
+                    SniperPost.noteShot(this.mob, this.mob.level().getGameTime());
+                }
                 // Real progress: the mob is shooting, so it is not stalled.
                 this.watchdogTicks = Config.FIRE_STALL_TICKS.get();
                 this.stallEscapes = 0;

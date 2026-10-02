@@ -69,8 +69,8 @@ public final class KillFeedWeapons {
      */
     private static final List<Resolver> RESOLVERS = new ArrayList<>(List.of(
             KillFeedWeapons::fromExplosion,
-            KillFeedWeapons::fromKillerHand,
-            KillFeedWeapons::fromDamageMessage));
+            KillFeedWeapons::fromDamageMessage,
+            KillFeedWeapons::fromKillerHand));
 
     /** Weapon ids already WARNed about, so a wrong answer is reported once and not once per death. */
     private static final Set<String> WARNED = ConcurrentHashMap.newKeySet();
@@ -139,9 +139,8 @@ public final class KillFeedWeapons {
     }
 
     /**
-     * Last resort before "unknown": the damage message itself, mapped by a table. This is what names a fall, a
-     * drowning, fire, magic and the rest, and it keeps the mapping in one place instead of a chain of string
-     * comparisons.
+     * Known environmental causes take precedence over an earlier attacker's current hand. A mob
+     * pushed off a roof still died from a fall even when its last attacker is holding a gun.
      */
     @Nullable
     private static Armament fromDamageMessage(@Nullable LivingEntity killer, LivingEntity victim,

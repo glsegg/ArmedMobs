@@ -12,6 +12,8 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.FixedBiomeSource;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.LegacyRandomSource;
 import net.minecraft.world.level.levelgen.WorldgenRandom;
 import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
@@ -50,14 +52,9 @@ import java.util.Optional;
  * {@code cell * spacing + spreadType.evaluate(...)} - so the overworld branch is not "similar to" vanilla,
  * it is the same formula with the same numbers.</p>
  *
- * <h2>The locate trade-off (stated, not hidden)</h2>
- * <p>{@link #spacing()} and {@link #separation()} report the DENSE pair, because {@code /locate structure}
- * walks candidates in steps of {@code spacing()} and never hands the placement a generator - it is the
- * only value that can make {@code locate} correct in the dense dimension. The cost is on the overworld
- * side: {@code locate} there now probes the dense grid, so it will not report the overworld's
- * sparse-grid cities. That was already the documented behaviour of this mod before this class existed
- * (README section 7i's TODO: "/locate structure tarkovscav:city_small -> Could not find"), so nothing
- * regresses, but the reason is now different and is written down here rather than discovered later.</p>
+ * <p>The locate hook supplies the level when choosing spacing and candidate chunks. Vanilla's inherited
+ * candidate method reads its private spacing fields directly, so overriding a getter alone cannot make
+ * locating use the same grid as generation.</p>
  */
 public class WastelandSpreadPlacement extends RandomSpreadStructurePlacement {
     /** The biome that marks a dimension as the urban wasteland. */
@@ -149,13 +146,13 @@ public class WastelandSpreadPlacement extends RandomSpreadStructurePlacement {
         return super.spreadType();
     }
 
-    /** Reports the dense pair on purpose: see the class comment's locate section. */
+    /** Vanilla fallback; level-aware locating uses {@link #spacingFor(ServerLevel)}. */
     @Override
     public int spacing() {
         return this.denseSpacing;
     }
 
-    /** Reports the dense pair on purpose: see the class comment's locate section. */
+    /** Vanilla fallback; level-aware locating selects the matching pair. */
     @Override
     public int separation() {
         return this.denseSeparation;
@@ -177,6 +174,17 @@ public class WastelandSpreadPlacement extends RandomSpreadStructurePlacement {
             return matchesAt(seed, chunkX, chunkZ, this.denseSpacing, this.denseSeparation);
         }
         return matchesAt(seed, chunkX, chunkZ, this.normalSpacing, this.normalSeparation);
+    }
+
+    public int spacingFor(ServerLevel level) {
+        return isWasteland(level.getChunkSource().getGeneratorState()) ? this.denseSpacing : this.normalSpacing;
+    }
+
+    /** The locate candidate on this level's generation grid, with no mutable dimension context. */
+    public ChunkPos potentialChunkFor(ServerLevel level, long seed, int chunkX, int chunkZ) {
+        boolean dense = isWasteland(level.getChunkSource().getGeneratorState());
+        return candidateAt(seed, chunkX, chunkZ, dense ? this.denseSpacing : this.normalSpacing,
+                dense ? this.denseSeparation : this.normalSeparation);
     }
 
     /**
@@ -246,13 +254,17 @@ public class WastelandSpreadPlacement extends RandomSpreadStructurePlacement {
     /**
      * Vanilla's {@code RandomSpreadStructurePlacement#getPotentialStructureChunk} arithmetic, verbatim
      * (including the salt-seeded {@code setLargeFeatureWithSalt}), with the spacing/separation handed in.
-     * Copied rather than called because the inherited version reads this instance's {@link #spacing()} -
-     * which is the dense value, and the overworld branch must use the shipped one.
+     * Shared by generation and locating, because the inherited method reads its private normal fields.
      */
     private boolean matchesAt(long seed, int chunkX, int chunkZ, int spacing, int separation) {
         if (separation >= spacing) {
             return false;
         }
+        ChunkPos candidate = candidateAt(seed, chunkX, chunkZ, spacing, separation);
+        return candidate.x == chunkX && candidate.z == chunkZ;
+    }
+
+    private ChunkPos candidateAt(long seed, int chunkX, int chunkZ, int spacing, int separation) {
         int cellX = Math.floorDiv(chunkX, spacing);
         int cellZ = Math.floorDiv(chunkZ, spacing);
         WorldgenRandom random = new WorldgenRandom(new LegacyRandomSource(0L));
@@ -260,6 +272,6 @@ public class WastelandSpreadPlacement extends RandomSpreadStructurePlacement {
         int range = spacing - separation;
         int offsetX = this.spreadType().evaluate(random, range);
         int offsetZ = this.spreadType().evaluate(random, range);
-        return cellX * spacing + offsetX == chunkX && cellZ * spacing + offsetZ == chunkZ;
+        return new ChunkPos(cellX * spacing + offsetX, cellZ * spacing + offsetZ);
     }
 }

@@ -8,6 +8,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -22,6 +23,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -31,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
+import java.util.zip.GZIPInputStream;
 
 /**
  * The runtime city-structure pool: the NBTs the user edits in a world and hands back to the mod.
@@ -77,6 +81,7 @@ public final class CityStructures {
 
     /** Refuse a template whose bounding box is absurd (a mis-saved structure fills the world). */
     private static final int MAX_AXIS = 512;
+    private static final long MAX_NBT_BYTES = 128L * 1024L * 1024L;
 
     /** Above this a warning is logged - it is allowed, it is just slow. */
     private static final int WARN_AXIS = 256;
@@ -96,6 +101,8 @@ public final class CityStructures {
                     + " palette=" + paletteEntries + " blocks=" + blocks + " entities=" + entities;
         }
     }
+
+    private record Validated(Loaded metadata, CompoundTag tag) { }
 
     /** One placed instance: which world, which box, and where it came from. */
     public record Placed(String name, ResourceLocation dimension, BoundingBox box, BlockPos origin,
@@ -129,6 +136,7 @@ public final class CityStructures {
      * @throws InvalidStructure when the file is missing, empty, unreadable or implausible
      */
     public static Loaded importFromWorld(ServerLevel level, String name) throws InvalidStructure {
+        validateName(name);
         Path source = worldStructureFile(level, name);
         if (!Files.isRegularFile(source)) {
             throw new InvalidStructure("no structure file at " + source
@@ -185,6 +193,11 @@ public final class CityStructures {
 
     /** Reads and validates one file without registering it. */
     public static Loaded read(Path file, String name) throws InvalidStructure {
+        return readValidated(file, name).metadata();
+    }
+
+    private static Validated readValidated(Path file, String name) throws InvalidStructure {
+        validateName(name);
         if (!Files.isRegularFile(file)) {
             throw new InvalidStructure("no such file: " + file);
         }
@@ -200,7 +213,7 @@ public final class CityStructures {
 
         CompoundTag tag;
         try (InputStream in = Files.newInputStream(file)) {
-            tag = NbtIo.readCompressed(in);
+            tag = readBoundedCompressed(in);
         } catch (IOException | RuntimeException failed) {
             throw new InvalidStructure(file + " is not a readable compressed NBT structure: "
                     + failed.getMessage());
@@ -253,11 +266,32 @@ public final class CityStructures {
                 throw new InvalidStructure(file + " block " + i + " references palette entry " + state
                         + " but the palette has " + palette.size() + " entries");
             }
+            ListTag position = block.getList("pos", net.minecraft.nbt.Tag.TAG_INT);
+            if (position.size() != 3 || position.getInt(0) < 0 || position.getInt(0) >= sx
+                    || position.getInt(1) < 0 || position.getInt(1) >= sy
+                    || position.getInt(2) < 0 || position.getInt(2) >= sz) {
+                throw new InvalidStructure(file + " block " + i + " lies outside its declared size");
+            }
         }
 
         StructureTemplate template = null; // loaded lazily in loadTemplate(), which needs a level
-        return new Loaded(name, id(name), file, template, new Vec3i(sx, sy, sz),
-                palette.size(), blocks.size(), entities.size());
+        return new Validated(new Loaded(name, id(name), file, template, new Vec3i(sx, sy, sz),
+                palette.size(), blocks.size(), entities.size()), tag);
+    }
+
+    private static void validateName(String name) throws InvalidStructure {
+        // This runtime pool uses flat file names; paths would escape the import directory or disappear
+        // from its non-recursive reload. Invalid resource names must not abort server startup either.
+        if (name == null || !name.matches("[A-Za-z0-9_.-]+") || name.equals(".") || name.equals("..")) {
+            throw new InvalidStructure("invalid city name '" + name
+                    + "': use a file name with letters, digits, underscores, dashes or dots");
+        }
+    }
+
+    private static CompoundTag readBoundedCompressed(InputStream input) throws IOException {
+        try (DataInputStream data = new DataInputStream(new BufferedInputStream(new GZIPInputStream(input)))) {
+            return NbtIo.read(data, new NbtAccounter(MAX_NBT_BYTES));
+        }
     }
 
     /** The resource id a runtime structure is registered under, e.g. {@code tarkovscav:city/mycity}. */
@@ -267,6 +301,7 @@ public final class CityStructures {
 
     /** Loads the template for real (needs a level for the block registry). */
     public static Loaded loadTemplate(ServerLevel level, String name) throws InvalidStructure {
+        validateName(name);
         Loaded loaded = POOL.get(name.toLowerCase(Locale.ROOT));
         if (loaded == null) {
             throw new InvalidStructure("'" + name + "' is not in the runtime pool; use"
@@ -275,17 +310,15 @@ public final class CityStructures {
         }
         HolderLookup<Block> blocks = level.holderLookup(Registries.BLOCK);
         StructureTemplate template = new StructureTemplate();
-        try (InputStream in = Files.newInputStream(loaded.file())) {
-            CompoundTag tag = NbtIo.readCompressed(in);
-            if (tag == null) {
-                throw new InvalidStructure(loaded.file() + " holds no NBT data");
-            }
-            template.load(blocks, tag);
-        } catch (IOException | RuntimeException failed) {
+        Validated snapshot = readValidated(loaded.file(), loaded.name());
+        Loaded validated = snapshot.metadata();
+        try {
+            template.load(blocks, snapshot.tag());
+        } catch (RuntimeException failed) {
             throw new InvalidStructure("could not load " + loaded.file() + ": " + failed.getMessage());
         }
-        Loaded withTemplate = new Loaded(loaded.name(), loaded.id(), loaded.file(), template, loaded.size(),
-                loaded.paletteEntries(), loaded.blocks(), loaded.entities());
+        Loaded withTemplate = new Loaded(validated.name(), validated.id(), validated.file(), template,
+                validated.size(), validated.paletteEntries(), validated.blocks(), validated.entities());
         POOL.put(loaded.name().toLowerCase(Locale.ROOT), withTemplate);
         return withTemplate;
     }

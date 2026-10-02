@@ -102,35 +102,45 @@ public class GrenadeResupplyGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return this.target != null && MobGrenades.hasRoom(this.mob)
-                && !this.mob.getNavigation().isDone()
-                && this.mob.distanceToSqr(this.target.getBlockPos().getX() + 0.5D,
-                        this.target.getBlockPos().getY() + 0.5D, this.target.getBlockPos().getZ() + 0.5D)
-                    > REACH * REACH;
+        if (!Config.GRENADES_ENABLED.get() || !Config.MOB_GRENADES_ENABLED.get()
+                || !Config.GRENADES_RESUPPLY_ENABLED.get() || !validTarget()
+                || !MobGrenades.hasRoom(this.mob) || this.mob.getTarget() != null) {
+            return false;
+        }
+        // Remain active after reaching the rack so tick() gets to take it on this tick.
+        return withinReach() || !this.mob.getNavigation().isDone();
     }
 
     @Override
     public void tick() {
-        if (this.target == null) {
-            return;
-        }
-        double distance = Math.sqrt(this.mob.distanceToSqr(this.target.getBlockPos().getX() + 0.5D,
-                this.target.getBlockPos().getY() + 0.5D, this.target.getBlockPos().getZ() + 0.5D));
-        if (distance > REACH) {
+        if (!validTarget() || !withinReach()) {
             return;
         }
         take();
     }
 
+    private boolean validTarget() {
+        return this.target != null && !this.target.isRemoved()
+                && this.mob.level().hasChunkAt(this.target.getBlockPos())
+                && this.mob.level().getBlockEntity(this.target.getBlockPos()) == this.target;
+    }
+
+    private boolean withinReach() {
+        return this.target != null && this.mob.distanceToSqr(this.target.getBlockPos().getX() + 0.5D,
+                this.target.getBlockPos().getY() + 0.5D, this.target.getBlockPos().getZ() + 0.5D)
+                <= REACH * REACH;
+    }
+
     @Override
     public void stop() {
+        this.mob.getNavigation().stop();
         this.target = null;
         this.searchCooldown = 40;
     }
 
     /** Takes ONE throwable off the rack, if it is still holding one. */
     private void take() {
-        if (this.target == null || !(this.mob.level() instanceof ServerLevel level)) {
+        if (!validTarget() || !(this.mob.level() instanceof ServerLevel level)) {
             return;
         }
         ItemStack held = this.target.held();

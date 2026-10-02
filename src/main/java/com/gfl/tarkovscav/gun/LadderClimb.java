@@ -168,22 +168,30 @@ public final class LadderClimb {
 
         @Override
         public boolean passable(int x, int y, int z) {
-            BlockState state = this.level.getBlockState(new BlockPos(x, y, z));
+            BlockPos pos = new BlockPos(x, y, z);
+            if (!this.level.hasChunkAt(pos)) {
+                return false;
+            }
+            BlockState state = this.level.getBlockState(pos);
             if (!state.getFluidState().isEmpty()) {
                 return false;
             }
-            return state.getCollisionShape(this.level, new BlockPos(x, y, z)).isEmpty();
+            return state.getCollisionShape(this.level, pos).isEmpty();
         }
 
         @Override
         public boolean solidTop(int x, int y, int z) {
-            BlockState state = this.level.getBlockState(new BlockPos(x, y, z));
-            return !state.getCollisionShape(this.level, new BlockPos(x, y, z)).isEmpty();
+            BlockPos pos = new BlockPos(x, y, z);
+            if (!this.level.hasChunkAt(pos)) {
+                return false;
+            }
+            BlockState state = this.level.getBlockState(pos);
+            return !state.getCollisionShape(this.level, pos).isEmpty();
         }
     }
 
     private static boolean climbable(Level level, BlockPos pos) {
-        return level.getBlockState(pos).is(BlockTags.CLIMBABLE);
+        return level.hasChunkAt(pos) && level.getBlockState(pos).is(BlockTags.CLIMBABLE);
     }
 
     // ------------------------------------------------------------------ the shaft fall rule

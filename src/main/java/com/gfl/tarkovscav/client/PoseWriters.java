@@ -290,6 +290,11 @@ public final class PoseWriters {
 
     /** Called by {@link RigSupport#invalidateConfig()}: a live config change starts a fresh count. */
     static void forget() {
+        frames = 0L;
+        lookConflicts = 0L;
+        fixedOverrides = 0L;
         LOGGED_CONFLICTS.clear();
+        NON_FINITE_REPORTED.clear();
+        CURRENT.remove();
     }
 }

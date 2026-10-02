@@ -181,6 +181,9 @@ public class WeaponRackBlock extends BaseEntityBlock {
         if (!(level.getBlockEntity(pos) instanceof WeaponRackBlockEntity rack)) {
             return InteractionResult.PASS;
         }
+        if (level.isClientSide) {
+            return InteractionResult.SUCCESS;
+        }
         ItemStack inHand = player.getItemInHand(hand);
         boolean infinite = rack.infinite();
         if (infinite && !com.gfl.tarkovscav.Config.RACK_CREATIVE_RACK_ENABLED.get()) {

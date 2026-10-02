@@ -117,6 +117,9 @@ public final class AlertNetwork {
                 || !Faction.isArmedMember(source)) {
             return;
         }
+        if (!source.hasLineOfSight(target)) {
+            return; // An old combat target must not become a fresh radio report through a wall.
+        }
         long now = level.getGameTime();
         Long last = LAST_BROADCAST.get(source);
         int cooldown = Config.ALERT_BROADCAST_COOLDOWN_TICKS.get();
@@ -235,14 +238,17 @@ public final class AlertNetwork {
         if (!(mob.level() instanceof ServerLevel level)) {
             return -1;
         }
-        Faction faction = Faction.of(mob);
-        if (faction == null) {
+        SharedContact contact = current(mob);
+        if (contact == null) {
             return -1;
         }
         List<Mob> allies = new ArrayList<>(level.getEntitiesOfClass(Mob.class,
                 mob.getBoundingBox().inflate(Config.ALERT_RADIUS.get())));
-        allies.removeIf(candidate -> candidate == mob || !Faction.isArmedMember(candidate)
-                || Faction.of(candidate) != faction || current(candidate) == null);
+        // Include the receiver itself: removing it before indexOf made every receiver index -1,
+        // so the converge branch could never run. Only idle receivers of this same report share slots.
+        allies.removeIf(candidate -> !Faction.isArmedMember(candidate)
+                || (candidate.getTarget() != null && candidate.getTarget().isAlive())
+                || !contact.equals(current(candidate)));
         allies.sort(Comparator.comparingInt(Mob::getId));
         return allies.indexOf(mob);
     }

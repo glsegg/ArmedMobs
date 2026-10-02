@@ -178,22 +178,7 @@ public class GunnerVillagerEntity extends Villager implements GunUser, RangedAtt
      */
     @Override
     public void performRangedAttack(LivingEntity target, float distanceFactor) {
-        ItemStack weapon = this.getItemInHand(net.minecraft.world.entity.projectile.ProjectileUtil
-                .getWeaponHoldingHand(this, item -> item == net.minecraft.world.item.Items.BOW
-                        || item == net.minecraft.world.item.Items.CROSSBOW));
-        ItemStack ammo = this.getProjectile(weapon);
-        // var, not Arrow: getMobArrow's return type is the mapped arrow class, and naming it here would only
-        // add an import that the compiler already knows about.
-        var arrow = net.minecraft.world.entity.projectile.ProjectileUtil.getMobArrow(this, ammo, distanceFactor);
-        double dx = target.getX() - this.getX();
-        double dy = target.getY(0.3333333333333333D) - arrow.getY();
-        double dz = target.getZ() - this.getZ();
-        double horizontal = Math.sqrt(dx * dx + dz * dz);
-        arrow.shoot(dx, dy + horizontal * 0.2D, dz, 1.6F,
-                (float) (14 - this.level().getDifficulty().getId() * 4));
-        this.playSound(net.minecraft.sounds.SoundEvents.SKELETON_SHOOT, 1.0F,
-                1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
-        this.level().addFreshEntity(arrow);
+        com.gfl.tarkovscav.gun.ArmedRangedGoal.shootArrow(this, target, distanceFactor);
     }
 
     @Override
@@ -235,7 +220,7 @@ public class GunnerVillagerEntity extends Villager implements GunUser, RangedAtt
             this.goalSelector.addGoal(2, new com.gfl.tarkovscav.gun.NoGunMeleeGoal(this, 1.1D, false));
         } else {
             this.goalSelector.addGoal(2,
-                    new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(this, 1.1D, false));
+                    new com.gfl.tarkovscav.gun.NoGunMeleeGoal(this, 1.1D, false));
         }
         // Grenades (README 5v), behind shooting and melee: thrown only when the target is out of sight. The
         // ladder gate (README 7o) is required because this goal carries no goal flags of its own.

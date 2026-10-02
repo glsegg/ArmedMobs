@@ -98,6 +98,18 @@ public final class SniperBehavior {
         if (!Config.SNIPER_ENABLED.get()) {
             // The master switch (sniper.enabled): the post logic stops entirely - no holding, no relocation.
             // The mob still fights with the shared gun brain, it just stops behaving like a sniper.
+            if (!this.mob.level().isClientSide && this.movingTo != null) {
+                this.movingTo = null;
+                this.mob.getNavigation().stop();
+                if (this.stashedTarget != null && this.stashedTarget.isAlive()
+                        && this.mob.getTarget() == null) {
+                    this.mob.setTarget(this.stashedTarget);
+                }
+                this.stashedTarget = null;
+            }
+            if (!this.mob.level().isClientSide) {
+                SniperPost.setHoldingPost(this.mob, false);
+            }
             return;
         }
         if (!(this.mob.level() instanceof ServerLevel level)) {
@@ -165,10 +177,8 @@ public final class SniperBehavior {
         // where it is. Both are needed - a path already in flight keeps walking without the second one.
         this.mob.getNavigation().stop();
         this.mob.getMoveControl().setWantedPosition(this.mob.getX(), this.mob.getY(), this.mob.getZ(), 0.0D);
-        // Count the shots it takes from here (trigger 3). isGunFiring() is the shared GunUser readout.
-        if (this.user.isGunFiring()) {
-            SniperPost.noteShot(this.mob, level.getGameTime());
-        }
+        // Shot counts are recorded at accepted gun/arrow shots. A FIRE pose also spans cooldowns
+        // and rejected shots, so counting that flag each tick prematurely exhausted the post.
     }
 
     private void startMove(ServerLevel level, LivingEntity target, String reason) {
@@ -236,6 +246,9 @@ public final class SniperBehavior {
             BlockPos candidate = BlockPos.containing(
                     target.getX() + Math.cos(angle) * radius, target.getY(),
                     target.getZ() + Math.sin(angle) * radius);
+            if (!level.hasChunkAt(candidate)) {
+                continue;
+            }
             candidate = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING,
                     candidate);
             if (this.mob.distanceToSqr(Vec3.atCenterOf(candidate)) < min * min) {
@@ -295,6 +308,8 @@ public final class SniperBehavior {
         }
         flat = flat.normalize().scale(Config.SNIPER_MIN_POST_DISTANCE.get());
         BlockPos candidate = BlockPos.containing(this.mob.getX() + flat.x, this.mob.getY(), this.mob.getZ() + flat.z);
-        return level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, candidate);
+        return level.hasChunkAt(candidate)
+                ? level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, candidate)
+                : this.mob.blockPosition();
     }
 }

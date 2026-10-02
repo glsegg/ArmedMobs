@@ -68,6 +68,11 @@ public class ArmedRangedGoal extends Goal {
     }
 
     @Override
+    public boolean requiresUpdateEveryTick() {
+        return true; // Draw/cooldown constants and seeTime are expressed in actual game ticks.
+    }
+
+    @Override
     public boolean canUse() {
         LivingEntity target = this.mob.getTarget();
         // Inert unless it is actually holding a bow/crossbow, so a normal gunner is untouched by this goal.
@@ -131,8 +136,9 @@ public class ArmedRangedGoal extends Goal {
                 this.mob.stopUsingItem();
             } else if (this.mob.getTicksUsingItem() >= drawTicks()) {
                 this.mob.releaseUsingItem();
-                float distance = (float) Math.sqrt(distanceSqr);
-                this.shooter.performRangedAttack(target, distance);
+                // getMobArrow interprets this argument as draw power (0..1), not blocks. Passing
+                // a 15-block distance used to make a plain bow deal roughly 30 base damage.
+                this.shooter.performRangedAttack(target, 1.0F);
                 this.attackTime = drawTicks() + 10;
             }
         } else if (this.attackTime <= 0 && canSee) {
@@ -142,6 +148,27 @@ public class ArmedRangedGoal extends Goal {
         }
         if (this.attackTime > 0) {
             this.attackTime--;
+        }
+    }
+
+    /** Shared fully drawn bow shot, including pillagers whose vanilla attack handles crossbows only. */
+    public static void shootArrow(Mob mob, LivingEntity target, float drawPower) {
+        ItemStack weapon = mob.getItemInHand(ProjectileUtil.getWeaponHoldingHand(mob,
+                item -> item == Items.BOW || item == Items.CROSSBOW));
+        ItemStack ammo = mob.getProjectile(weapon);
+        var arrow = ProjectileUtil.getMobArrow(mob, ammo, net.minecraft.util.Mth.clamp(drawPower, 0.0F, 1.0F));
+        double dx = target.getX() - mob.getX();
+        double dy = target.getY(0.3333333333333333D) - arrow.getY();
+        double dz = target.getZ() - mob.getZ();
+        double horizontal = Math.sqrt(dx * dx + dz * dz);
+        arrow.shoot(dx, dy + horizontal * 0.2D, dz, 1.6F,
+                (float) (14 - mob.level().getDifficulty().getId() * 4));
+        if (mob.level().addFreshEntity(arrow)) {
+            mob.playSound(net.minecraft.sounds.SoundEvents.SKELETON_SHOOT, 1.0F,
+                    1.0F / (mob.getRandom().nextFloat() * 0.4F + 0.8F));
+            if (mob instanceof SniperMob && SniperPost.holdingPost(mob)) {
+                SniperPost.noteShot(mob, mob.level().getGameTime());
+            }
         }
     }
 }

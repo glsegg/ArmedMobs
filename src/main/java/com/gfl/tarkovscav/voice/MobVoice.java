@@ -226,17 +226,17 @@ public final class MobVoice {
      * a fresh draw, so the band is always honoured even for mobs that were already in the world.</p>
      */
     public float basePitch() {
-        if (this.basePitch > 0.0F) {
+        double[] band = Config.voicePitchBand();
+        if (Float.isFinite(this.basePitch) && this.basePitch >= band[0] && this.basePitch <= band[1]) {
             return this.basePitch;
         }
-        double[] band = Config.voicePitchBand();
         float stored = Float.NaN;
         CompoundTag data = this.mob.getPersistentData();
         Tag tag = data.get(Config.NBT_VOICE_PITCH);
         if (tag instanceof NumericTag number) {
             stored = number.getAsFloat();
         }
-        if (Float.isNaN(stored) || stored < (float) band[0] || stored > (float) band[1]) {
+        if (!Float.isFinite(stored) || stored < (float) band[0] || stored > (float) band[1]) {
             stored = (float) (band[0] + this.random.nextDouble() * (band[1] - band[0]));
             data.putFloat(Config.NBT_VOICE_PITCH, stored);
         }

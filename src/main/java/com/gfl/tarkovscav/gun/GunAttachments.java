@@ -8,6 +8,7 @@ import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.api.item.attachment.AttachmentType;
 import com.tacz.guns.api.item.builder.AttachmentItemBuilder;
 import com.tacz.guns.resource.index.CommonAttachmentIndex;
+import com.tacz.guns.util.AttachmentDataUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -88,6 +90,7 @@ public final class GunAttachments {
     private static final Map<AttachmentType, Integer> LAST_LOGGED = new ConcurrentHashMap<>();
     /** Guns whose refusal has already been logged, so a bad pack cannot spam the log. */
     private static final Map<String, Integer> REFUSED = new ConcurrentHashMap<>();
+    private static final Set<String> CAPACITY_ERRORS = ConcurrentHashMap.newKeySet();
 
     private GunAttachments() {
     }
@@ -311,21 +314,34 @@ public final class GunAttachments {
     /**
      * The gun's current ammunition capacity, <b>read from the item</b> after any attachment change.
      *
-     * <p>Order matters and is the whole point: {@code GunPool.buildGun} sets the magazine from TaCZ's index
-     * <em>before</em> this class installs anything, so the recorded {@code before} value is the vanilla
-     * magazine and the {@code after} value is the modded one. TaCZ's own accessors are used
-     * ({@code getMaxDummyAmmoAmount} when the gun uses dummy ammo, otherwise {@code getCurrentAmmoCount}),
-     * so an extended magazine is reflected without this mod knowing what "+10" means.</p>
+     * <p>TaCZ's attachment calculation reads the gun data and installed magazine. The current ammo count
+     * is only the rounds remaining, so it cannot describe capacity after firing or an empty reload.</p>
      */
     public static int capacityOf(ItemStack gun) {
+        if (gun.isEmpty() || !TaczPresence.loaded()) {
+            return 0;
+        }
         IGun igun = IGun.getIGunOrNull(gun);
         if (igun == null) {
             return 0;
         }
-        if (igun.useDummyAmmo(gun) && igun.hasMaxDummyAmmo(gun)) {
-            return igun.getMaxDummyAmmoAmount(gun);
+        ResourceLocation gunId = null;
+        try {
+            gunId = igun.getGunId(gun);
+            if (igun.useDummyAmmo(gun) && igun.hasMaxDummyAmmo(gun)) {
+                return igun.getMaxDummyAmmoAmount(gun);
+            }
+            return TimelessAPI.getCommonGunIndex(gunId)
+                    .map(index -> AttachmentDataUtils.getAmmoCountWithAttachment(gun, index.getGunData()))
+                    .orElse(0);
+        } catch (RuntimeException | LinkageError failed) {
+            String key = String.valueOf(gunId);
+            if (CAPACITY_ERRORS.add(key)) {
+                TarkovScav.LOGGER.warn("[mods] could not read gun capacity; using base loadout capacity: {}",
+                        failed.toString());
+            }
+            return 0;
         }
-        return igun.getCurrentAmmoCount(gun);
     }
 
     /**

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Common (server + client) configuration. The file lives at
@@ -713,22 +714,12 @@ public final class Config {
                         "leave on while building a city.")
                 .define("cityFactionCapIgnoreManual", false);
         CITY_FOUNDATION_DEPTH = b
-                .comment("How many blocks of footing the city-district assembler guarantees UNDER every",
-                        "piece it places (/tarkovscav city district). Default 5.",
-                        "",
-                        "THE TWO KINDS OF PIECE ARE DIFFERENT, ON PURPOSE:",
-                        "  * the hand-built pieces cut out of the user's save (README 7b, buildings/<name>.nbt)",
-                        "    carry a FROZEN 5 blocks of footing, baked in when they were extracted - this key",
-                        "    cannot change them;",
-                        "  * the buildings the generator produces (tools/district-layout.json, run with",
-                        "    CityStructureGen --pieces-only --foundation N) are baked with whatever N the",
-                        "    generator was given.",
-                        "This key is the assembler's side of the deal: before placing a piece it extends the",
-                        "footing upwards to this depth, so a district dropped on rough terrain is buried",
-                        "rather than floating. With the default 5 it is a no-op for the shipped pieces (they",
-                        "already have 5); raise it to 7-9 on a mountain, lower it to 3 to leave less of a",
-                        "skirt in flat land. The generator's --foundation and this key should be kept equal",
-                        "for new pieces to look like the extracted ones.")
+                .comment("Minimum footing depth beneath solid city-district template foundations.",
+                        "The assembler fills air or liquid below the baked footing with its own material,",
+                        "down to this depth or the dimension's minimum build height. Existing terrain is kept.",
+                        "Default 5. Raising the value extends shallow foundations; lowering it never removes",
+                        "layers already baked into the original structure template. Pieces without a solid",
+                        "foundation are not filled.")
                 .defineInRange("foundationDepth", 5, 0, 16);
         b.pop();
 
@@ -1641,16 +1632,15 @@ public final class Config {
                 .defineInRange("minElevation", 4, 1, 32);
         SNIPER_SPAWN_WEIGHT = b
                 .comment("Relative natural-spawn weight (the scav is 5, the gunner villager 2). 0 disables",
-                        "natural spawning without disabling the mob. Kept EQUAL to the",
-                        "tarkovscav:sniper_pillager weight in the biome modifier, which is what the game",
-                        "actually reads.")
+                        "natural spawning without disabling the mob. Applied to existing biome spawn",
+                        "entries at spawn time; changing it does not add the mob to new biomes.")
                 .defineInRange("spawnWeight", 1, 0, 1000);
         SNIPER_VILLAGER_SPAWN_WEIGHT = b
                 .comment("Relative natural-spawn weight of the SNIPER VILLAGER (tarkovscav:sniper_villager),",
                         "the villager half of the sniper pair. Deliberately no higher than the pillager",
                         "sniper's, because a friendly long-range unit is a bigger change to a village",
                         "than another pillager. 0 disables its natural spawning without disabling the",
-                        "mob. Kept EQUAL to the tarkovscav:sniper_villager weight in the biome modifier.")
+                        "mob. Applied to existing biome spawn entries at spawn time.")
                 .defineInRange("villagerWeight", 1, 0, 1000);
         b.pop();
 
@@ -2519,11 +2509,11 @@ public final class Config {
                 .defineInRange("maxArmorClass", 6, 1, 6);
         USEC_VILLAGER_SPAWN_WEIGHT = b
                 .comment("Natural spawn weight of the USEC villager (the plain gunner villager is 2).",
-                        "Kept EQUAL to the tarkovscav:usec_villager weight in the biome modifier.")
+                        "Applied to existing biome spawn entries at spawn time. 0 disables natural spawning.")
                 .defineInRange("usecVillagerWeight", 1, 0, 1000);
         BEAR_PILLAGER_SPAWN_WEIGHT = b
                 .comment("Natural spawn weight of the BEAR pillager (the plain gunner pillager is 2).",
-                        "Kept EQUAL to the tarkovscav:bear_pillager weight in the biome modifier.")
+                        "Applied to existing biome spawn entries at spawn time. 0 disables natural spawning.")
                 .defineInRange("bearPillagerWeight", 1, 0, 1000);
         ELITE_VILLAGER_SPAWN_WEIGHT = b
                 .comment("Natural spawn weight of the elite villager - the rarest of the four on purpose.")
@@ -4118,14 +4108,16 @@ public final class Config {
         if (!SPEC.isLoaded()) {
             return (float) DEFAULT_VOICE_PITCH_JITTER;
         }
-        return (float) Mth.clamp(clampPitch(VOICE_PITCH_JITTER.get(), DEFAULT_VOICE_PITCH_JITTER), 0.0D, 0.5D);
+        double jitter = VOICE_PITCH_JITTER.get();
+        return (float) (Double.isFinite(jitter)
+                ? Mth.clamp(jitter, 0.0D, 0.5D) : DEFAULT_VOICE_PITCH_JITTER);
     }
 
     /** The families {@code voice.familyVolume} understands: the shared pool plus the three factions. */
     public static final List<String> VOICE_FAMILIES = List.of("shared", "usec", "bear", "elite");
 
     /** Bad {@code familyVolume} entries already reported, so a typo warns once per session. */
-    private static final Set<String> WARNED_FAMILY_VOLUME = new HashSet<>();
+    private static final Set<String> WARNED_FAMILY_VOLUME = ConcurrentHashMap.newKeySet();
 
     /**
      * The volume multiplier of one family (README 5l), read from the {@code familyVolume} entries.

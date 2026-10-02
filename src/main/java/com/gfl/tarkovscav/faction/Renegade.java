@@ -46,6 +46,8 @@ public final class Renegade {
     private static final String TAG_WINDOW_START = "TarkovScavFriendlyWindow";
     private static final String TAG_SINCE = "TarkovScavRenegadeSince";
     private static final String TAG_VICTIM = "TarkovScavFriendlyVictim";
+    private static final String TAG_FREE_RETALIATION = "TarkovScavFreeRetaliation";
+    private static final String TAG_FREE_RETALIATION_AT = "TarkovScavFreeRetaliationAt";
 
     private Renegade() {
     }
@@ -76,13 +78,20 @@ public final class Renegade {
         if (Faction.of(attacker) == Faction.BLACKFOX) {
             return false;
         }
-        // Rule 5: a single retaliation is free.
-        if (attacker.getLastHurtByMob() == victim) {
-            return false;
-        }
         long now = level.getGameTime();
         var data = attacker.getPersistentData();
         int window = Config.FACTION_FRIENDLY_FIRE_WINDOW_TICKS.get();
+        // Rule 5: consume one permission for the most recent friendly hit. lastHurtByMob alone
+        // stays set for many ticks and allowed unlimited retaliation shots without any accounting.
+        if (data.hasUUID(TAG_FREE_RETALIATION)
+                && data.getUUID(TAG_FREE_RETALIATION).equals(victim.getUUID())
+                && now - data.getLong(TAG_FREE_RETALIATION_AT) <= window) {
+            data.remove(TAG_FREE_RETALIATION);
+            data.remove(TAG_FREE_RETALIATION_AT);
+            return false;
+        }
+        victim.getPersistentData().putUUID(TAG_FREE_RETALIATION, attacker.getUUID());
+        victim.getPersistentData().putLong(TAG_FREE_RETALIATION_AT, now);
         long windowStart = data.getLong(TAG_WINDOW_START);
         int hits = now - windowStart > window ? 0 : data.getInt(TAG_HITS);
         // Rule 6: anger is per attacker/victim pair, so a hit on somebody else resets the pairing.

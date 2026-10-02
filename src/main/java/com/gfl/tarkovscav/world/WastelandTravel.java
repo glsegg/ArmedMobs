@@ -21,6 +21,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
 
@@ -98,7 +99,7 @@ public final class WastelandTravel {
     public record Arrival(ResourceLocation dimension, BlockPos pos, boolean platform, boolean fallback) {
     }
 
-    private record Cast(ServerLevel level, BlockPos origin, Target target, int dueTick) {
+    private record Cast(ServerLevel level, Vec3 origin, Target target, int dueTick) {
     }
 
     private static final Map<UUID, Cast> CASTS = new HashMap<>();
@@ -138,7 +139,7 @@ public final class WastelandTravel {
         if (until == null) {
             return 0;
         }
-        long left = until - player.level().getGameTime();
+        long left = until - player.server.overworld().getGameTime();
         return left <= 0L ? 0 : (int) Math.ceil(left / 20.0D);
     }
 
@@ -177,7 +178,7 @@ public final class WastelandTravel {
         if (server == null) {
             return Refusal.NO_SUCH_DIMENSION;
         }
-        CASTS.put(id, new Cast(serverLevel(player), player.blockPosition().immutable(), target,
+        CASTS.put(id, new Cast(serverLevel(player), player.position(), target,
                 server.getTickCount() + CAST_TICKS));
         ServerLevel level = serverLevel(player);
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEACON_ACTIVATE,
@@ -199,7 +200,7 @@ public final class WastelandTravel {
             abort(player, "tarkovscav.beacon.cast.cancelled");
             return;
         }
-        if (player.position().distanceTo(Vec3.atBottomCenterOf(cast.origin())) > MAX_CAST_DRIFT) {
+        if (player.position().distanceTo(cast.origin()) > MAX_CAST_DRIFT) {
             abort(player, "tarkovscav.beacon.cast.moved");
             return;
         }
@@ -216,15 +217,23 @@ public final class WastelandTravel {
 
     /** The cast ran its full 2 s: make the trip. */
     public static void completeCast(ServerPlayer player) {
-        Cast cast = CASTS.remove(player.getUUID());
+        castTick(player);
+        Cast cast = CASTS.get(player.getUUID());
         if (cast == null) {
             return;
         }
-        COOLDOWN_UNTIL.put(player.getUUID(), player.level().getGameTime() + COOLDOWN_TICKS);
+        if (player.server.getTickCount() < cast.dueTick()) {
+            abandonCast(player);
+            return;
+        }
+        CASTS.remove(player.getUUID());
         ServerLevel level = serverLevel(player);
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDERMAN_TELEPORT,
                 SoundSource.PLAYERS, 1.0F, 0.8F);
         Arrival arrival = cast.target() == Target.INTO_WASTELAND ? teleportInto(player) : teleportBack(player);
+        if (arrival != null) {
+            COOLDOWN_UNTIL.put(player.getUUID(), player.server.overworld().getGameTime() + COOLDOWN_TICKS);
+        }
         if (arrival == null) {
             // The dimension is not loaded on this server: the datapack is missing or was refused.
             player.displayClientMessage(refusalMessage(Refusal.NO_SUCH_DIMENSION)
@@ -352,15 +361,17 @@ public final class WastelandTravel {
         // 1. the column must exist before it can be measured (see the javadoc above)
         level.getChunkSource().getChunk(x >> 4, z >> 4, ChunkStatus.FULL, true);
         int minY = level.getMinBuildHeight();
+        int maxLandingY = level.getMaxBuildHeight() - 2;
         int surface = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
         if (surface <= minY + 1) {
             surface = scanDownForGround(level, x, z, level.getMaxBuildHeight() - 1, minY);
         }
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, surface, z);
-        for (int step = 0; step < 8 && !isClear(level, pos); step++) {
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x,
+                Math.max(minY + 1, Math.min(surface, maxLandingY)), z);
+        for (int step = 0; step < 8 && !isClear(level, pos) && pos.getY() < maxLandingY; step++) {
             pos.move(Direction.UP);
         }
-        if (!isStandable(level, pos.below())) {
+        if (!isClear(level, pos) || !isStandable(level, pos.below())) {
             buildPlatform(level, pos);
             if (platformPlaced != null && platformPlaced.length > 0) {
                 platformPlaced[0] = true;
@@ -391,18 +402,24 @@ public final class WastelandTravel {
     }
 
     private static boolean isOpen(ServerLevel level, BlockPos pos) {
-        return level.getBlockState(pos).getCollisionShape(level, pos).isEmpty()
-                && level.getFluidState(pos).isEmpty();
+        BlockState state = level.getBlockState(pos);
+        return state.getCollisionShape(level, pos).isEmpty() && state.getFluidState().isEmpty()
+                && !state.is(Blocks.FIRE) && !state.is(Blocks.SOUL_FIRE)
+                && !state.is(Blocks.SWEET_BERRY_BUSH) && !state.is(Blocks.WITHER_ROSE)
+                && !state.is(Blocks.POWDER_SNOW);
     }
 
     private static boolean isStandable(ServerLevel level, BlockPos pos) {
-        return !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
+        BlockState state = level.getBlockState(pos);
+        return state.isFaceSturdy(level, pos, Direction.UP) && state.getFluidState().isEmpty()
+                && !state.is(Blocks.MAGMA_BLOCK) && !state.is(Blocks.CAMPFIRE)
+                && !state.is(Blocks.SOUL_CAMPFIRE) && !state.is(Blocks.CACTUS);
     }
 
     /**
      * A 5x5 stone-brick pad one block under the landing cell, the 5x5x2 box above it cleared, and a
-     * torch on a corner. Only the cells that are air or replaceable become bricks, so the pad never
-     * carves into terrain that is already there.
+     * torch on a corner. Replaceable floor cells become bricks, and the centre floor is repaired when it
+     * is unsafe. Collision, liquid and hazardous plants are cleared from the arrival space.
      */
     public static void buildPlatform(ServerLevel level, BlockPos centre) {
         BlockState bricks = Blocks.STONE_BRICKS.defaultBlockState();
@@ -411,12 +428,13 @@ public final class WastelandTravel {
             for (int dz = -PLATFORM_RADIUS; dz <= PLATFORM_RADIUS; dz++) {
                 BlockPos floor = centre.offset(dx, -1, dz);
                 BlockState existing = level.getBlockState(floor);
-                if (existing.isAir() || existing.canBeReplaced()) {
+                if (existing.isAir() || existing.canBeReplaced()
+                        || (dx == 0 && dz == 0 && !isStandable(level, floor))) {
                     level.setBlock(floor, bricks, 3);
                 }
                 for (int dy = 0; dy <= 1; dy++) {
                     BlockPos head = centre.offset(dx, dy, dz);
-                    if (!level.getBlockState(head).getCollisionShape(level, head).isEmpty()) {
+                    if (!isOpen(level, head)) {
                         level.setBlock(head, air, 3);
                     }
                 }
@@ -460,9 +478,9 @@ public final class WastelandTravel {
     }
 
     /** Taking damage aborts a running cast: you cannot deploy out of a losing fight. */
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLivingHurt(LivingHurtEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player && isCasting(player)) {
+        if (event.getAmount() > 0 && event.getEntity() instanceof ServerPlayer player && isCasting(player)) {
             interrupt(player);
         }
     }

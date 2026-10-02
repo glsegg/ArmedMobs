@@ -181,7 +181,7 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
             this.goalSelector.addGoal(2, new com.gfl.tarkovscav.gun.NoGunMeleeGoal(this, 1.1D, false));
         } else {
             this.goalSelector.addGoal(2,
-                    new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(this, 1.1D, false));
+                    new com.gfl.tarkovscav.gun.NoGunMeleeGoal(this, 1.1D, false));
         }
         // Unconditional, exactly as on the two gunner units: inert unless a bow or crossbow is actually in
         // hand, and without TaCZ this IS the weapon goal (it hands the shot to performRangedAttack).
@@ -343,9 +343,9 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
     public void die(DamageSource source) {
         // Our own death cry replaces the vanilla one (client.voice.death); see README 5l.
         this.voice.sayDeath();
-        // Play the rig's own death clip on the movement controller (registered as a triggered
-        // animation). It only affects the legs+root, so the upper body keeps whatever pose it had.
-        this.triggerAnim("movement", "death");
+        // Death owns the whole rig. Use the controller registered by the active layering mode;
+        // the gun controller yields so its upper-body clip cannot override the falling motion.
+        this.triggerAnim(Config.SPEC.isLoaded() && Config.singleControllerMode() ? "model" : "movement", "death");
         super.die(source);
     }
 
@@ -462,14 +462,12 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
             //     pose while it walks;
             //   * no gun -> the whole-body idle/walk/run clip.
             controllers.add(new AnimationController<>(this, "model", 3, this::singleController)
-                    .triggerableAnim("death", RawAnimation.begin().thenPlay(GunClips.DEATH))
-                    .receiveTriggeredAnimations());
+                    .triggerableAnim("death", RawAnimation.begin().thenPlay(GunClips.DEATH)));
             return;
         }
         // ---- 1. lower body: movement ------------------------------------------------------
         controllers.add(new AnimationController<>(this, "movement", 4, this::movementController)
-                .triggerableAnim("death", RawAnimation.begin().thenPlay(GunClips.DEATH))
-                .receiveTriggeredAnimations());
+                .triggerableAnim("death", RawAnimation.begin().thenPlay(GunClips.DEATH)));
 
         // ---- 2. upper body: the gun ------------------------------------------------------
         // Registered second on purpose: GeckoLib applies controllers in order and the later one wins
@@ -482,6 +480,9 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
      * the two-controller scheme uses.
      */
     private PlayState singleController(AnimationState<ScavEntity> state) {
+        if (isDeadOrDying()) {
+            return state.setAndContinue(RawAnimation.begin().thenPlay(GunClips.DEATH));
+        }
         if (isArmed()) {
             String family = usesPistolClips() ? GunClips.FAMILY_PISTOL : GunClips.FAMILY_RIFLE;
             String action = GunClips.actionFor(isGunAiming(), isGunFiring(), isGunReloading(), gunAiState());
@@ -498,6 +499,9 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
      * scav walks with the correct gait instead of having a whole-body clip fight the gun pose.
      */
     private PlayState movementController(AnimationState<ScavEntity> state) {
+        if (isDeadOrDying()) {
+            return state.setAndContinue(RawAnimation.begin().thenPlay(GunClips.DEATH));
+        }
         boolean armed = isArmed();
         boolean moving = this.walk.isMoving();
         boolean running = this.walk.isRunning();
@@ -511,7 +515,7 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
      * type up reliably).
      */
     private PlayState gunController(AnimationState<ScavEntity> state) {
-        if (!isArmed()) {
+        if (isDeadOrDying() || !isArmed()) {
             return PlayState.STOP;
         }
         String family = usesPistolClips() ? GunClips.FAMILY_PISTOL : GunClips.FAMILY_RIFLE;
@@ -528,20 +532,7 @@ public class ScavEntity extends Monster implements GeoEntity, GunUser,
      */
     @Override
     public void performRangedAttack(LivingEntity target, float distanceFactor) {
-        ItemStack weapon = this.getItemInHand(net.minecraft.world.entity.projectile.ProjectileUtil
-                .getWeaponHoldingHand(this, item -> item == net.minecraft.world.item.Items.BOW
-                        || item == net.minecraft.world.item.Items.CROSSBOW));
-        ItemStack ammo = this.getProjectile(weapon);
-        var arrow = net.minecraft.world.entity.projectile.ProjectileUtil.getMobArrow(this, ammo, distanceFactor);
-        double dx = target.getX() - this.getX();
-        double dy = target.getY(0.3333333333333333D) - arrow.getY();
-        double dz = target.getZ() - this.getZ();
-        double horizontal = Math.sqrt(dx * dx + dz * dz);
-        arrow.shoot(dx, dy + horizontal * 0.2D, dz, 1.6F,
-                (float) (14 - this.level().getDifficulty().getId() * 4));
-        this.playSound(net.minecraft.sounds.SoundEvents.SKELETON_SHOOT, 1.0F,
-                1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
-        this.level().addFreshEntity(arrow);
+        com.gfl.tarkovscav.gun.ArmedRangedGoal.shootArrow(this, target, distanceFactor);
     }
 
     /** True when the mob visibly holds a TaCZ gun. Read from the main hand, which is synced. */

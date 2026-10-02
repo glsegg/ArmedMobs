@@ -70,9 +70,32 @@ public class GrenadeItem extends Item {
 
     @Override
     public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remaining) {
+        if (level.isClientSide || !(entity instanceof Player player)) {
+            return;
+        }
+        if (!Config.GRENADES_ENABLED.get()) {
+            player.stopUsingItem();
+            return;
+        }
         int used = this.getUseDuration(stack) - remaining;
+        if (Config.GRENADES_COOK_WHILE_HOLDING.get() && used >= this.kind.fuseTicks()) {
+            GrenadeEntity grenade = new GrenadeEntity(level, player, this.kind, 1);
+            grenade.setPos(player.getX(), player.getEyeY() - 0.15D, player.getZ());
+            boolean spawned = level.addFreshEntity(grenade);
+            // stopUsingItem does not call releaseUsing: a cooked grenade must never also be thrown.
+            player.stopUsingItem();
+            if (spawned) {
+                if (!player.getAbilities().instabuild) {
+                    stack.shrink(1);
+                }
+                grenade.detonate();
+            } else {
+                grenade.discard();
+            }
+            return;
+        }
         // A quiet click every 4 ticks while it is held, so "cooking" is audible.
-        if (used > 0 && used % 4 == 0 && !level.isClientSide) {
+        if (used > 0 && used % 4 == 0) {
             level.playSound(null, entity.getX(), entity.getY(), entity.getZ(), SoundEvents.LEVER_CLICK,
                     SoundSource.PLAYERS, 0.3F, 1.6F);
         }

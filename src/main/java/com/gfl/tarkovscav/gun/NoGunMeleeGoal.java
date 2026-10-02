@@ -61,6 +61,7 @@ public class NoGunMeleeGoal extends MeleeAttackGoal {
      */
     private boolean usable() {
         return !this.user.gunBrain().hasGun()
-                && !ArmedRangedGoal.isRangedWeapon(this.user.asMob().getMainHandItem());
+                && !ArmedRangedGoal.isRangedWeapon(this.user.asMob().getMainHandItem())
+                && !ArmedRangedGoal.isRangedWeapon(this.user.asMob().getOffhandItem());
     }
 }

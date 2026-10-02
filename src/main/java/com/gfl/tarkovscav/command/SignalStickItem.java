@@ -53,7 +53,9 @@ public class SignalStickItem extends Item {
         SignalStickEntity stick = new SignalStickEntity(serverLevel, player);
         stick.setItem(stack.copyWithCount(1));
         stick.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, THROW_SPEED, 1.0F);
-        serverLevel.addFreshEntity(stick);
+        if (!serverLevel.addFreshEntity(stick)) {
+            return InteractionResultHolder.fail(stack);
+        }
         serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.SNOWBALL_THROW, SoundSource.PLAYERS, 0.8F, 0.7F);
         if (!player.getAbilities().instabuild) {

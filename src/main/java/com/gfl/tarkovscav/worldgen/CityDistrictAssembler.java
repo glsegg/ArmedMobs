@@ -2,14 +2,19 @@ package com.gfl.tarkovscav.worldgen;
 
 import com.gfl.tarkovscav.Config;
 import com.gfl.tarkovscav.TarkovScav;
+import com.gfl.tarkovscav.world.CityStructures;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
@@ -65,8 +70,6 @@ public final class CityDistrictAssembler {
     private static final String STREET_POOL = "tarkovscav:city_district/street";
     private static final String BUILDING_POOL = "tarkovscav:city_district/building";
     private static final String DECOR_POOL = "tarkovscav:city_district/decor";
-    /** The footing the shipped pieces were baked with (extractor: 5 for buildings, 3 for streets). */
-    private static final int BAKED_BUILDING_DEPTH = 5;
 
     private CityDistrictAssembler() {
     }
@@ -84,12 +87,20 @@ public final class CityDistrictAssembler {
                 var json = com.google.gson.JsonParser.parseReader(reader).getAsJsonObject();
                 List<Piece> pieces = new ArrayList<>();
                 for (var element : json.getAsJsonArray("elements")) {
+                    int weight = element.getAsJsonObject().get("weight").getAsInt();
+                    // Match StructureTemplatePool's valid weight range and repeated-entry selection.
+                    if (weight < 1 || weight > 150) {
+                        throw new IllegalArgumentException("pool weight must be between 1 and 150");
+                    }
                     String location = element.getAsJsonObject().getAsJsonObject("element")
                             .get("location").getAsString();
                     if (!location.startsWith(TarkovScav.MOD_ID + ":")) { continue; }
                     String path = location.substring(TarkovScav.MOD_ID.length() + 1);
-                    pieces.add(fallback.stream().filter(p -> p.path().equals(path)).findFirst()
-                            .orElse(new Piece(path, 5, 16, 16)));
+                    Piece piece = fallback.stream().filter(p -> p.path().equals(path)).findFirst()
+                            .orElse(new Piece(path, 5, 16, 16));
+                    for (int i = 0; i < weight; i++) {
+                        pieces.add(piece);
+                    }
                 }
                 return pieces.isEmpty() ? fallback : pieces;
             }
@@ -137,22 +148,13 @@ public final class CityDistrictAssembler {
         List<Piece> decorPool = poolPieces(level, DECOR_POOL, DECOR);
         TarkovScav.LOGGER.info("[city] district pools: streets={} buildings={} decor={} foundationDepth={}",
                 streets.size(), buildingsPool.size(), decorPool.size(), Config.cityFoundationDepth());
-        // The footing is BAKED into each piece (extractor: 5 for buildings, 3 for streets; generator:
-        // --foundation N). This key is the number those pieces are supposed to carry, so a mismatch is a
-        // warning rather than a silent surprise: the fix is to re-extract / re-generate with --foundation N.
-        if (Config.cityFoundationDepth() != BAKED_BUILDING_DEPTH) {
-            TarkovScav.LOGGER.warn("[city] spawn.foundationDepth = {} but the pieces in the jar are baked with "
-                            + "{} blocks of footing; re-run the extractor or CityStructureGen --pieces-only "
-                            + "--foundation {} to match",
-                    Config.cityFoundationDepth(), BAKED_BUILDING_DEPTH, Config.cityFoundationDepth());
-        }
-
         int[] cells = gridCoordinates(gridSize);
         int minCell = cells[0];
         int maxCell = cells[cells.length - 1];
         int placedStreets = 0;
         int placedBuildings = 0;
         int placedDecor = 0;
+        List<BoundingBox> placedBounds = new ArrayList<>();
         int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
         int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
 
@@ -163,7 +165,7 @@ public final class CityDistrictAssembler {
                 int z = centre.getZ() + gz * 16;
                 Piece street = streets.get(random.nextInt(streets.size()));
                 if (place(level, templates, street, new BlockPos(x, 0, z),
-                        Rotation.values()[random.nextInt(4)], random)) {
+                        Rotation.values()[random.nextInt(4)], random, placedBounds)) {
                     placedStreets++;
                 }
                 minX = Math.min(minX, x);
@@ -177,7 +179,7 @@ public final class CityDistrictAssembler {
                     int dx = x + 2 + random.nextInt(8);
                     int dz = z + 2 + random.nextInt(8);
                     if (place(level, templates, decor, new BlockPos(dx, 0, dz),
-                            Rotation.values()[random.nextInt(4)], random)) {
+                            Rotation.values()[random.nextInt(4)], random, placedBounds)) {
                         placedDecor++;
                     }
                 }
@@ -196,7 +198,7 @@ public final class CityDistrictAssembler {
                 // Face the road: the building's own connector is on its north side, so rotate it towards
                 // the grid centre and the entrance ends up on the street.
                 Rotation rotation = facingTheGrid(gx, gz);
-                if (place(level, templates, building, new BlockPos(x, 0, z), rotation, random)) {
+                if (place(level, templates, building, new BlockPos(x, 0, z), rotation, random, placedBounds)) {
                     placedBuildings++;
                 }
                 minX = Math.min(minX, x);
@@ -206,8 +208,26 @@ public final class CityDistrictAssembler {
             }
         }
 
-        Result result = new Result(seed, gridSize, placedStreets, placedBuildings, placedDecor,
-                "x[" + minX + ".." + maxX + "] z[" + minZ + ".." + maxZ + "]");
+        String bounds = "nothing placed";
+        if (!placedBounds.isEmpty()) {
+            int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
+            minX = minZ = Integer.MAX_VALUE;
+            maxX = maxZ = Integer.MIN_VALUE;
+            for (BoundingBox box : placedBounds) {
+                minX = Math.min(minX, box.minX());
+                maxX = Math.max(maxX, box.maxX());
+                minY = Math.min(minY, box.minY());
+                maxY = Math.max(maxY, box.maxY());
+                minZ = Math.min(minZ, box.minZ());
+                maxZ = Math.max(maxZ, box.maxZ());
+            }
+            BoundingBox box = new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ);
+            // Template placement does not create a StructureStart. Register the actual successful pieces
+            // so city spawning, loot, caps and the garrison recognise this command-created district.
+            CityStructures.record(level, "district", centre, Rotation.NONE, Mirror.NONE, box);
+            bounds = "x[" + minX + ".." + maxX + "] z[" + minZ + ".." + maxZ + "]";
+        }
+        Result result = new Result(seed, gridSize, placedStreets, placedBuildings, placedDecor, bounds);
         TarkovScav.LOGGER.info("[city] district placed by command: seed={} grid={} streets={} buildings={} "
                 + "decor={} bounds={}", seed, gridSize, placedStreets, placedBuildings, placedDecor,
                 result.bounds());
@@ -227,7 +247,8 @@ public final class CityDistrictAssembler {
 
     /** Places one piece on the terrain height of its anchor column. Returns false when the file is missing. */
     private static boolean place(ServerLevel level, StructureTemplateManager templates, Piece piece,
-                                 BlockPos anchor, Rotation rotation, RandomSource random) {
+                                 BlockPos anchor, Rotation rotation, RandomSource random,
+                                 List<BoundingBox> placedBounds) {
         Optional<StructureTemplate> loaded = templates.get(new ResourceLocation(TarkovScav.MOD_ID, piece.path()));
         if (loaded.isEmpty()) {
             TarkovScav.LOGGER.warn("[city] structure {} is missing from the jar - district incomplete",
@@ -236,13 +257,44 @@ public final class CityDistrictAssembler {
         }
         StructureTemplate template = loaded.get();
         Vec3i size = template.getSize();
+        level.getChunk(anchor.getX() >> 4, anchor.getZ() >> 4);
         int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE, anchor.getX(), anchor.getZ());
         BlockPos origin = tileOrigin(anchor, surface, piece.floorOffset(), size, rotation);
         StructurePlaceSettings settings = new StructurePlaceSettings()
                 .setRotation(rotation)
                 .setIgnoreEntities(true)
                 .setKeepLiquids(false);
-        return template.placeInWorld(level, origin, origin, settings, random, 2);
+        boolean placed = template.placeInWorld(level, origin, origin, settings, random, 2);
+        if (placed) {
+            BoundingBox box = template.getBoundingBox(settings, origin);
+            extendFoundation(level, box, surface, piece.floorOffset());
+            placedBounds.add(box);
+        }
+        return placed;
+    }
+
+    /** Extend an existing solid template footing; never erase its baked layers or replace terrain. */
+    private static void extendFoundation(ServerLevel level, BoundingBox box, int surface, int bakedDepth) {
+        int targetBottom = Math.max(level.getMinBuildHeight(), surface - Config.cityFoundationDepth());
+        if (bakedDepth <= 0 || targetBottom >= box.minY()) {
+            return;
+        }
+        for (int x = box.minX(); x <= box.maxX(); x++) {
+            for (int z = box.minZ(); z <= box.maxZ(); z++) {
+                BlockPos footing = new BlockPos(x, box.minY(), z);
+                BlockState material = level.getBlockState(footing);
+                if (!material.isFaceSturdy(level, footing, Direction.UP)) {
+                    continue;
+                }
+                for (int y = box.minY() - 1; y >= targetBottom; y--) {
+                    BlockPos pos = new BlockPos(x, y, z);
+                    BlockState existing = level.getBlockState(pos);
+                    if (existing.isAir() || existing.getBlock() instanceof LiquidBlock) {
+                        level.setBlock(pos, material, 2);
+                    }
+                }
+            }
+        }
     }
 
     /** The piece paths, for the command's listing and for the gate. */

@@ -58,10 +58,19 @@ public record CityRegion(String name, ResourceLocation dimension, AABB box) {
 
     private static double[] xyz(String text) {
         String[] numbers = text.trim().split("[ ,]+");
-        return new double[]{
+        if (numbers.length != 3) {
+            throw new IllegalArgumentException("A city corner must contain exactly three coordinates");
+        }
+        double[] coordinates = new double[]{
                 Double.parseDouble(numbers[0]),
                 Double.parseDouble(numbers[1]),
                 Double.parseDouble(numbers[2])};
+        for (double coordinate : coordinates) {
+            if (!Double.isFinite(coordinate)) {
+                throw new IllegalArgumentException("City coordinates must be finite");
+            }
+        }
+        return coordinates;
     }
 
     public static CityRegion cube(String name, ResourceLocation dimension, BlockPos center, int radius) {

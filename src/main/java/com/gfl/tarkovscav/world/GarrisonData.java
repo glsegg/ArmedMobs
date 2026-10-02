@@ -203,58 +203,55 @@ public class GarrisonData extends SavedData {
         ListTag list = tag.getList(KEY_ENTRIES, Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag row = list.getCompound(i);
-            String entryKey = row.getString(KEY_KEY);
             String cityKey = row.getString(KEY_CITY);
             ResourceLocation dimension = ResourceLocation.tryParse(row.getString(KEY_DIMENSION));
-            if (entryKey.isEmpty() || dimension == null) {
+            if (cityKey.isEmpty() || dimension == null) {
                 continue;
             }
-            data.entries.put(entryKey, new Entry(cityKey, dimension,
-                    row.getInt(KEY_SQUADS), row.getInt(KEY_UNITS), row.getLong(KEY_TICK)));
+            data.entries.put(key(dimension, cityKey), new Entry(cityKey, dimension,
+                    Math.max(0, row.getInt(KEY_SQUADS)), Math.max(0, row.getInt(KEY_UNITS)), row.getLong(KEY_TICK)));
         }
         ListTag cityList = tag.getList(KEY_CITIES, Tag.TAG_COMPOUND);
         for (int i = 0; i < cityList.size(); i++) {
             CompoundTag row = cityList.getCompound(i);
-            String entryKey = row.getString(KEY_KEY);
             String cityKey = row.getString(KEY_CITY);
             ResourceLocation dimension = ResourceLocation.tryParse(row.getString(KEY_DIMENSION));
             Faction dominant = CityFactions.parse(row.getString(KEY_DOMINANT));
-            if (entryKey.isEmpty() || dimension == null || dominant == null) {
+            if (cityKey.isEmpty() || dimension == null || dominant == null) {
                 continue;
             }
-            data.cities.put(entryKey, new CityRow(cityKey, dimension, dominant,
+            data.cities.put(key(dimension, cityKey), new CityRow(cityKey, dimension, dominant,
                     CityFactions.parse(row.getString(KEY_OVERRIDE)), row.getBoolean(KEY_SPAWNERS)));
         }
         ListTag buildingList = tag.getList(KEY_BUILDINGS, Tag.TAG_COMPOUND);
         for (int i = 0; i < buildingList.size(); i++) {
             CompoundTag row = buildingList.getCompound(i);
-            String entryKey = row.getString(KEY_KEY);
             String cityKey = row.getString(KEY_CITY);
             String buildingId = row.getString(KEY_BUILDING);
             ResourceLocation dimension = ResourceLocation.tryParse(row.getString(KEY_DIMENSION));
             Faction rolled = CityFactions.parse(row.getString(KEY_ROLLED));
-            if (entryKey.isEmpty() || dimension == null || rolled == null || buildingId.isEmpty()) {
+            if (cityKey.isEmpty() || dimension == null || rolled == null || buildingId.isEmpty()) {
                 continue;
             }
-            data.buildings.put(entryKey, new BuildingRow(cityKey, dimension, buildingId, rolled,
+            data.buildings.put(buildingKey(dimension, cityKey, buildingId), new BuildingRow(cityKey, dimension, buildingId, rolled,
                     CityFactions.parse(row.getString(KEY_OVERRIDE))));
         }
         ListTag poolList = tag.getList(KEY_POOLS, Tag.TAG_COMPOUND);
         for (int i = 0; i < poolList.size(); i++) {
             CompoundTag row = poolList.getCompound(i);
-            String entryKey = row.getString(KEY_KEY);
             String cityKey = row.getString(KEY_CITY);
             ResourceLocation dimension = ResourceLocation.tryParse(row.getString(KEY_DIMENSION));
             Faction faction = CityFactions.parse(row.getString(KEY_FACTION));
             // A row whose city or faction cannot be read is dropped rather than guessed: a pool attributed to
             // the wrong faction would drain the wrong bar and stop the wrong line-up from spawning. Same rule
             // the faction rows above already follow.
-            if (entryKey.isEmpty() || dimension == null || faction == null) {
+            if (cityKey.isEmpty() || dimension == null || !CityCapture.isPoolFaction(faction)) {
                 continue;
             }
+            int strength = Math.max(0, row.getInt(KEY_STRENGTH));
             data.pools.computeIfAbsent(key(dimension, cityKey), unused -> new LinkedHashMap<>())
                     .put(CityFactions.name(faction), new PoolRow(cityKey, dimension, faction,
-                            row.getInt(KEY_STRENGTH), row.getInt(KEY_MAX), row.getBoolean(KEY_CAPTURED)));
+                            strength, Math.max(1, row.getInt(KEY_MAX)), CapturePools.isCaptured(strength)));
         }
         return data;
     }

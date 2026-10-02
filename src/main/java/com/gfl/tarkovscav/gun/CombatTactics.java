@@ -270,6 +270,9 @@ public final class CombatTactics {
     /** Solid ground with two blocks of air above it, within three blocks of the given height. */
     @Nullable
     private BlockPos findGround(ServerLevel level, int x, int y, int z) {
+        if (!level.hasChunkAt(new BlockPos(x, y, z))) {
+            return null; // A cover search must not load or generate chunks on behalf of idle mobs.
+        }
         for (int dy = 2; dy >= -3; dy--) {
             BlockPos candidate = new BlockPos(x, y + dy, z);
             if (level.getBlockState(candidate).isAir()

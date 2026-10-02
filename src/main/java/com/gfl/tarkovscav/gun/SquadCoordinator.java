@@ -297,7 +297,8 @@ public final class SquadCoordinator {
         if (this.flankSide == 0) {
             return true;
         }
-        return onFlankSide(this.mob.getX(), this.mob.getZ(), targetX, targetZ, this.flankSide, x, z);
+        return onFlankSide(this.mob.getX(), this.mob.getZ(), targetX, targetZ, this.flankSide, x, z,
+                Config.AI_COORD_FLANK_OFFSET.get());
     }
 
     // ------------------------------------------------------------------ cover claims
@@ -364,11 +365,19 @@ public final class SquadCoordinator {
      */
     public static boolean onFlankSide(double mobX, double mobZ, double targetX, double targetZ,
                                       int side, double x, double z) {
+        return onFlankSide(mobX, mobZ, targetX, targetZ, side, x, z, 0.0D);
+    }
+
+    /** The configured stand-off is a distance from the axis, independent of target range. */
+    public static boolean onFlankSide(double mobX, double mobZ, double targetX, double targetZ,
+                                      int side, double x, double z, double standOff) {
         double axisX = targetX - mobX;
         double axisZ = targetZ - mobZ;
         double offsetX = x - mobX;
         double offsetZ = z - mobZ;
-        return (axisX * offsetZ - axisZ * offsetX) * side >= 0.0D;
+        double length = Math.hypot(axisX, axisZ);
+        return side == 0 || length < 1.0E-8D
+                || (axisX * offsetZ - axisZ * offsetX) * side / length >= Math.max(0.0D, standOff);
     }
 
     /** Most-voted target id, ties by lowest id; -1 when nobody has a live target. */

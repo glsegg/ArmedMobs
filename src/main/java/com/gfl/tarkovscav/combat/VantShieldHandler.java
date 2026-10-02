@@ -77,12 +77,10 @@ public final class VantShieldHandler {
         // 1.20.1 has no DamageSource#isExplosion(), so this asks the vanilla damage-type tag
         // #minecraft:is_explosion - the same tag-shaped judgement the gunfire test uses, and it also
         // covers a modded explosion damage type that opts into the vanilla tag.
-        if (source.is(DamageTypeTags.IS_EXPLOSION) && !Config.SHIELD_PROTECT_FROM_EXPLOSIONS.get()) {
-            return;
-        }
+        boolean explosion = source.is(DamageTypeTags.IS_EXPLOSION);
         // "Is this gunfire" is asked of TaCZ's #tacz:bullets damage-type tag - the same predicate the
         // iron golem's ricochet uses. No second classifier, no guessed damage-type name.
-        if (!HardTarget.isGunfire(source)) {
+        if (explosion ? !Config.SHIELD_PROTECT_FROM_EXPLOSIONS.get() : !HardTarget.isGunfire(source)) {
             return;
         }
         ItemStack shield = heldShield(holder);

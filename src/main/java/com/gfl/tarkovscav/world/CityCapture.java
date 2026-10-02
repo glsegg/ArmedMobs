@@ -15,6 +15,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -176,7 +177,7 @@ public final class CityCapture {
      * damage source) - instead of inventing a second attribution. A grenade thrown by a player therefore
      * counts, exactly as it does in the feed.</p>
      */
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onDeath(LivingDeathEvent event) {
         if (!Config.SPEC.isLoaded() || !Config.CAPTURE_ENABLED.get()) {
             return;

@@ -237,7 +237,7 @@ public final class AccuracyProfile {
         CompoundTag data = mob.getPersistentData();
         int reset = Config.ACCURACY_RESET_TICKS.get();
         long last = data.getLong(TAG_LAST_SHOT);
-        if (reset > 0 && last != 0L && gameTime - last > reset && data.getInt(TAG_SHOTS) != 0) {
+        if (reset > 0 && gameTime - last > reset && data.getInt(TAG_SHOTS) != 0) {
             data.putInt(TAG_SHOTS, 0);
         }
     }

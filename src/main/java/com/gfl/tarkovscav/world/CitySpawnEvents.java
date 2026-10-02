@@ -7,14 +7,24 @@ import com.gfl.tarkovscav.entity.GunnerVillagerEntity;
 import com.gfl.tarkovscav.entity.ScavEntity;
 import com.gfl.tarkovscav.entity.SniperPillagerEntity;
 import com.gfl.tarkovscav.faction.Faction;
+import com.gfl.tarkovscav.registry.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.minecraftforge.event.entity.living.MobSpawnEvent;
+import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * City-only spawning.
@@ -29,11 +39,55 @@ import org.jetbrains.annotations.Nullable;
  * server operator can always place one by hand to debug.</p>
  */
 public final class CitySpawnEvents {
+    private record SpawnKey(EntityType<?> type, int weight, int min, int max) { }
+
+    // NaturalSpawner asks for the list twice, and its second check uses SpawnerData identity.
+    private static final Map<SpawnKey, MobSpawnSettings.SpawnerData> WEIGHTED_SPAWNS =
+            new ConcurrentHashMap<>();
+
     private CitySpawnEvents() {
     }
 
     @SubscribeEvent
+    public static void onPotentialSpawns(LevelEvent.PotentialSpawns event) {
+        if (!(event.getLevel() instanceof ServerLevel) || !Config.SPEC.isLoaded()) {
+            return;
+        }
+        for (MobSpawnSettings.SpawnerData entry : List.copyOf(event.getSpawnerDataList())) {
+            int weight = configuredWeight(entry.type);
+            if (weight < 0 || weight == entry.getWeight().asInt()) {
+                continue;
+            }
+            event.removeSpawnerData(entry);
+            if (weight > 0) {
+                event.addSpawnerData(WEIGHTED_SPAWNS.computeIfAbsent(
+                        new SpawnKey(entry.type, weight, entry.minCount, entry.maxCount),
+                        key -> new MobSpawnSettings.SpawnerData(key.type(), key.weight(), key.min(), key.max())));
+            }
+        }
+    }
+
+    /** Only changes existing entries, so a datapack retains control over biome membership and group size. */
+    private static int configuredWeight(EntityType<?> type) {
+        if (type == ModEntities.USEC_VILLAGER.get()) return Config.USEC_VILLAGER_SPAWN_WEIGHT.get();
+        if (type == ModEntities.BEAR_PILLAGER.get()) return Config.BEAR_PILLAGER_SPAWN_WEIGHT.get();
+        if (type == ModEntities.ELITE_VILLAGER.get()) return Config.ELITE_VILLAGER_SPAWN_WEIGHT.get();
+        if (type == ModEntities.ELITE_PILLAGER.get()) return Config.ELITE_PILLAGER_SPAWN_WEIGHT.get();
+        if (type == ModEntities.SNIPER_PILLAGER.get()) return Config.SNIPER_SPAWN_WEIGHT.get();
+        if (type == ModEntities.SNIPER_VILLAGER.get()) return Config.SNIPER_VILLAGER_SPAWN_WEIGHT.get();
+        return -1;
+    }
+
+    @SubscribeEvent
+    public static void onServerStopped(ServerStoppedEvent event) {
+        WEIGHTED_SPAWNS.clear();
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onPositionCheck(MobSpawnEvent.PositionCheck event) {
+        if (!Config.SPEC.isLoaded() || event.getResult() == Event.Result.DENY) {
+            return;
+        }
         Mob mob = event.getEntity();
         boolean manual = isManualSpawn(event.getSpawnType());
 
@@ -74,21 +128,6 @@ public final class CitySpawnEvents {
             return;
         }
 
-        // The per-city faction cap (README 7q): a city that is not being cleared must not turn into a standing
-        // army, because every unit of this mod runs the full gun AI. Asked here, so the natural spawner and
-        // the spawner blocks are covered by one rule - in Forge 1.20.1 those are the same event. A hand-placed
-        // unit (a spawn egg, /summon) is exempt unless spawn.cityFactionCapIgnoreManual says otherwise. Placed
-        // after the capture veto so a spent faction is still refused by the decisive rule first, and before the
-        // purity block because it is cheaper (a hash lookup, no ledger read).
-        // Manual spawns use FinalizeSpawn below. Counting them in both callbacks would reserve twice.
-        if (!manual && event.getLevel() instanceof ServerLevel capLevel) {
-            if (CitySpawnCap.vetoSpawn(capLevel,
-                    BlockPos.containing(event.getX(), event.getY(), event.getZ()), mob, event.getSpawnType())) {
-                event.setResult(Event.Result.DENY);
-                return;
-            }
-        }
-
         // City faction purity (garrison.factionSpawnFilter): inside a city a mob of one line-up may not
         // appear in a building of the other, so a village building never spawns an illager unit and an
         // illager building never spawns a village one. SCAV is the unaligned third party and is allowed in
@@ -114,6 +153,7 @@ public final class CitySpawnEvents {
 
         Boolean cityOnly = cityOnlyFor(mob);
         if (cityOnly == null || !cityOnly) {
+            applyCap(event, manual);
             return;
         }
         if (manual && !Config.GATE_COMMAND_SPAWNS.get()) {
@@ -138,12 +178,25 @@ public final class CitySpawnEvents {
         log(mob, event.getSpawnType(), pos, result);
         if (!result.allowed()) {
             event.setResult(Event.Result.DENY);
+            return;
+        }
+        applyCap(event, manual);
+    }
+
+    /** Reserve capacity only after the other spawn rules pass; rejected candidates must not fill the cap. */
+    private static void applyCap(MobSpawnEvent.PositionCheck event, boolean manual) {
+        // Eggs and commands reserve once in FinalizeSpawn below.
+        if (!manual && event.getLevel() instanceof ServerLevel level
+                && CitySpawnCap.vetoSpawn(level,
+                        BlockPos.containing(event.getX(), event.getY(), event.getZ()),
+                        event.getEntity(), event.getSpawnType())) {
+            event.setResult(Event.Result.DENY);
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onFinalizeSpawn(MobSpawnEvent.FinalizeSpawn event) {
-        if (event.isSpawnCancelled()) {
+        if (!Config.SPEC.isLoaded() || event.isSpawnCancelled()) {
             return;
         }
         Mob mob = event.getEntity();
@@ -152,6 +205,16 @@ public final class CitySpawnEvents {
         }
 
         BlockPos pos = BlockPos.containing(event.getX(), event.getY(), event.getZ());
+        if (Config.GATE_COMMAND_SPAWNS.get() && Config.GARRISON_FACTION_SPAWN_FILTER.get()) {
+            Faction faction = Faction.of(mob);
+            if (CityCapture.isPoolFaction(faction)
+                    && !CityFactions.allows(CityGarrison.factionAt(level, pos), faction)) {
+                logRefusal(mob, event.getSpawnType(), "city building belongs to the other faction");
+                event.setSpawnCancelled(true);
+                mob.discard();
+                return;
+            }
+        }
         Boolean cityOnly = cityOnlyFor(mob);
         if (Boolean.TRUE.equals(cityOnly) && Config.GATE_COMMAND_SPAWNS.get()) {
             CityGate.Result result = CityGate.test(level, pos);

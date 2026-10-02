@@ -154,6 +154,7 @@ public final class RigSupport {
         SUMMARIZED_RIGS.clear();
         PoseWriters.forget();
         GunInHandGeoLayer.forgetLogGuards();
+        ModelRenderTypes.forgetLogGuards();
     }
 
     /**
@@ -313,6 +314,12 @@ public final class RigSupport {
      */
     public static void applyAimTracking(GeoModel<?> model, Entity entity, long instanceId, float netHeadYaw,
                                         float headPitch, boolean aiming, GunAiState state) {
+        ClipPose clip = clipPoseOf(entity, instanceId);
+        if (isDeathPose(entity, clip)) {
+            // The death clip owns even its fixed tracks. Replacing those with live look angles
+            // keeps the corpse's head/chest aimed while the rest of its body falls.
+            return;
+        }
         // The torso share is a stylistic lean, and it is the size of the reported twist: netHeadYaw is by
         // definition the head's yaw RELATIVE TO THE BODY, so the head is where the whole of it belongs
         // and a share on the torso over-rotates the chest by exactly that fraction. The head takes the
@@ -321,7 +328,6 @@ public final class RigSupport {
         float pitchShare = aiming ? 0.4F : 0.0F;
 
         PoseSource source = Config.poseSource();
-        ClipPose clip = clipPoseOf(entity, instanceId);
         CoreGeoBone upperBody = model.getAnimationProcessor().getBone("UpperBody");
         CoreGeoBone head = model.getAnimationProcessor().getBone("Head");
 
@@ -423,6 +429,11 @@ public final class RigSupport {
         return ClipPose.EMPTY;
     }
 
+    private static boolean isDeathPose(Entity entity, ClipPose clip) {
+        return !entity.isAlive() || entity instanceof LivingEntity living && living.deathTime > 0
+                || clip.clips().contains(GunClips.DEATH);
+    }
+
     /** Says once per (bone, source) which side took a bone, so a vanished pose is never silent. */
     private static void reportYield(Entity entity, ClipPose clip, PoseSource source, boolean aiming,
                                     boolean torsoOwns, boolean headOwns) {
@@ -492,6 +503,10 @@ public final class RigSupport {
      * its arms are still written here; a real rig that brings them keeps its own arms.</p>
      */
     public static void applyArmPose(GeoModel<?> model, Entity entity, long instanceId) {
+        ClipPose clip = clipPoseOf(entity, instanceId);
+        if (isDeathPose(entity, clip)) {
+            return;
+        }
         boolean longGun = entity instanceof LivingEntity living && entity instanceof GunUser user
                 && TaczPresence.isGun(living.getMainHandItem())
                 && !user.usesPistolClips();
@@ -506,7 +521,6 @@ public final class RigSupport {
             return;
         }
         PoseSource source = Config.poseSource();
-        ClipPose clip = clipPoseOf(entity, instanceId);
         Map<String, String> writers = PoseWriters.frame(clip);
         // A headless fallback for a rig that has no clips: any track on the bone wins, Molang or not.
         if (armOwnsByCode(clip, "RightArm", source)) {
